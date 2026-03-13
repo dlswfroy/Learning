@@ -49,6 +49,7 @@ export default function SettingsPage() {
         if (adminDoc.exists()) {
           setIsAdmin(adminDoc.data().adminUid === user.uid);
         } else {
+          // If no admin exists, first user becomes admin
           await setDoc(adminDocRef, { adminUid: user.uid });
           setIsAdmin(true);
         }
@@ -128,7 +129,7 @@ export default function SettingsPage() {
         return;
       }
       setUploading(true);
-      saveToFirestore(pdfUrl, `${subject}_বই_লিঙ্ক`);
+      saveToFirestore(pdfUrl, `${subject}`);
     }
   };
 
@@ -138,7 +139,7 @@ export default function SettingsPage() {
       subject,
       fileName: fileName,
       pdfUrl: url,
-      coverImageUrl: coverImageUrl || '',
+      coverImageUrl: coverImageUrl,
       uploadedAt: serverTimestamp(),
       userId: user?.uid,
     };
@@ -246,7 +247,7 @@ export default function SettingsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">শ্রেণি</label>
-                  <Select onValueChange={setClassId} value={classId || ''}>
+                  <Select onValueChange={setClassId} value={classId}>
                     <SelectTrigger className="bg-background">
                       <SelectValue placeholder="নির্বাচন করুন" />
                     </SelectTrigger>
@@ -260,7 +261,7 @@ export default function SettingsPage() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">বিষয়</label>
-                  <Select onValueChange={setSubject} value={subject || ''} disabled={!classId}>
+                  <Select onValueChange={setSubject} value={subject} disabled={!classId}>
                     <SelectTrigger className="bg-background">
                       <SelectValue placeholder="নির্বাচন করুন" />
                     </SelectTrigger>
@@ -291,7 +292,7 @@ export default function SettingsPage() {
                       <label className="text-sm font-semibold">বইয়ের ডাউনলোড লিঙ্ক (URL)</label>
                       <Input 
                         placeholder="https://nctb.gov.bd/..." 
-                        value={pdfUrl || ''}
+                        value={pdfUrl}
                         onChange={(e) => setPdfUrl(e.target.value)}
                         disabled={uploading}
                       />
@@ -305,7 +306,7 @@ export default function SettingsPage() {
                   </label>
                   <Input 
                     placeholder="https://example.com/cover.jpg" 
-                    value={coverImageUrl || ''}
+                    value={coverImageUrl}
                     onChange={(e) => setCoverImageUrl(e.target.value)}
                     disabled={uploading}
                   />
@@ -372,7 +373,6 @@ export default function SettingsPage() {
                   </div>
                   <div className="overflow-hidden">
                     <h4 className="font-bold text-sm truncate">{book.subject} - {CLASSES.find(c => c.id === book.classId)?.label} শ্রেণি</h4>
-                    <p className="text-[10px] text-muted-foreground italic truncate">{book.fileName}</p>
                   </div>
                 </div>
                 <div className="flex gap-2">
