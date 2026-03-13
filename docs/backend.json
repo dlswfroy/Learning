@@ -22,12 +22,18 @@
       "description": "A collection of questions for an exam.",
       "type": "object",
       "properties": {
-        "institutionName": { "type": "string" },
-        "examName": { "type": "string" },
+        "institution": { "type": "string" },
+        "exam": { "type": "string" },
         "classId": { "type": "string" },
         "subject": { "type": "string" },
         "time": { "type": "string" },
         "totalMarks": { "type": "string" },
+        "marksA": { "type": "number" },
+        "marksB": { "type": "number" },
+        "marksC": { "type": "number" },
+        "marksD": { "type": "number" },
+        "creativeInstruction": { "type": "string" },
+        "shortInstruction": { "type": "string" },
         "questions": {
           "type": "array",
           "items": {
@@ -49,6 +55,7 @@
           }
         },
         "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
         "userId": { "type": "string" }
       }
     },

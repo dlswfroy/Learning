@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Printer, Plus, Trash2, BookOpen, Clock, Award, Save, FileText, ListChecks, ArrowLeft, Loader2, Info } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useUser } from '@/firebase';
-import { collection, addDoc, updateDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -186,7 +186,7 @@ function CreateQuestionContent() {
     return parts;
   };
 
-  const handleSaveToDb = async () => {
+  const handleSaveToDb = () => {
     if (!user) {
       toast({ title: "লগইন প্রয়োজন", description: "প্রশ্নপত্র সেভ করতে লগইন করুন।", variant: "destructive" });
       return;
@@ -215,32 +215,34 @@ function CreateQuestionContent() {
       };
     });
 
+    const docId = editId || doc(collection(db!, 'questions')).id;
     const questionSetData = {
       ...meta,
       questions: formattedQuestions,
       userId: user.uid,
       updatedAt: serverTimestamp(),
+      ...(editId ? {} : { createdAt: serverTimestamp() })
     };
 
-    try {
-      if (editId) {
-        await updateDoc(doc(db!, 'questions', editId), questionSetData);
-        toast({ title: "সফল!", description: "প্রশ্নপত্রটি আপডেট করা হয়েছে।" });
-      } else {
-        const newDoc = await addDoc(collection(db!, 'questions'), { ...questionSetData, createdAt: serverTimestamp() });
-        localStorage.removeItem('question_draft'); // Clear draft after save
-        toast({ title: "সফল!", description: "প্রশ্নপত্রটি সেভ করা হয়েছে।" });
-        router.replace(`/create-question?id=${newDoc.id}`);
-      }
-    } catch (e: any) {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: editId ? `questions/${editId}` : 'questions',
-        operation: 'write',
-        requestResourceData: questionSetData
-      }));
-    } finally {
-      setSaving(false);
-    }
+    const docRef = doc(db!, 'questions', docId);
+    
+    setDoc(docRef, questionSetData, { merge: true })
+      .then(() => {
+        setSaving(false);
+        localStorage.removeItem('question_draft');
+        toast({ title: "সফল!", description: "প্রশ্নপত্রটি ফায়ারবেসে সেভ করা হয়েছে।" });
+        if (!editId) {
+          router.replace(`/create-question?id=${docId}`);
+        }
+      })
+      .catch(async (error) => {
+        setSaving(false);
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: docRef.path,
+          operation: 'write',
+          requestResourceData: questionSetData
+        }));
+      });
   };
 
   const handlePrint = () => {
