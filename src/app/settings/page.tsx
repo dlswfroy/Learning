@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
-import { Settings, Upload, FileText, CheckCircle, Trash2, Loader2, AlertCircle, ShieldAlert, LogIn } from 'lucide-react';
+import { Settings, Upload, FileText, CheckCircle, Trash2, Loader2, AlertCircle, ShieldAlert, LogIn, Info } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useStorage, useUser } from '@/firebase';
 import { collection, addDoc, deleteDoc, doc, serverTimestamp, getDoc } from 'firebase/firestore';
@@ -92,8 +92,9 @@ export default function SettingsPage() {
       return;
     }
 
-    if (file.size > 50 * 1024 * 1024) {
-      toast({ title: "ফাইল অনেক বড়", description: "৫০ মেগাবাইটের নিচের ফাইল আপলোড করুন।", variant: "destructive" });
+    // Increased limit to 500MB as requested
+    if (file.size > 500 * 1024 * 1024) {
+      toast({ title: "ফাইল অনেক বড়", description: "৫০০ মেগাবাইটের নিচের ফাইল আপলোড করুন।", variant: "destructive" });
       return;
     }
 
@@ -112,7 +113,7 @@ export default function SettingsPage() {
         },
         (error) => {
           setUploading(false);
-          toast({ title: "আপলোড ব্যর্থ", description: "স্টোরেজ পারমিশন চেক করুন।", variant: "destructive" });
+          toast({ title: "আপলোড ব্যর্থ", description: "ইন্টারনেট কানেকশন চেক করুন। " + error.message, variant: "destructive" });
         },
         async () => {
           const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
@@ -129,7 +130,8 @@ export default function SettingsPage() {
             .then(() => {
               setUploading(false);
               setFile(null);
-              toast({ title: "সফল", description: "বইটি সেভ করা হয়েছে।" });
+              setProgress(0);
+              toast({ title: "সফল", description: "বইটি সফলভাবে আপলোড এবং সেভ করা হয়েছে।" });
             })
             .catch(async () => {
               setUploading(false);
@@ -253,6 +255,11 @@ export default function SettingsPage() {
                   className="cursor-pointer bg-background"
                   disabled={uploading}
                 />
+                {file && file.size > 100 * 1024 * 1024 && (
+                  <p className="text-[10px] text-orange-600 flex items-center gap-1 mt-1">
+                    <Info className="w-3 h-3" /> বড় ফাইল আপলোড হতে বেশ সময় লাগতে পারে।
+                  </p>
+                )}
               </div>
             </CardContent>
             {uploading && (
@@ -260,11 +267,12 @@ export default function SettingsPage() {
                 <div className="flex justify-between text-xs font-medium">
                   <span className="text-primary flex items-center gap-1">
                     <Loader2 className="w-3 h-3 animate-spin" />
-                    আপলোড হচ্ছে...
+                    {progress < 100 ? 'আপলোড হচ্ছে...' : 'প্রসেসিং...'}
                   </span>
                   <span className="text-primary">{Math.round(progress)}%</span>
                 </div>
                 <Progress value={progress} className="h-2 bg-secondary" />
+                <p className="text-[10px] text-muted-foreground text-center">অনুগ্রহ করে অপেক্ষা করুন, এই ট্যাবটি বন্ধ করবেন না।</p>
               </div>
             )}
             <CardFooter className="flex justify-end border-t bg-muted/20 py-4">
@@ -274,7 +282,7 @@ export default function SettingsPage() {
                 className="gap-2 bg-accent hover:bg-accent/90 min-w-[120px]"
               >
                 {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                {uploading ? 'প্রসেসিং...' : 'বই সেভ করুন'}
+                {uploading ? 'অপেক্ষা করুন...' : 'বই সেভ করুন'}
               </Button>
             </CardFooter>
           </Card>
