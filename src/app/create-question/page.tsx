@@ -22,19 +22,16 @@ type Question = {
   shortMarks?: number;
 };
 
-// উন্নত গাণিতিক সংকেত প্রসেসর
+// প্রফেশনাল গাণিতিক সংকেত প্রসেসর
 function formatMath(text: string) {
   if (!text) return '';
   return text
-    // Fractions: \frac{a}{b} or \frac(a)(b)
-    .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '<span class="math-frac"><sup>$1</sup>/<sub>$2</sub></span>')
-    .replace(/\\frac\(([^)]+)\)\(([^)]+)\)/g, '<span class="math-frac"><sup>$1</sup>/<sub>$2</sub></span>')
     // Power/Superscript: x^2 or x^{10}
-    .replace(/\^\{([^}]+)\}/g, '<sup>$1</sup>')
-    .replace(/\^(\d+|[a-z]+)/g, '<sup>$1</sup>')
+    .replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>')
+    .replace(/\^(\d+|[a-z]+)/g, '<sup class="math-sup">$1</sup>')
     // Subscript: H_2O
-    .replace(/_\{([^}]+)\}/g, '<sub>$1</sub>')
-    .replace(/_(\d+|[a-z]+)/g, '<sub>$1</sub>')
+    .replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>')
+    .replace(/_(\d+|[a-z]+)/g, '<sub class="math-sub">$1</sub>')
     // Square Root: sqrt(x)
     .replace(/sqrt\(([^)]+)\)/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>')
     // Greek & Scientific Symbols
@@ -76,7 +73,7 @@ function CreateQuestionContent() {
 
   const [questions, setQuestions] = useState<Question[]>([]);
 
-  // ফায়ারবেস থেকে প্রশ্ন লোড করা
+  // ফায়ারবেস থেকে ডাটা লোড করা
   useEffect(() => {
     async function loadQuestion() {
       if (!editId || !db || !user) return;
@@ -85,7 +82,6 @@ function CreateQuestionContent() {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
-          // নিরাপত্তা নিশ্চিত করা যাতে অন্য ইউজারের প্রশ্ন এডিট না হয়
           if (data.userId !== user.uid) {
             toast({ title: "অনুমতি নেই", variant: "destructive" });
             router.push('/my-questions');
@@ -110,11 +106,12 @@ function CreateQuestionContent() {
           const reconstructed = data.questions.map((q: any) => {
             if (q.type === 'creative') {
               let content = q.stimulus || '';
-              if (q.qA && !content.includes('ক.')) content += `\nক. ${q.qA}`;
-              if (q.qB && !content.includes('খ.')) content += `\nখ. ${q.qB}`;
-              if (q.qC && !content.includes('গ.')) content += `\nগ. ${q.qC}`;
-              if (q.qD && !content.includes('ঘ.')) content += `\nঘ. ${q.qD}`;
-              return { type: 'creative', content };
+              const parts = [];
+              if (q.qA) parts.push(`ক. ${q.qA}`);
+              if (q.qB) parts.push(`খ. ${q.qB}`);
+              if (q.qC) parts.push(`গ. ${q.qC}`);
+              if (q.qD) parts.push(`ঘ. ${q.qD}`);
+              return { type: 'creative', content: content + (parts.length > 0 ? '\n' + parts.join('\n') : '') };
             }
             return { type: 'short', content: q.shortText || '', shortMarks: q.shortMarks || 2 };
           });
@@ -124,7 +121,7 @@ function CreateQuestionContent() {
         setLoading(false);
       }
     }
-    if (user) loadQuestion();
+    if (user && db) loadQuestion();
   }, [editId, db, user, router]);
 
   const subjects = useMemo(() => meta.classId ? getSubjectsForClass(meta.classId) : [], [meta.classId]);
@@ -148,28 +145,37 @@ function CreateQuestionContent() {
 
   const parseCreative = (text: string) => {
     const parts = { stimulus: '', qA: '', qB: '', qC: '', qD: '' };
-    let currentText = text;
-
+    if (!text) return parts;
+    
     const markers = ['ক.', 'খ.', 'গ.', 'ঘ.'];
-    const positions = markers.map(m => currentText.indexOf(m));
-
-    if (positions[0] !== -1) {
-      parts.stimulus = currentText.substring(0, positions[0]).trim();
+    let stimulusEnd = text.length;
+    
+    const positions = markers.map(m => text.indexOf(m));
+    const firstMarker = positions.find(p => p !== -1);
+    
+    if (firstMarker !== undefined) {
+      parts.stimulus = text.substring(0, firstMarker).trim();
       
       for (let i = 0; i < markers.length; i++) {
         const start = positions[i];
-        const end = i < markers.length - 1 && positions[i+1] !== -1 ? positions[i+1] : currentText.length;
+        if (start === -1) continue;
         
-        if (start !== -1) {
-          const content = currentText.substring(start + 2, end).trim();
-          if (i === 0) parts.qA = content;
-          else if (i === 1) parts.qB = content;
-          else if (i === 2) parts.qC = content;
-          else if (i === 3) parts.qD = content;
+        let end = text.length;
+        for (let j = i + 1; j < markers.length; j++) {
+          if (positions[j] !== -1) {
+            end = positions[j];
+            break;
+          }
         }
+        
+        const content = text.substring(start + 2, end).trim();
+        if (i === 0) parts.qA = content;
+        else if (i === 1) parts.qB = content;
+        else if (i === 2) parts.qC = content;
+        else if (i === 3) parts.qD = content;
       }
     } else {
-      parts.stimulus = currentText;
+      parts.stimulus = text.trim();
     }
     return parts;
   };
@@ -269,15 +275,15 @@ function CreateQuestionContent() {
           <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="space-y-2">
               <label className="text-sm font-semibold">প্রতিষ্ঠানের নাম</label>
-              <Input value={meta.institution || ''} onChange={e => setMeta({...meta, institution: e.target.value})} placeholder="উদা: বীরগঞ্জ সরকারি উচ্চ বিদ্যালয়" />
+              <Input value={meta.institution ?? ''} onChange={e => setMeta({...meta, institution: e.target.value})} placeholder="উদা: বীরগঞ্জ সরকারি উচ্চ বিদ্যালয়" />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-semibold">পরীক্ষার নাম</label>
-              <Input value={meta.exam || ''} onChange={e => setMeta({...meta, exam: e.target.value})} placeholder="উদা: বার্ষিক পরীক্ষা" />
+              <Input value={meta.exam ?? ''} onChange={e => setMeta({...meta, exam: e.target.value})} placeholder="উদা: বার্ষিক পরীক্ষা" />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-semibold">শ্রেণি</label>
-              <Select onValueChange={v => setMeta({...meta, classId: v})} value={meta.classId || ''}>
+              <Select onValueChange={v => setMeta({...meta, classId: v})} value={meta.classId ?? ''}>
                 <SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
                 <SelectContent>
                   {CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}
@@ -286,7 +292,7 @@ function CreateQuestionContent() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-semibold">বিষয়</label>
-              <Select onValueChange={v => setMeta({...meta, subject: v})} value={meta.subject || ''} disabled={!meta.classId}>
+              <Select onValueChange={v => setMeta({...meta, subject: v})} value={meta.subject ?? ''} disabled={!meta.classId}>
                 <SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
                 <SelectContent>
                   {subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
@@ -295,11 +301,11 @@ function CreateQuestionContent() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-semibold">সময়</label>
-              <Input value={meta.time || ''} onChange={e => setMeta({...meta, time: e.target.value})} placeholder="উদা: ২ ঘণ্টা ৩০ মিনিট" />
+              <Input value={meta.time ?? ''} onChange={e => setMeta({...meta, time: e.target.value})} placeholder="উদা: ২ ঘণ্টা ৩০ মিনিট" />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-semibold">পূর্ণমান</label>
-              <Input value={meta.totalMarks || ''} onChange={e => setMeta({...meta, totalMarks: e.target.value})} placeholder="১০০" />
+              <Input value={meta.totalMarks ?? ''} onChange={e => setMeta({...meta, totalMarks: e.target.value})} placeholder="১০০" />
             </div>
           </CardContent>
         </Card>
@@ -330,11 +336,11 @@ function CreateQuestionContent() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-sm font-bold">সৃজনশীল নির্দেশনা</label>
-            <Input value={meta.creativeInstruction || ''} onChange={e => setMeta({...meta, creativeInstruction: e.target.value})} placeholder="যেকোনো ৭টি প্রশ্নের উত্তর দাও" />
+            <Input value={meta.creativeInstruction ?? ''} onChange={e => setMeta({...meta, creativeInstruction: e.target.value})} placeholder="যেকোনো ৭টি প্রশ্নের উত্তর দাও" />
           </div>
           <div className="space-y-2">
             <label className="text-sm font-bold">সংক্ষিপ্ত নির্দেশনা</label>
-            <Input value={meta.shortInstruction || ''} onChange={e => setMeta({...meta, shortInstruction: e.target.value})} placeholder="সকল প্রশ্নের উত্তর দাও" />
+            <Input value={meta.shortInstruction ?? ''} onChange={e => setMeta({...meta, shortInstruction: e.target.value})} placeholder="সকল প্রশ্নের উত্তর দাও" />
           </div>
         </div>
 
@@ -365,14 +371,14 @@ function CreateQuestionContent() {
                 </div>
                 <Textarea 
                   placeholder={q.type === 'creative' ? "উদ্দীপক ও প্রশ্ন একসাথে (ক. খ. গ. ঘ. সহ) লিখুন।" : "সংক্ষিপ্ত প্রশ্ন লিখুন..."} 
-                  value={q.content || ''} 
+                  value={q.content ?? ''} 
                   onChange={e => updateQuestion(idx, {content: e.target.value})}
                   className="min-h-[100px] text-sm leading-relaxed"
                 />
                 {q.type === 'short' && (
                   <div className="flex items-center gap-2">
                     <label className="text-xs font-bold">নম্বর:</label>
-                    <Input type="number" className="w-16 h-8 text-center" value={q.shortMarks || 2} onChange={e => updateQuestion(idx, {shortMarks: Number(e.target.value)})} />
+                    <Input type="number" className="w-16 h-8 text-center" value={q.shortMarks ?? 2} onChange={e => updateQuestion(idx, {shortMarks: Number(e.target.value)})} />
                   </div>
                 )}
               </CardContent>
@@ -415,18 +421,16 @@ function CreateQuestionContent() {
             
             .q-block { margin-bottom: 12px; page-break-inside: avoid; }
             .stimulus { margin-bottom: 4px; white-space: pre-wrap; text-align: justify; font-size: 9pt; line-height: 1.1 !important; }
-            .sub-q { display: flex; justify-content: space-between; margin-bottom: 1px; align-items: flex-start; line-height: 1.1 !important; }
-            .mark { font-weight: bold; width: 25px; text-align: right; min-width: 25px; }
             
-            sup, sub { line-height: 0; position: relative; vertical-align: baseline; font-size: 0.75em; }
-            sup { top: -0.4em; }
-            sub { bottom: -0.2em; }
+            .sub-qs { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
+            .sub-q { display: flex; justify-content: space-between; align-items: flex-start; line-height: 1.1 !important; }
+            .q-text-part { flex: 1; text-align: justify; }
+            .mark { font-weight: bold; width: 30px; text-align: right; min-width: 30px; margin-left: 10px; }
             
-            .math-frac { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; line-height: 1; font-size: 0.85em; margin: 0 2px; }
-            .math-frac sup { border-bottom: 1px solid black; padding: 0 2px; top: 0; position: static; }
-            .math-frac sub { padding: 0 2px; bottom: 0; position: static; }
-            .math-sqrt { position: relative; display: inline-block; vertical-align: middle; }
-            .math-sqrt-stem { border-top: 1px solid black; padding-top: 1px; margin-left: 1px; display: inline-block; }
+            .math-sup { font-size: 0.75em; vertical-align: super; line-height: 0; position: relative; top: -0.2em; }
+            .math-sub { font-size: 0.75em; vertical-align: sub; line-height: 0; position: relative; bottom: -0.1em; }
+            .math-sqrt { display: inline-flex; align-items: flex-start; vertical-align: middle; }
+            .math-sqrt-stem { border-top: 1px solid currentColor; margin-top: 1px; padding-top: 1px; display: inline-block; }
             
             .no-print { display: none !important; }
           }
@@ -455,28 +459,28 @@ function CreateQuestionContent() {
                   <div key={idx} className="q-block">
                     <div className="font-bold mb-1">{idx + 1}. নিচের উদ্দীপকটি পড়ো এবং প্রশ্নগুলোর উত্তর দাও:</div>
                     <div className="stimulus" dangerouslySetInnerHTML={{ __html: formatMath(parsed.stimulus) }} />
-                    <div className="space-y-0.5">
+                    <div className="sub-qs">
                       {parsed.qA && (
                         <div className="sub-q">
-                          <span dangerouslySetInnerHTML={{ __html: 'ক. ' + formatMath(parsed.qA) }} />
+                          <span className="q-text-part" dangerouslySetInnerHTML={{ __html: 'ক. ' + formatMath(parsed.qA) }} />
                           <span className="mark">{meta.marksA}</span>
                         </div>
                       )}
                       {parsed.qB && (
                         <div className="sub-q">
-                          <span dangerouslySetInnerHTML={{ __html: 'খ. ' + formatMath(parsed.qB) }} />
+                          <span className="q-text-part" dangerouslySetInnerHTML={{ __html: 'খ. ' + formatMath(parsed.qB) }} />
                           <span className="mark">{meta.marksB}</span>
                         </div>
                       )}
                       {parsed.qC && (
                         <div className="sub-q">
-                          <span dangerouslySetInnerHTML={{ __html: 'গ. ' + formatMath(parsed.qC) }} />
+                          <span className="q-text-part" dangerouslySetInnerHTML={{ __html: 'গ. ' + formatMath(parsed.qC) }} />
                           <span className="mark">{meta.marksC}</span>
                         </div>
                       )}
                       {parsed.qD && (
                         <div className="sub-q">
-                          <span dangerouslySetInnerHTML={{ __html: 'ঘ. ' + formatMath(parsed.qD) }} />
+                          <span className="q-text-part" dangerouslySetInnerHTML={{ __html: 'ঘ. ' + formatMath(parsed.qD) }} />
                           <span className="mark">{meta.marksD}</span>
                         </div>
                       )}
@@ -495,7 +499,7 @@ function CreateQuestionContent() {
               <div className="instruction">{meta.shortInstruction}</div>
               {shortQuestions.map((q, idx) => (
                 <div key={idx} className="q-block flex justify-between items-start">
-                  <span dangerouslySetInnerHTML={{ __html: `${idx + 1}. ${formatMath(q.content)}` }} />
+                  <span className="flex-1 text-justify" dangerouslySetInnerHTML={{ __html: `${idx + 1}. ${formatMath(q.content)}` }} />
                   <span className="mark">{q.shortMarks}</span>
                 </div>
               ))}
