@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, Plus, Trash2, BookOpen, Clock, Award, Save, FileText, ArrowLeft, Loader2, Info } from 'lucide-react';
+import { Printer, Plus, Trash2, BookOpen, Clock, Award, Save, FileText, ArrowLeft, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useUser } from '@/firebase';
 import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
@@ -22,7 +22,7 @@ type Question = {
   shortMarks?: number;
 };
 
-// উন্নত গাণিতিক সংকেত প্রসেসর (LaTeX-style)
+// উন্নত গাণিতিক সংকেত প্রসেসর
 function formatMath(text: string) {
   if (!text) return '';
   return text
@@ -37,11 +37,10 @@ function formatMath(text: string) {
     // Square Root: sqrt(x)
     .replace(/sqrt\(([^)]+)\)/g, '<span class="sqrt">√<span class="sqrt-stem">$1</span></span>')
     .replace(/sqrt/g, '√')
-    // Greek Symbols
+    // Greek Symbols & Others
     .replace(/theta/g, 'θ')
     .replace(/pi/g, 'π')
     .replace(/degree/g, '°')
-    // Operators
     .replace(/\+-/g, '±')
     .replace(/\*/g, '×')
     .replace(/\//g, '÷')
@@ -162,28 +161,23 @@ function CreateQuestionContent() {
     const parts = { stimulus: '', qA: '', qB: '', qC: '', qD: '' };
     let currentText = text;
 
-    const posA = currentText.indexOf('ক.');
-    const posB = currentText.indexOf('খ.');
-    const posC = currentText.indexOf('গ.');
-    const posD = currentText.indexOf('ঘ.');
+    const markers = ['ক.', 'খ.', 'গ.', 'ঘ.'];
+    const positions = markers.map(m => currentText.indexOf(m));
 
-    if (posA !== -1) {
-      parts.stimulus = currentText.substring(0, posA).trim();
-      if (posB !== -1) {
-        parts.qA = currentText.substring(posA + 2, posB).trim();
-        if (posC !== -1) {
-          parts.qB = currentText.substring(posB + 2, posC).trim();
-          if (posD !== -1) {
-            parts.qC = currentText.substring(posC + 2, posD).trim();
-            parts.qD = currentText.substring(posD + 2).trim();
-          } else {
-            parts.qC = currentText.substring(posC + 2).trim();
-          }
-        } else {
-          parts.qB = currentText.substring(posB + 2).trim();
+    if (positions[0] !== -1) {
+      parts.stimulus = currentText.substring(0, positions[0]).trim();
+      
+      for (let i = 0; i < markers.length; i++) {
+        const start = positions[i];
+        const end = i < markers.length - 1 && positions[i+1] !== -1 ? positions[i+1] : currentText.length;
+        
+        if (start !== -1) {
+          const content = currentText.substring(start + 2, end).trim();
+          if (i === 0) parts.qA = content;
+          else if (i === 1) parts.qB = content;
+          else if (i === 2) parts.qC = content;
+          else if (i === 3) parts.qD = content;
         }
-      } else {
-        parts.qA = currentText.substring(posA + 2).trim();
       }
     } else {
       parts.stimulus = currentText;
@@ -328,7 +322,7 @@ function CreateQuestionContent() {
 
         <Card className="shadow-sm border-primary/20 bg-primary/5">
           <CardHeader className="py-2 border-b">
-            <CardTitle className="text-xs font-bold uppercase text-primary">সৃজনশীল প্রশ্নের মান বণ্টন (একবার দিন)</CardTitle>
+            <CardTitle className="text-xs font-bold uppercase text-primary">সৃজনশীল প্রশ্নের মান বণ্টন (গ্লোবাল)</CardTitle>
           </CardHeader>
           <CardContent className="pt-4 flex gap-4">
             {['ক', 'খ', 'গ', 'ঘ'].map((key, i) => (
@@ -423,30 +417,34 @@ function CreateQuestionContent() {
           @media print {
             @page { size: A4; margin: 0.5in; }
             body { 
-              font-family: 'Inter', sans-serif; 
+              font-family: 'Inter', 'SolaimanLipi', sans-serif; 
               font-size: 9pt; 
               color: black !important; 
               line-height: 1.1 !important; 
               background: white !important; 
+              margin: 0;
+              padding: 0;
             }
             .paper { width: 100%; text-align: justify; }
-            .header { text-align: center; margin-bottom: 10px; border-bottom: 2px solid black; padding-bottom: 5px; }
+            .header { text-align: center; margin-bottom: 12px; border-bottom: 2px solid black; padding-bottom: 6px; }
             .inst-name { font-size: 14pt; font-weight: 800; margin-bottom: 2px; }
             .exam-name { font-size: 11pt; font-weight: 700; margin-bottom: 2px; }
             .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px; font-size: 9pt; }
+            
             .section-label-container { text-align: center; width: 100%; margin-top: 15px; margin-bottom: 5px; }
             .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1.5px solid black; display: inline-block; padding: 0 10px; }
             .instruction { font-style: italic; font-size: 8.5pt; margin-bottom: 8px; text-align: center; width: 100%; }
+            
             .q-block { margin-bottom: 12px; page-break-inside: avoid; }
             .stimulus { margin-bottom: 4px; white-space: pre-wrap; line-height: 1.1; text-align: justify; }
             .sub-q { display: flex; justify-content: space-between; margin-bottom: 1px; align-items: flex-start; }
             .mark { font-weight: bold; width: 25px; text-align: right; min-width: 25px; }
             
-            /* উন্নত গাণিতিক স্টাইল */
-            sup, sub { line-height: 0; position: relative; vertical-align: baseline; font-size: 0.75em; }
+            /* গাণিতিক স্টাইল */
+            sup, sub { line-height: 0; position: relative; vertical-align: baseline; font-size: 0.7em; }
             sup { top: -0.4em; }
-            sub { bottom: -0.25em; }
-            .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
+            sub { bottom: -0.2em; }
+            .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.8em; margin: 0 2px; }
             .math-frac sup { position: static; top: 0; }
             .math-frac sub { position: static; bottom: 0; border-top: 0.5px solid black; }
             .sqrt { position: relative; display: inline-block; vertical-align: middle; }
