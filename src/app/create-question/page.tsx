@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, Plus, Trash2, BookOpen, Clock, Award, Save, FileText } from 'lucide-react';
+import { Printer, Plus, Trash2, BookOpen, Clock, Award, Save, FileText, ListChecks } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useUser } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -17,7 +17,7 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 type Question = {
   type: 'creative' | 'short';
-  content: string; // One box for everything
+  content: string; 
   shortMarks?: number;
 };
 
@@ -33,6 +33,10 @@ export default function CreateQuestionPage() {
     subject: '',
     time: '২ ঘণ্টা ৩০ মিনিট',
     totalMarks: '১০০',
+    marksA: 1,
+    marksB: 2,
+    marksC: 3,
+    marksD: 4,
   });
 
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -57,20 +61,9 @@ export default function CreateQuestionPage() {
   };
 
   const parseCreative = (text: string) => {
-    // Basic logic to split stimulus and parts based on markers ক. খ. গ. ঘ.
-    const parts = {
-      stimulus: '',
-      qA: '',
-      qB: '',
-      qC: '',
-      qD: ''
-    };
-
-    const markers = ['ক.', 'খ.', 'গ.', 'ঘ.'];
-    let lastIndex = 0;
-    let currentMarker = '';
-
-    // Simple parser: Find marker positions
+    const parts = { stimulus: '', qA: '', qB: '', qC: '', qD: '' };
+    
+    // Find markers
     const posA = text.indexOf('ক.');
     const posB = text.indexOf('খ.');
     const posC = text.indexOf('গ.');
@@ -112,7 +105,6 @@ export default function CreateQuestionPage() {
     }
 
     setSaving(true);
-    // Transform data for firestore to match backend.json schema if possible
     const formattedQuestions = questions.map(q => {
       if (q.type === 'creative') {
         const parsed = parseCreative(q.content);
@@ -123,7 +115,10 @@ export default function CreateQuestionPage() {
           qB: parsed.qB,
           qC: parsed.qC,
           qD: parsed.qD,
-          marksA: 1, marksB: 2, marksC: 3, marksD: 4
+          marksA: meta.marksA, 
+          marksB: meta.marksB, 
+          marksC: meta.marksC, 
+          marksD: meta.marksD
         };
       }
       return {
@@ -159,25 +154,25 @@ export default function CreateQuestionPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-20 no-print">
+    <div className="max-w-5xl mx-auto space-y-8 pb-32 no-print">
       <header className="flex items-center gap-4 border-b pb-4">
         <div className="w-12 h-12 rounded-xl bg-primary text-white flex items-center justify-center shadow-sm">
           <FileText className="w-7 h-7" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold text-primary">ম্যানুয়াল প্রশ্নপত্র নির্মাতা</h2>
-          <p className="text-sm text-muted-foreground">উদ্দীপক ও প্রশ্ন এক বক্সে লিখে বোর্ড স্ট্যান্ডার্ড প্রশ্নপত্র তৈরি করুন</p>
+          <h2 className="text-2xl font-bold text-primary">প্রশ্নপত্র নির্মাতা (বোর্ড স্ট্যান্ডার্ড)</h2>
+          <p className="text-sm text-muted-foreground">বোর্ড ফরম্যাটে প্রশ্নপত্র তৈরি ও ডাউনলোড করুন</p>
         </div>
       </header>
 
       {/* Form Metadata */}
-      <Card className="shadow-md border-primary/10">
-        <CardHeader>
+      <Card className="shadow-md border-primary/10 overflow-hidden">
+        <CardHeader className="bg-primary/5 border-b">
           <CardTitle className="text-lg flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-primary" /> পরীক্ষার সাধারণ তথ্য
           </CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div className="space-y-2">
             <label className="text-sm font-semibold">প্রতিষ্ঠানের নাম</label>
             <Input 
@@ -223,16 +218,43 @@ export default function CreateQuestionPage() {
         </CardContent>
       </Card>
 
+      {/* Global Marks Config */}
+      <Card className="shadow-sm border-accent/20">
+        <CardHeader className="py-3 bg-accent/5 border-b">
+          <CardTitle className="text-sm font-bold flex items-center gap-2">
+            <ListChecks className="w-4 h-4 text-accent" /> সৃজনশীল প্রশ্নের মান বণ্টন (ক, খ, গ, ঘ)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-4 flex gap-4">
+          <div className="flex-1 space-y-1">
+            <label className="text-[10px] font-bold uppercase text-muted-foreground">ক.</label>
+            <Input type="number" value={meta.marksA} onChange={e => setMeta({...meta, marksA: Number(e.target.value)})} />
+          </div>
+          <div className="flex-1 space-y-1">
+            <label className="text-[10px] font-bold uppercase text-muted-foreground">খ.</label>
+            <Input type="number" value={meta.marksB} onChange={e => setMeta({...meta, marksB: Number(e.target.value)})} />
+          </div>
+          <div className="flex-1 space-y-1">
+            <label className="text-[10px] font-bold uppercase text-muted-foreground">গ.</label>
+            <Input type="number" value={meta.marksC} onChange={e => setMeta({...meta, marksC: Number(e.target.value)})} />
+          </div>
+          <div className="flex-1 space-y-1">
+            <label className="text-[10px] font-bold uppercase text-muted-foreground">ঘ.</label>
+            <Input type="number" value={meta.marksD} onChange={e => setMeta({...meta, marksD: Number(e.target.value)})} />
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Questions List */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-bold text-primary">প্রশ্নসমূহ ({questions.length})</h3>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => handleAddQuestion('creative')} className="gap-1 border-primary text-primary hover:bg-primary/10">
-              <Plus className="w-4 h-4" /> সৃজনশীল যোগ করুন
+              <Plus className="w-4 h-4" /> সৃজনশীল যোগ
             </Button>
             <Button variant="outline" size="sm" onClick={() => handleAddQuestion('short')} className="gap-1 border-accent text-accent hover:bg-accent/10">
-              <Plus className="w-4 h-4" /> সংক্ষিপ্ত যোগ করুন
+              <Plus className="w-4 h-4" /> সংক্ষিপ্ত যোগ
             </Button>
           </div>
         </div>
@@ -268,9 +290,8 @@ export default function CreateQuestionPage() {
                     placeholder="উদ্দীপক লিখুন... তারপর ক. খ. গ. ঘ. দিয়ে প্রশ্নগুলো লিখুন।" 
                     value={q.content || ''} 
                     onChange={e => updateQuestion(idx, {content: e.target.value})}
-                    className="min-h-[180px]"
+                    className="min-h-[150px]"
                   />
-                  <p className="text-[10px] text-muted-foreground">টিপস: "ক.", "খ.", "গ.", "ঘ." ব্যবহার করলে সিস্টেম অটোমেটিক নম্বর ও প্রশ্ন আলাদা করে দেবে।</p>
                 </div>
               ) : (
                 <div className="flex flex-col md:flex-row gap-4">
@@ -294,12 +315,12 @@ export default function CreateQuestionPage() {
       </div>
 
       {questions.length > 0 && (
-        <div className="flex flex-col sm:flex-row justify-center gap-4 pt-8">
-          <Button onClick={handleSaveToDb} disabled={saving} variant="outline" className="gap-2 px-8 border-primary text-primary hover:bg-primary/5">
-            <Save className="w-5 h-5" /> {saving ? 'সেভ হচ্ছে...' : 'ডাটাবেসে সেভ করুন'}
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 flex gap-4 z-40 bg-background/80 backdrop-blur p-4 rounded-full border shadow-2xl no-print">
+          <Button onClick={handleSaveToDb} disabled={saving} variant="outline" className="gap-2 px-8 border-primary text-primary hover:bg-primary/5 rounded-full">
+            <Save className="w-4 h-4" /> {saving ? 'সেভ হচ্ছে...' : 'সেভ করুন'}
           </Button>
-          <Button onClick={handlePrint} size="lg" className="bg-primary hover:bg-primary/90 gap-2 px-10 shadow-lg font-bold">
-            <Printer className="w-5 h-5" /> প্রিন্ট / পিডিএফ ডাউনলোড
+          <Button onClick={handlePrint} size="lg" className="bg-primary hover:bg-primary/90 gap-2 px-10 shadow-lg font-bold rounded-full">
+            <Printer className="w-4 h-4" /> প্রিন্ট / পিডিএফ
           </Button>
         </div>
       )}
@@ -321,72 +342,71 @@ export default function CreateQuestionPage() {
               background: white;
               padding: 0;
               margin: 0;
+              line-height: 1.4;
             }
             .paper {
               width: 100%;
               text-align: justify;
-              line-height: 1.5;
             }
             .header-section {
               text-align: center;
-              margin-bottom: 25px;
+              margin-bottom: 20px;
             }
             .inst-name {
-              font-size: 14pt;
+              font-size: 13pt;
               font-weight: bold;
-              text-transform: uppercase;
-              margin-bottom: 4px;
+              margin-bottom: 2px;
             }
             .exam-title {
               font-size: 11pt;
               font-weight: bold;
-              margin-bottom: 4px;
+              margin-bottom: 2px;
             }
             .subject-meta {
-              font-size: 10pt;
+              font-size: 9.5pt;
               font-weight: bold;
             }
             .meta-line {
               display: flex;
               justify-content: space-between;
               border-bottom: 1px solid black;
-              padding-bottom: 4px;
+              padding-bottom: 2px;
               margin-bottom: 15px;
               font-weight: bold;
-              font-size: 9.5pt;
+              font-size: 9pt;
             }
             .q-block {
-              margin-bottom: 25px;
+              margin-bottom: 20px;
               page-break-inside: avoid;
             }
             .q-title {
               font-weight: bold;
-              margin-bottom: 8px;
+              margin-bottom: 6px;
             }
             .stimulus-text {
-              margin-bottom: 12px;
+              margin-bottom: 8px;
               white-space: pre-wrap;
               text-align: justify;
             }
             .sub-questions {
               display: grid;
-              gap: 4px;
+              gap: 2px;
             }
             .sub-q-row {
-              display: grid;
-              grid-template-columns: 1fr 20px;
-              gap: 10px;
+              display: flex;
+              justify-content: space-between;
               align-items: flex-start;
             }
             .q-mark {
               text-align: right;
               font-weight: bold;
+              min-width: 20px;
             }
             .short-q-block {
               display: flex;
               justify-content: space-between;
-              font-weight: bold;
-              margin-bottom: 10px;
+              margin-bottom: 8px;
+              page-break-inside: avoid;
             }
           }
           .print-only { display: none; }
@@ -418,25 +438,25 @@ export default function CreateQuestionPage() {
                       {parsed.qA && (
                         <div className="sub-q-row">
                           <span>ক. {parsed.qA}</span>
-                          <span className="q-mark">১</span>
+                          <span className="q-mark">{meta.marksA}</span>
                         </div>
                       )}
                       {parsed.qB && (
                         <div className="sub-q-row">
                           <span>খ. {parsed.qB}</span>
-                          <span className="q-mark">২</span>
+                          <span className="q-mark">{meta.marksB}</span>
                         </div>
                       )}
                       {parsed.qC && (
                         <div className="sub-q-row">
                           <span>গ. {parsed.qC}</span>
-                          <span className="q-mark">৩</span>
+                          <span className="q-mark">{meta.marksC}</span>
                         </div>
                       )}
                       {parsed.qD && (
                         <div className="sub-q-row">
                           <span>ঘ. {parsed.qD}</span>
-                          <span className="q-mark">৪</span>
+                          <span className="q-mark">{meta.marksD}</span>
                         </div>
                       )}
                     </div>
