@@ -1,10 +1,10 @@
+
 "use client";
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, GraduationCap, PlusCircle, Settings, FileText } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, Settings, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { CLASSES } from '@/lib/constants';
 
 export function BottomNav() {
   const pathname = usePathname();
@@ -17,7 +17,7 @@ export function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-primary border-t border-primary/20 text-primary-foreground z-50 h-20 shadow-lg">
+    <nav className="fixed bottom-0 left-0 right-0 bg-primary border-t border-primary/20 text-primary-foreground z-50 h-20 shadow-lg no-print">
       <div className="h-full max-w-5xl mx-auto flex items-center justify-around overflow-x-auto hide-scrollbar px-4 gap-2">
         {navItems.map((item) => {
           const isActive = pathname === item.href || (item.href !== '/' && pathname?.startsWith(item.href));

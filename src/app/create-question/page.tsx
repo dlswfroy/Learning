@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { CLASSES, getSubjectsForClass } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, Plus, Trash2, BookOpen, Clock, Award, Save, FileText, ListChecks, ArrowLeft, Loader2, Info } from 'lucide-react';
+import { Printer, Plus, Trash2, BookOpen, Clock, Award, Save, FileText, ArrowLeft, Loader2, Info } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useUser } from '@/firebase';
 import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
@@ -26,8 +26,8 @@ type Question = {
 function formatMath(text: string) {
   if (!text) return '';
   return text
-    .replace(/\^(\d+|[a-z]+)/g, '<sup>$1</sup>')
-    .replace(/_(\d+|[a-z]+)/g, '<sub>$1</sub>')
+    .replace(/\^(\d+|[a-z]+|\([^)]+\))/g, (match, p1) => `<sup>${p1.replace(/[()]/g, '')}</sup>`)
+    .replace(/_(\d+|[a-z]+|\([^)]+\))/g, (match, p1) => `<sub>${p1.replace(/[()]/g, '')}</sub>`)
     .replace(/sqrt\(([^)]+)\)/g, '√$1')
     .replace(/sqrt/g, '√')
     .replace(/\+-/g, '±')
@@ -62,7 +62,6 @@ function CreateQuestionContent() {
 
   const [questions, setQuestions] = useState<Question[]>([]);
 
-  // Load draft from localStorage on mount (only for new questions)
   useEffect(() => {
     if (!editId) {
       const savedDraft = localStorage.getItem('question_draft');
@@ -71,14 +70,11 @@ function CreateQuestionContent() {
           const { meta: dMeta, questions: dQs } = JSON.parse(savedDraft);
           setMeta(prev => ({ ...prev, ...dMeta }));
           setQuestions(dQs || []);
-        } catch (e) {
-          console.error("Failed to load draft", e);
-        }
+        } catch (e) {}
       }
     }
   }, [editId]);
 
-  // Auto-save draft to localStorage (only for new questions)
   useEffect(() => {
     if (!editId && (questions.length > 0 || meta.institution)) {
       localStorage.setItem('question_draft', JSON.stringify({ meta, questions }));
@@ -98,14 +94,14 @@ function CreateQuestionContent() {
             exam: data.exam || '',
             classId: data.classId || '',
             subject: data.subject || '',
-            time: data.time || '২ ঘণ্টা ৩০ মিনিট',
-            totalMarks: data.totalMarks || '১০০',
+            time: data.time || '',
+            totalMarks: data.totalMarks || '',
             marksA: data.marksA || 1,
             marksB: data.marksB || 2,
             marksC: data.marksC || 3,
             marksD: data.marksD || 4,
-            creativeInstruction: data.creativeInstruction || 'যেকোনো ৭টি প্রশ্নের উত্তর দাও',
-            shortInstruction: data.shortInstruction || 'সকল প্রশ্নের উত্তর দাও',
+            creativeInstruction: data.creativeInstruction || '',
+            shortInstruction: data.shortInstruction || '',
           });
           
           const reconstructed = data.questions.map((q: any) => {
@@ -121,16 +117,14 @@ function CreateQuestionContent() {
           });
           setQuestions(reconstructed);
         }
-      } catch (e) {
-        console.error(e);
-      } finally {
+      } catch (e) {} finally {
         setLoading(false);
       }
     }
     loadQuestion();
   }, [editId, db]);
 
-  const subjects = meta.classId ? getSubjectsForClass(meta.classId) : [];
+  const subjects = useMemo(() => meta.classId ? getSubjectsForClass(meta.classId) : [], [meta.classId]);
 
   const handleAddQuestion = (type: 'creative' | 'short') => {
     const newQ: Question = type === 'creative' 
@@ -151,32 +145,35 @@ function CreateQuestionContent() {
 
   const parseCreative = (text: string) => {
     const parts = { stimulus: '', qA: '', qB: '', qC: '', qD: '' };
-    // Find markers and split
-    const posA = text.indexOf('ক.');
-    const posB = text.indexOf('খ.');
-    const posC = text.indexOf('গ.');
-    const posD = text.indexOf('ঘ.');
+    const markers = ['ক.', 'খ.', 'গ.', 'ঘ.'];
+    let currentText = text;
+
+    // Split based on markers
+    const posA = currentText.indexOf('ক.');
+    const posB = currentText.indexOf('খ.');
+    const posC = currentText.indexOf('গ.');
+    const posD = currentText.indexOf('ঘ.');
 
     if (posA !== -1) {
-      parts.stimulus = text.substring(0, posA).trim();
+      parts.stimulus = currentText.substring(0, posA).trim();
       if (posB !== -1) {
-        parts.qA = text.substring(posA + 2, posB).trim();
+        parts.qA = currentText.substring(posA + 2, posB).trim();
         if (posC !== -1) {
-          parts.qB = text.substring(posB + 2, posC).trim();
+          parts.qB = currentText.substring(posB + 2, posC).trim();
           if (posD !== -1) {
-            parts.qC = text.substring(posC + 2, posD).trim();
-            parts.qD = text.substring(posD + 2).trim();
+            parts.qC = currentText.substring(posC + 2, posD).trim();
+            parts.qD = currentText.substring(posD + 2).trim();
           } else {
-            parts.qC = text.substring(posC + 2).trim();
+            parts.qC = currentText.substring(posC + 2).trim();
           }
         } else {
-          parts.qB = text.substring(posB + 2).trim();
+          parts.qB = currentText.substring(posB + 2).trim();
         }
       } else {
-        parts.qA = text.substring(posA + 2).trim();
+        parts.qA = currentText.substring(posA + 2).trim();
       }
     } else {
-      parts.stimulus = text;
+      parts.stimulus = currentText;
     }
     return parts;
   };
@@ -230,12 +227,10 @@ function CreateQuestionContent() {
           router.replace(`/create-question?id=${docId}`);
         }
       })
-      .catch(async (error) => {
+      .catch(async () => {
         setSaving(false);
         errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: docRef.path,
-          operation: 'write',
-          requestResourceData: questionSetData
+          path: docRef.path, operation: 'write', requestResourceData: questionSetData
         }));
       });
   };
@@ -274,7 +269,7 @@ function CreateQuestionContent() {
           </Button>
         </header>
 
-        <Card className="shadow-md border-primary/10">
+        <Card className="shadow-md">
           <CardHeader className="bg-primary/5 border-b py-3">
             <CardTitle className="text-base flex items-center gap-2 font-bold">
               <BookOpen className="w-4 h-4 text-primary" /> পরীক্ষার সাধারণ তথ্য
@@ -309,24 +304,25 @@ function CreateQuestionContent() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-semibold">সময়</label>
-              <Input value={meta.time || ''} onChange={e => setMeta({...meta, time: e.target.value})} />
+              <Input value={meta.time || ''} onChange={e => setMeta({...meta, time: e.target.value})} placeholder="উদা: ২ ঘণ্টা ৩০ মিনিট" />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-semibold">পূর্ণমান</label>
-              <Input value={meta.totalMarks || ''} onChange={e => setMeta({...meta, totalMarks: e.target.value})} />
+              <Input value={meta.totalMarks || ''} onChange={e => setMeta({...meta, totalMarks: e.target.value})} placeholder="১০০" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="shadow-sm border-primary/20 bg-primary/5">
           <CardHeader className="py-2 border-b">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-primary">সৃজনশীল প্রশ্নের মান বণ্টন (একবারই প্রযোজ্য)</CardTitle>
+            <CardTitle className="text-xs font-bold uppercase text-primary">সৃজনশীল প্রশ্নের মান বণ্টন (একবার দিন)</CardTitle>
           </CardHeader>
           <CardContent className="pt-4 flex gap-4">
             {['ক', 'খ', 'গ', 'ঘ'].map((key, i) => (
               <div key={key} className="flex-1 space-y-1">
                 <label className="text-xs font-bold">{key}. নম্বর</label>
-                <Input type="number" className="h-8 text-center font-bold" value={i === 0 ? meta.marksA : i === 1 ? meta.marksB : i === 2 ? meta.marksC : meta.marksD} 
+                <Input type="number" className="h-8 text-center font-bold" 
+                  value={i === 0 ? meta.marksA : i === 1 ? meta.marksB : i === 2 ? meta.marksC : meta.marksD} 
                   onChange={e => {
                     const v = Number(e.target.value);
                     if (i === 0) setMeta({...meta, marksA: v});
@@ -341,18 +337,14 @@ function CreateQuestionContent() {
         </Card>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card className="border-accent/20">
-            <CardHeader className="py-2 bg-accent/5 border-b"><CardTitle className="text-xs font-bold">সৃজনশীল নির্দেশিকা</CardTitle></CardHeader>
-            <CardContent className="pt-3">
-              <Input value={meta.creativeInstruction || ''} onChange={e => setMeta({...meta, creativeInstruction: e.target.value})} placeholder="উদা: যেকোনো ৭টি প্রশ্নের উত্তর দাও" />
-            </CardContent>
-          </Card>
-          <Card className="border-accent/20">
-            <CardHeader className="py-2 bg-accent/5 border-b"><CardTitle className="text-xs font-bold">সংক্ষিপ্ত নির্দেশিকা</CardTitle></CardHeader>
-            <CardContent className="pt-3">
-              <Input value={meta.shortInstruction || ''} onChange={e => setMeta({...meta, shortInstruction: e.target.value})} placeholder="উদা: সকল প্রশ্নের উত্তর দাও" />
-            </CardContent>
-          </Card>
+          <div className="space-y-2">
+            <label className="text-sm font-bold">সৃজনশীল নির্দেশনা</label>
+            <Input value={meta.creativeInstruction || ''} onChange={e => setMeta({...meta, creativeInstruction: e.target.value})} placeholder="যেকোনো ৭টি প্রশ্নের উত্তর দাও" />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-bold">সংক্ষিপ্ত নির্দেশনা</label>
+            <Input value={meta.shortInstruction || ''} onChange={e => setMeta({...meta, shortInstruction: e.target.value})} placeholder="সকল প্রশ্নের উত্তর দাও" />
+          </div>
         </div>
 
         <div className="space-y-4">
@@ -369,27 +361,27 @@ function CreateQuestionContent() {
           </div>
 
           {questions.map((q, idx) => (
-            <Card key={idx} className="relative group border-l-4 border-l-primary shadow-sm hover:shadow-md transition-shadow">
-              <Button variant="ghost" size="icon" className="absolute top-2 right-2 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveQuestion(idx)}>
+            <Card key={idx} className="relative border-l-4 border-l-primary">
+              <Button variant="ghost" size="icon" className="absolute top-2 right-2 text-destructive" onClick={() => handleRemoveQuestion(idx)}>
                 <Trash2 className="w-4 h-4" />
               </Button>
               <CardContent className="pt-6 space-y-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded uppercase">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded">
                     {q.type === 'creative' ? 'সৃজনশীল' : 'সংক্ষিপ্ত'}
                   </span>
                   <span className="text-sm font-bold">প্রশ্ন নং: {idx + 1}</span>
                 </div>
                 {q.type === 'creative' ? (
                   <Textarea 
-                    placeholder="উদ্দীপক ও প্রশ্ন একসাথে (ক. খ. গ. ঘ. সহ) লিখুন। উদ্দীপক... ক. প্রশ্ন খ. প্রশ্ন..." 
+                    placeholder="উদ্দীপক ও প্রশ্ন একসাথে (ক. খ. গ. ঘ. সহ) লিখুন। উদা: উদ্দীপক... ক. প্রশ্ন খ. প্রশ্ন..." 
                     value={q.content || ''} 
                     onChange={e => updateQuestion(idx, {content: e.target.value})}
-                    className="min-h-[140px] text-sm leading-relaxed"
+                    className="min-h-[150px] text-sm leading-relaxed"
                   />
                 ) : (
                   <div className="flex gap-4">
-                    <Input className="flex-1 text-sm" value={q.content || ''} onChange={e => updateQuestion(idx, {content: e.target.value})} placeholder="সংক্ষিপ্ত প্রশ্ন লিখুন..." />
+                    <Input className="flex-1" value={q.content || ''} onChange={e => updateQuestion(idx, {content: e.target.value})} placeholder="সংক্ষিপ্ত প্রশ্ন লিখুন..." />
                     <div className="flex items-center gap-2">
                       <label className="text-xs font-bold">মান:</label>
                       <Input type="number" className="w-16 h-8 text-center" value={q.shortMarks || 2} onChange={e => updateQuestion(idx, {shortMarks: Number(e.target.value)})} />
@@ -402,11 +394,11 @@ function CreateQuestionContent() {
         </div>
 
         {questions.length > 0 && (
-          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 flex gap-4 z-40 bg-background/90 backdrop-blur p-4 rounded-full border shadow-2xl no-print">
+          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 flex gap-4 z-40 bg-background/90 backdrop-blur p-4 rounded-full border shadow-2xl">
             <Button onClick={handleSaveToDb} disabled={saving} variant="outline" className="gap-2 px-8 border-primary text-primary rounded-full font-bold">
               <Save className="w-4 h-4" /> {saving ? 'সেভ হচ্ছে...' : 'সেভ করুন'}
             </Button>
-            <Button onClick={handlePrint} size="lg" className="bg-primary hover:bg-primary/90 gap-2 px-10 shadow-lg font-bold rounded-full">
+            <Button onClick={handlePrint} size="lg" className="bg-primary hover:bg-primary/90 gap-2 px-10 shadow-lg font-bold rounded-full text-white">
               <Printer className="w-4 h-4" /> প্রিন্ট / পিডিএফ
             </Button>
           </div>
@@ -417,22 +409,21 @@ function CreateQuestionContent() {
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
             @page { size: A4; margin: 0.5in; }
-            * { -webkit-print-color-adjust: exact !important; color-adjust: exact !important; }
-            body, html { background: white !important; font-family: 'Inter', sans-serif; font-size: 9pt; color: black !important; line-height: 1.0; }
-            .paper { width: 100%; text-align: justify; background: white !important; }
-            .header { text-align: center; margin-bottom: 8px; border-bottom: 1.5px solid black; padding-bottom: 4px; }
-            .inst-name { font-size: 14pt; font-weight: 800; margin-bottom: 2px; }
-            .exam-name { font-size: 11pt; font-weight: 700; margin-bottom: 2px; }
-            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 4px; font-size: 9.5pt; }
-            .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1px solid black; display: inline-block; margin-top: 12px; margin-bottom: 4px; }
-            .instruction { font-style: italic; font-size: 8.5pt; margin-bottom: 8px; }
-            .q-block { margin-bottom: 12px; page-break-inside: avoid; }
-            .stimulus { margin-bottom: 4px; white-space: pre-wrap; line-height: 1.1; }
-            .sub-q { display: flex; justify-content: space-between; margin-bottom: 1px; }
-            .mark { font-weight: bold; width: 25px; text-align: right; }
+            body { font-family: 'Inter', sans-serif; font-size: 9pt; color: black !important; line-height: 1.0; background: white !important; }
+            .paper { width: 100%; text-align: justify; }
+            .header { text-align: center; margin-bottom: 15px; border-bottom: 2px solid black; padding-bottom: 5px; }
+            .inst-name { font-size: 16pt; font-weight: 800; margin-bottom: 2px; }
+            .exam-name { font-size: 12pt; font-weight: 700; margin-bottom: 2px; }
+            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px; font-size: 10pt; }
+            .section-label { font-size: 11pt; font-weight: bold; border-bottom: 1.5px solid black; display: inline-block; margin-top: 15px; margin-bottom: 5px; }
+            .instruction { font-style: italic; font-size: 9pt; margin-bottom: 10px; }
+            .q-block { margin-bottom: 15px; page-break-inside: avoid; }
+            .stimulus { margin-bottom: 5px; white-space: pre-wrap; line-height: 1.1; }
+            .sub-q { display: flex; justify-content: space-between; margin-bottom: 2px; }
+            .mark { font-weight: bold; width: 30px; text-align: right; }
             sup { vertical-align: super; font-size: 0.7em; }
             sub { vertical-align: sub; font-size: 0.7em; }
-            .no-print { display: none !important; visibility: hidden !important; opacity: 0 !important; height: 0 !important; pointer-events: none !important; }
+            .no-print { display: none !important; }
           }
         `}} />
         
