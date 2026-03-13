@@ -183,7 +183,7 @@ export default function SettingsPage() {
   if (userLoading || adminChecking) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh]">
-        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+        <Loader2 className="w-10 h-10 animate-spin text-primary mb-2" />
         <p className="mt-4 text-muted-foreground font-medium">অ্যাক্সেস চেক করা হচ্ছে...</p>
       </div>
     );
@@ -253,7 +253,7 @@ export default function SettingsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">শ্রেণি</label>
-                  <Select onValueChange={setClassId} value={classId || ''}>
+                  <Select onValueChange={(v) => setClassId(v || '')} value={classId || ''}>
                     <SelectTrigger className="bg-background">
                       <SelectValue placeholder="নির্বাচন করুন" />
                     </SelectTrigger>
@@ -267,7 +267,7 @@ export default function SettingsPage() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">বিষয়</label>
-                  <Select onValueChange={setSubject} value={subject || ''} disabled={!classId}>
+                  <Select onValueChange={(v) => setSubject(v || '')} value={subject || ''} disabled={!classId}>
                     <SelectTrigger className="bg-background">
                       <SelectValue placeholder="নির্বাচন করুন" />
                     </SelectTrigger>

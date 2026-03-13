@@ -22,25 +22,29 @@ type Question = {
   shortMarks?: number;
 };
 
-// নিখুঁত গাণিতিক সংকেত প্রসেসর
+// নিখুঁত গাণিতিক সংকেত প্রসেসর - বোর্ড স্ট্যান্ডার্ড
 function formatMath(text: string) {
   if (!text) return '';
   
-  // স্পেশাল ক্যারেক্টার প্রোটেকশন
   let formatted = text;
   
   formatted = formatted
-    // Fractions: \frac{num}{den}
+    // Fractions: \frac{num}{den} or 1/x ->Stacked fraction look
     .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>')
+    .replace(/(\d+|[a-z])\/(\d+|[a-z])/g, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>')
+    
     // Power: x^2 or x^{10}
-    .replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>')
-    .replace(/\^(\d+|[a-z]+)/g, '<sup class="math-sup">$1</sup>')
+    .replace(/\^\{([^}]+)\}/g, '<span class="math-sup">$1</span>')
+    .replace(/\^(\d+|[a-z])/g, '<span class="math-sup">$1</span>')
+    
     // Subscript: H_2O
-    .replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>')
-    .replace(/_(\d+|[a-z]+)/g, '<sub class="math-sub">$1</sub>')
+    .replace(/_\{([^}]+)\}/g, '<span class="math-sub">$1</span>')
+    .replace(/_(\d+|[a-z])/g, '<span class="math-sub">$1</span>')
+    
     // Square Root: \sqrt{x} or sqrt(x)
     .replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>')
     .replace(/sqrt\(([^)]+)\)/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>')
+    
     // Symbols
     .replace(/theta/g, '&theta;')
     .replace(/pi/g, '&pi;')
@@ -400,31 +404,31 @@ function CreateQuestionContent() {
               padding: 0;
             }
             .paper { width: 100%; text-align: justify; }
-            .header { text-align: center; margin-bottom: 15px; border-bottom: 2px solid black; padding-bottom: 8px; }
+            .header { text-align: center; margin-bottom: 10px; border-bottom: 2px solid black; padding-bottom: 8px; }
             .inst-name { font-size: 14pt; font-weight: 800; margin-bottom: 2px; text-transform: uppercase; }
             .exam-name { font-size: 10pt; font-weight: 700; margin-bottom: 2px; }
             .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px; }
             
-            .section-label-container { text-align: center; width: 100%; margin-top: 20px; margin-bottom: 5px; }
-            .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1.5px solid black; display: inline-block; padding: 0 10px; }
-            .instruction { font-style: italic; font-size: 8.5pt; margin-bottom: 10px; text-align: center; width: 100%; }
+            .section-header-container { text-align: center; width: 100%; margin-top: 15px; margin-bottom: 5px; position: relative; }
+            .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1.5px solid black; display: inline-block; padding: 0 15px; }
+            .instruction { font-style: italic; font-size: 8.5pt; margin-bottom: 8px; text-align: center; display: block; width: 100%; }
             
-            .q-block { margin-bottom: 15px; page-break-inside: avoid; }
-            .stimulus { margin-bottom: 5px; white-space: pre-wrap; text-align: justify; }
+            .q-block { margin-bottom: 12px; page-break-inside: avoid; clear: both; }
+            .stimulus { margin-bottom: 4px; white-space: pre-wrap; text-align: justify; display: block; }
             
-            .sub-qs { display: flex; flex-direction: column; gap: 3px; margin-top: 5px; }
-            .sub-q { display: flex; justify-content: space-between; align-items: flex-start; }
+            .sub-qs { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
+            .sub-q { display: flex; justify-content: space-between; align-items: flex-start; line-height: 1.1; }
             .q-text-part { flex: 1; text-align: justify; }
             .mark { font-weight: bold; width: 30px; text-align: right; min-width: 30px; margin-left: 10px; }
             
-            /* Math Styles */
-            .math-sup { font-size: 0.75em; vertical-align: super; line-height: 0; }
-            .math-sub { font-size: 0.75em; vertical-align: sub; line-height: 0; }
-            .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
-            .math-num { border-bottom: 0.5px solid currentColor; padding: 0 2px; }
+            /* Math Styles - Enhanced for stack fractions and powers */
+            .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.9em; margin: 0 4px; line-height: 1; }
+            .math-num { border-bottom: 0.5pt solid black; padding: 0 2px; }
             .math-den { padding: 0 2px; }
+            .math-sup { font-size: 0.7em; vertical-align: top; line-height: 0; margin-left: 1px; position: relative; top: -0.3em; }
+            .math-sub { font-size: 0.7em; vertical-align: bottom; line-height: 0; margin-left: 1px; position: relative; bottom: -0.2em; }
             .math-sqrt { display: inline-flex; align-items: flex-start; vertical-align: middle; }
-            .math-sqrt-stem { border-top: 1px solid currentColor; margin-top: 1px; padding-top: 1px; display: inline-block; }
+            .math-sqrt-stem { border-top: 1px solid black; margin-top: 1px; padding-top: 1px; display: inline-block; }
             
             .no-print { display: none !important; }
           }
@@ -443,7 +447,7 @@ function CreateQuestionContent() {
 
           {creativeQuestions.length > 0 && (
             <div className="section">
-              <div className="section-label-container">
+              <div className="section-header-container">
                 <div className="section-label">সৃজনশীল প্রশ্ন</div>
               </div>
               <div className="instruction">{meta.creativeInstruction}</div>
@@ -487,7 +491,7 @@ function CreateQuestionContent() {
 
           {shortQuestions.length > 0 && (
             <div className="section">
-              <div className="section-label-container">
+              <div className="section-header-container">
                 <div className="section-label">সংক্ষিপ্ত প্রশ্ন</div>
               </div>
               <div className="instruction">{meta.shortInstruction}</div>
