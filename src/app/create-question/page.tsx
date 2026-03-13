@@ -17,21 +17,21 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
 type Question = {
+  id: string;
   type: 'creative' | 'short';
   content: string; 
   shortMarks?: number;
 };
 
-// নিখুঁত গাণিতিক সংকেত প্রসেসর - বোর্ড স্ট্যান্ডার্ড
+// গাণিতিক সংকেত প্রসেসর - বোর্ড স্ট্যান্ডার্ড
 function formatMath(text: string) {
   if (!text) return '';
   
   let formatted = text;
   
   formatted = formatted
-    // Fractions: \frac{num}{den} or 1/x ->Stacked fraction look
+    // Fractions: \frac{num}{den} -> Stacked look
     .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>')
-    .replace(/(\d+|[a-z])\/(\d+|[a-z])/g, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>')
     
     // Power: x^2 or x^{10}
     .replace(/\^\{([^}]+)\}/g, '<span class="math-sup">$1</span>')
@@ -41,7 +41,7 @@ function formatMath(text: string) {
     .replace(/_\{([^}]+)\}/g, '<span class="math-sub">$1</span>')
     .replace(/_(\d+|[a-z])/g, '<span class="math-sub">$1</span>')
     
-    // Square Root: \sqrt{x} or sqrt(x)
+    // Square Root: \sqrt{x}
     .replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>')
     .replace(/sqrt\(([^)]+)\)/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>')
     
@@ -133,7 +133,7 @@ function CreateQuestionContent() {
             shortInstruction: data.shortInstruction || '',
           });
           
-          const reconstructed = data.questions.map((q: any) => {
+          const reconstructed = data.questions.map((q: any, idx: number) => {
             if (q.type === 'creative') {
               let content = q.stimulus || '';
               const parts = [];
@@ -141,9 +141,18 @@ function CreateQuestionContent() {
               if (q.qB) parts.push(`খ. ${q.qB}`);
               if (q.qC) parts.push(`গ. ${q.qC}`);
               if (q.qD) parts.push(`ঘ. ${q.qD}`);
-              return { type: 'creative', content: content + (parts.length > 0 ? '\n' + parts.join('\n') : '') };
+              return { 
+                id: Math.random().toString(36).substr(2, 9),
+                type: 'creative', 
+                content: content + (parts.length > 0 ? '\n' + parts.join('\n') : '') 
+              };
             }
-            return { type: 'short', content: q.shortText || '', shortMarks: q.shortMarks || 2 };
+            return { 
+              id: Math.random().toString(36).substr(2, 9),
+              type: 'short', 
+              content: q.shortText || '', 
+              shortMarks: q.shortMarks || 2 
+            };
           });
           setQuestions(reconstructed);
         }
@@ -157,20 +166,21 @@ function CreateQuestionContent() {
   const subjects = useMemo(() => meta.classId ? getSubjectsForClass(meta.classId) : [], [meta.classId]);
 
   const handleAddQuestion = (type: 'creative' | 'short') => {
-    const newQ: Question = type === 'creative' 
-      ? { type, content: '' }
-      : { type, content: '', shortMarks: 2 };
+    const newQ: Question = {
+      id: Math.random().toString(36).substr(2, 9),
+      type,
+      content: '',
+      ...(type === 'short' ? { shortMarks: 2 } : {})
+    };
     setQuestions([...questions, newQ]);
   };
 
-  const handleRemoveQuestion = (index: number) => {
-    setQuestions(questions.filter((_, i) => i !== index));
+  const handleRemoveQuestion = (id: string) => {
+    setQuestions(questions.filter(q => q.id !== id));
   };
 
-  const updateQuestion = (index: number, data: Partial<Question>) => {
-    const updated = [...questions];
-    updated[index] = { ...updated[index], ...data };
-    setQuestions(updated);
+  const updateQuestion = (id: string, data: Partial<Question>) => {
+    setQuestions(questions.map(q => q.id === id ? { ...q, ...data } : q));
   };
 
   const parseCreative = (text: string) => {
@@ -193,7 +203,8 @@ function CreateQuestionContent() {
             break;
           }
         }
-        const content = text.substring(start + 2, end).trim();
+        // Remove the marker itself from the content to avoid duplication
+        const content = text.substring(start + markers[i].length, end).trim();
         if (i === 0) parts.qA = content;
         else if (i === 1) parts.qB = content;
         else if (i === 2) parts.qC = content;
@@ -358,8 +369,8 @@ function CreateQuestionContent() {
           </div>
 
           {questions.map((q, idx) => (
-            <Card key={idx} className="relative border-l-4 border-l-primary">
-              <Button variant="ghost" size="icon" className="absolute top-2 right-2 text-destructive" onClick={() => handleRemoveQuestion(idx)}>
+            <Card key={q.id} className="relative border-l-4 border-l-primary">
+              <Button variant="ghost" size="icon" className="absolute top-2 right-2 text-destructive" onClick={() => handleRemoveQuestion(q.id)}>
                 <Trash2 className="w-4 h-4" />
               </Button>
               <CardContent className="pt-6 space-y-4">
@@ -372,7 +383,7 @@ function CreateQuestionContent() {
                 <Textarea 
                   placeholder={q.type === 'creative' ? "উদ্দীপক ও প্রশ্ন একসাথে (ক. খ. গ. ঘ. সহ) লিখুন।" : "সংক্ষিপ্ত প্রশ্ন লিখুন..."} 
                   value={q.content || ''} 
-                  onChange={e => updateQuestion(idx, {content: e.target.value})}
+                  onChange={e => updateQuestion(q.id, {content: e.target.value})}
                   className="min-h-[100px] text-sm leading-relaxed"
                 />
               </CardContent>
@@ -413,20 +424,20 @@ function CreateQuestionContent() {
             .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1.5px solid black; display: inline-block; padding: 0 15px; }
             .instruction { font-style: italic; font-size: 8.5pt; margin-bottom: 8px; text-align: center; display: block; width: 100%; }
             
-            .q-block { margin-bottom: 12px; page-break-inside: avoid; clear: both; }
-            .stimulus { margin-bottom: 4px; white-space: pre-wrap; text-align: justify; display: block; }
+            .q-block { margin-bottom: 12px; page-break-inside: avoid; clear: both; width: 100%; position: relative; }
+            .stimulus { margin-bottom: 6px; white-space: pre-wrap; text-align: justify; display: block; }
             
-            .sub-qs { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
-            .sub-q { display: flex; justify-content: space-between; align-items: flex-start; line-height: 1.1; }
+            .sub-qs { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+            .sub-q { display: flex; justify-content: space-between; align-items: flex-start; line-height: 1.1; width: 100%; }
             .q-text-part { flex: 1; text-align: justify; }
             .mark { font-weight: bold; width: 30px; text-align: right; min-width: 30px; margin-left: 10px; }
             
-            /* Math Styles - Enhanced for stack fractions and powers */
-            .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.9em; margin: 0 4px; line-height: 1; }
+            /* Enhanced Math Styles - No Overlap */
+            .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; line-height: 1; }
             .math-num { border-bottom: 0.5pt solid black; padding: 0 2px; }
             .math-den { padding: 0 2px; }
-            .math-sup { font-size: 0.7em; vertical-align: top; line-height: 0; margin-left: 1px; position: relative; top: -0.3em; }
-            .math-sub { font-size: 0.7em; vertical-align: bottom; line-height: 0; margin-left: 1px; position: relative; bottom: -0.2em; }
+            .math-sup { font-size: 0.7em; vertical-align: top; line-height: 0; position: relative; top: -0.2em; margin-left: 1px; }
+            .math-sub { font-size: 0.7em; vertical-align: bottom; line-height: 0; position: relative; bottom: -0.1em; margin-left: 1px; }
             .math-sqrt { display: inline-flex; align-items: flex-start; vertical-align: middle; }
             .math-sqrt-stem { border-top: 1px solid black; margin-top: 1px; padding-top: 1px; display: inline-block; }
             
@@ -454,7 +465,7 @@ function CreateQuestionContent() {
               {creativeQuestions.map((q, idx) => {
                 const parsed = parseCreative(q.content);
                 return (
-                  <div key={idx} className="q-block">
+                  <div key={q.id} className="q-block">
                     <div className="font-bold mb-1">{idx + 1}. নিচের উদ্দীপকটি পড়ো এবং প্রশ্নগুলোর উত্তর দাও:</div>
                     <div className="stimulus" dangerouslySetInnerHTML={{ __html: formatMath(parsed.stimulus) }} />
                     <div className="sub-qs">
@@ -496,7 +507,7 @@ function CreateQuestionContent() {
               </div>
               <div className="instruction">{meta.shortInstruction}</div>
               {shortQuestions.map((q, idx) => (
-                <div key={idx} className="q-block flex justify-between items-start">
+                <div key={q.id} className="q-block flex justify-between items-start">
                   <span className="flex-1 text-justify" dangerouslySetInnerHTML={{ __html: `${idx + 1}. ${formatMath(q.content)}` }} />
                   <span className="mark">{q.shortMarks}</span>
                 </div>

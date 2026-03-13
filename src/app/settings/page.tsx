@@ -48,7 +48,7 @@ export default function SettingsPage() {
         const adminDoc = await getDoc(adminDocRef);
         
         if (adminDoc.exists()) {
-          setIsAdmin(adminDoc.data().adminUid === user.uid);
+          setIsAdmin(adminDoc.data()?.adminUid === user.uid);
         } else {
           await setDoc(adminDocRef, { adminUid: user.uid });
           setIsAdmin(true);
