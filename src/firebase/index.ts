@@ -3,12 +3,14 @@
 import { getFirebaseApp } from './config';
 import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
+import { getStorage } from 'firebase/storage';
 
 export function initializeFirebase() {
   const app = getFirebaseApp();
   const firestore = getFirestore(app);
   const auth = getAuth(app);
-  return { app, firestore, auth };
+  const storage = getStorage(app);
+  return { app, firestore, auth, storage };
 }
 
 export * from './provider';

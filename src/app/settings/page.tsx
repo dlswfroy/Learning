@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -9,13 +8,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Settings, Upload, FileText, CheckCircle, Trash2, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { useFirestore, useCollection } from '@/firebase';
+import { useFirestore, useCollection, useStorage } from '@/firebase';
 import { collection, addDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function SettingsPage() {
   const db = useFirestore();
+  const storage = useStorage();
   const [classId, setClassId] = useState('');
   const [subject, setSubject] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -30,8 +31,8 @@ export default function SettingsPage() {
 
   const subjects = classId ? getSubjectsForClass(classId) : [];
 
-  const handleUpload = () => {
-    if (!classId || !subject || !file || !db) {
+  const handleUpload = async () => {
+    if (!classId || !subject || !file || !db || !storage) {
       toast({
         title: "তথ্য অসম্পূর্ণ",
         description: "শ্রেণি, বিষয় এবং ফাইল নির্বাচন করুন।",
@@ -42,36 +43,50 @@ export default function SettingsPage() {
 
     setUploading(true);
     
-    // For prototype purposes, we use a sample PDF URL since we are not uploading to Firebase Storage yet
-    const samplePdfUrl = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
+    try {
+      // 1. Upload file to Firebase Storage
+      const storagePath = `books/${classId}/${subject}/${file.name}`;
+      const storageRef = ref(storage, storagePath);
+      const snapshot = await uploadBytes(storageRef, file);
+      const downloadUrl = await getDownloadURL(snapshot.ref);
 
-    const bookData = {
-      classId,
-      className: CLASSES.find(c => c.id === classId)?.label,
-      subject,
-      fileName: file.name,
-      pdfUrl: samplePdfUrl,
-      uploadedAt: serverTimestamp(),
-    };
+      // 2. Save book metadata to Firestore
+      const bookData = {
+        classId,
+        className: CLASSES.find(c => c.id === classId)?.label,
+        subject,
+        fileName: file.name,
+        pdfUrl: downloadUrl,
+        uploadedAt: serverTimestamp(),
+      };
 
-    addDoc(collection(db, 'books'), bookData)
-      .then(() => {
-        setUploading(false);
-        setFile(null);
-        toast({
-          title: "আপলোড সফল",
-          description: `${subject} বইটি সেভ করা হয়েছে। এখন আপনি এটি পড়তে পারবেন।`,
+      addDoc(collection(db, 'books'), bookData)
+        .then(() => {
+          setUploading(false);
+          setFile(null);
+          toast({
+            title: "আপলোড সফল",
+            description: `${subject} বইটি সেভ করা হয়েছে। এখন আপনি এটি পড়তে পারবেন।`,
+          });
+        })
+        .catch(async (error) => {
+          setUploading(false);
+          const permissionError = new FirestorePermissionError({
+            path: 'books',
+            operation: 'create',
+            requestResourceData: bookData,
+          });
+          errorEmitter.emit('permission-error', permissionError);
         });
-      })
-      .catch(async (error) => {
-        setUploading(false);
-        const permissionError = new FirestorePermissionError({
-          path: 'books',
-          operation: 'create',
-          requestResourceData: bookData,
-        });
-        errorEmitter.emit('permission-error', permissionError);
+
+    } catch (error: any) {
+      setUploading(false);
+      toast({
+        title: "আপলোড ব্যর্থ",
+        description: error.message || "ফাইল আপলোড করতে সমস্যা হয়েছে।",
+        variant: "destructive",
       });
+    }
   };
 
   const removeBook = (bookId: string) => {
