@@ -22,17 +22,36 @@ type Question = {
   shortMarks?: number;
 };
 
-// Utility to format math symbols for printing
+// Advanced Utility to format math symbols for professional printing
 function formatMath(text: string) {
   if (!text) return '';
   return text
+    // Power/Exponent: x^2 or x^(n+1)
     .replace(/\^(\d+|[a-z]+|\([^)]+\))/g, (match, p1) => `<sup>${p1.replace(/[()]/g, '')}</sup>`)
+    // Subscript: H_2O or x_i
     .replace(/_(\d+|[a-z]+|\([^)]+\))/g, (match, p1) => `<sub>${p1.replace(/[()]/g, '')}</sub>`)
-    .replace(/sqrt\(([^)]+)\)/g, '√$1')
+    // Square Root: sqrt(x)
+    .replace(/sqrt\(([^)]+)\)/g, '√<span style="text-decoration:overline; margin-left:-2px;">$1</span>')
     .replace(/sqrt/g, '√')
+    // Common Math Symbols
     .replace(/\+-/g, '±')
     .replace(/degree/g, '°')
-    .replace(/\*/g, '×');
+    .replace(/theta/g, 'θ')
+    .replace(/pi/g, 'π')
+    .replace(/alpha/g, 'α')
+    .replace(/beta/g, 'β')
+    .replace(/gamma/g, 'γ')
+    .replace(/phi/g, 'φ')
+    .replace(/omega/g, 'ω')
+    .replace(/lambda/g, 'λ')
+    .replace(/delta/g, 'Δ')
+    .replace(/sigma/g, 'σ')
+    .replace(/\*/g, '×')
+    .replace(/\//g, '÷')
+    .replace(/<=/g, '≤')
+    .replace(/>=/g, '≥')
+    .replace(/!=/g, '≠')
+    .replace(/approx/g, '≈');
 }
 
 function CreateQuestionContent() {
@@ -145,7 +164,6 @@ function CreateQuestionContent() {
 
   const parseCreative = (text: string) => {
     const parts = { stimulus: '', qA: '', qB: '', qC: '', qD: '' };
-    const markers = ['ক.', 'খ.', 'গ.', 'ঘ.'];
     let currentText = text;
 
     // Split based on markers
@@ -415,14 +433,16 @@ function CreateQuestionContent() {
             .inst-name { font-size: 16pt; font-weight: 800; margin-bottom: 2px; }
             .exam-name { font-size: 12pt; font-weight: 700; margin-bottom: 2px; }
             .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px; font-size: 10pt; }
-            .section-label { font-size: 11pt; font-weight: bold; border-bottom: 1.5px solid black; display: inline-block; margin-top: 15px; margin-bottom: 5px; }
-            .instruction { font-style: italic; font-size: 9pt; margin-bottom: 10px; }
+            .section-label-container { text-align: center; width: 100%; margin-top: 20px; margin-bottom: 10px; }
+            .section-label { font-size: 11pt; font-weight: bold; border-bottom: 1.5px solid black; display: inline-block; padding: 0 10px; }
+            .instruction { font-style: italic; font-size: 9pt; margin-bottom: 10px; text-align: center; width: 100%; }
             .q-block { margin-bottom: 15px; page-break-inside: avoid; }
-            .stimulus { margin-bottom: 5px; white-space: pre-wrap; line-height: 1.1; }
-            .sub-q { display: flex; justify-content: space-between; margin-bottom: 2px; }
-            .mark { font-weight: bold; width: 30px; text-align: right; }
+            .stimulus { margin-bottom: 5px; white-space: pre-wrap; line-height: 1.1; text-align: justify; }
+            .sub-q { display: flex; justify-content: space-between; margin-bottom: 2px; align-items: flex-start; }
+            .mark { font-weight: bold; width: 30px; text-align: right; min-width: 30px; }
             sup { vertical-align: super; font-size: 0.7em; }
             sub { vertical-align: sub; font-size: 0.7em; }
+            .math-text { font-family: 'Times New Roman', serif; font-style: italic; }
             .no-print { display: none !important; }
           }
         `}} />
@@ -440,7 +460,9 @@ function CreateQuestionContent() {
 
           {creativeQuestions.length > 0 && (
             <div className="section">
-              <div className="section-label">সৃজনশীল প্রশ্ন</div>
+              <div className="section-label-container">
+                <div className="section-label">সৃজনশীল প্রশ্ন</div>
+              </div>
               <div className="instruction">{meta.creativeInstruction}</div>
               {creativeQuestions.map((q, idx) => {
                 const parsed = parseCreative(q.content);
@@ -482,10 +504,12 @@ function CreateQuestionContent() {
 
           {shortQuestions.length > 0 && (
             <div className="section">
-              <div className="section-label">সংক্ষিপ্ত প্রশ্ন</div>
+              <div className="section-label-container">
+                <div className="section-label">সংক্ষিপ্ত প্রশ্ন</div>
+              </div>
               <div className="instruction">{meta.shortInstruction}</div>
               {shortQuestions.map((q, idx) => (
-                <div key={idx} className="q-block flex justify-between">
+                <div key={idx} className="q-block flex justify-between items-start">
                   <span dangerouslySetInnerHTML={{ __html: `${idx + 1}. ${formatMath(q.content)}` }} />
                   <span className="mark">{q.shortMarks}</span>
                 </div>
