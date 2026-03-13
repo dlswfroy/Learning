@@ -50,6 +50,7 @@ export default function SettingsPage() {
         if (adminDoc.exists()) {
           setIsAdmin(adminDoc.data().adminUid === user.uid);
         } else {
+          // প্রথম ইউজার এডমিন
           await setDoc(adminDocRef, { adminUid: user.uid });
           setIsAdmin(true);
         }

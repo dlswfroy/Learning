@@ -22,7 +22,7 @@ type Question = {
   shortMarks?: number;
 };
 
-// প্রফেশনাল গাণিতিক সংকেত প্রসেসর
+// প্রফেশনাল গাণিতিক সংকেত প্রসেসর (HTML ভিত্তিক)
 function formatMath(text: string) {
   if (!text) return '';
   return text
@@ -34,18 +34,16 @@ function formatMath(text: string) {
     .replace(/_(\d+|[a-z]+)/g, '<sub class="math-sub">$1</sub>')
     // Square Root: sqrt(x)
     .replace(/sqrt\(([^)]+)\)/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>')
-    // Fraction: \frac{a}{b}
-    .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>')
     // Greek & Scientific Symbols
-    .replace(/theta/g, 'θ')
-    .replace(/pi/g, 'π')
-    .replace(/degree/g, '°')
-    .replace(/\+-/g, '±')
-    .replace(/\*/g, '×')
-    .replace(/\//g, '÷')
-    .replace(/<=/g, '≤')
-    .replace(/>=/g, '≥')
-    .replace(/!=/g, '≠');
+    .replace(/theta/g, '&theta;')
+    .replace(/pi/g, '&pi;')
+    .replace(/degree/g, '&deg;')
+    .replace(/\+-/g, '&plusmn;')
+    .replace(/\*/g, '&times;')
+    .replace(/\//g, '&divide;')
+    .replace(/<=/g, '&le;')
+    .replace(/>=/g, '&ge;')
+    .replace(/!=/g, '&ne;');
 }
 
 function CreateQuestionContent() {
@@ -152,7 +150,7 @@ function CreateQuestionContent() {
     const markers = ['ক.', 'খ.', 'গ.', 'ঘ.'];
     let positions = markers.map(m => text.indexOf(m));
     
-    // Find first available marker
+    // প্রথম মার্কারের পজিশন খুঁজি
     const firstMarkerIndex = positions.findIndex(p => p !== -1);
     
     if (firstMarkerIndex !== -1) {
@@ -434,9 +432,6 @@ function CreateQuestionContent() {
             .math-sub { font-size: 0.75em; vertical-align: sub; line-height: 0; position: relative; bottom: -0.1em; }
             .math-sqrt { display: inline-flex; align-items: flex-start; vertical-align: middle; }
             .math-sqrt-stem { border-top: 1px solid currentColor; margin-top: 1px; padding-top: 1px; display: inline-block; }
-            .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
-            .math-num { border-bottom: 1px solid currentColor; padding: 0 2px; line-height: 1; }
-            .math-den { padding: 0 2px; line-height: 1; }
             
             .no-print { display: none !important; }
           }
