@@ -8,17 +8,21 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
-import { Settings, Upload, FileText, CheckCircle, Trash2, Loader2, AlertCircle } from 'lucide-react';
+import { Settings, Upload, FileText, CheckCircle, Trash2, Loader2, AlertCircle, LogIn } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { useFirestore, useCollection, useStorage } from '@/firebase';
-import { collection, addDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { useFirestore, useCollection, useStorage, useUser, useAuth } from '@/firebase';
+import { collection, addDoc, deleteDoc, doc, serverTimestamp, query, where } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 
 export default function SettingsPage() {
   const db = useFirestore();
   const storage = useStorage();
+  const auth = useAuth();
+  const { user, loading: userLoading } = useUser();
+  
   const [classId, setClassId] = useState('');
   const [subject, setSubject] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -43,11 +47,39 @@ export default function SettingsPage() {
 
   const subjects = classId ? getSubjectsForClass(classId) : [];
 
+  const handleLogin = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      toast({ variant: "destructive", title: "লগইন ব্যর্থ" });
+    }
+  };
+
   const handleUpload = async () => {
+    if (!user) {
+      toast({
+        title: "লগইন প্রয়োজন",
+        description: "ফাইল আপলোড করতে অনুগ্রহ করে প্রথমে লগইন করুন।",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!classId || !subject || !file || !db || !storage) {
       toast({
         title: "তথ্য অসম্পূর্ণ",
         description: "শ্রেণি, বিষয় এবং ফাইল নির্বাচন করুন।",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check file size (limit to 50MB for example)
+    if (file.size > 50 * 1024 * 1024) {
+      toast({
+        title: "ফাইল অনেক বড়",
+        description: "অনুগ্রহ করে ৫০ মেগাবাইটের নিচের ফাইল আপলোড করুন।",
         variant: "destructive",
       });
       return;
@@ -69,11 +101,19 @@ export default function SettingsPage() {
           }
         },
         (error) => {
-          console.error("Upload error:", error);
+          console.error("Upload error detail:", error);
           setUploading(false);
+          let message = "ফায়ারবেস স্টোরেজে ফাইল আপলোড করা যায়নি।";
+          
+          if (error.code === 'storage/unauthorized') {
+            message = "আপনার এই ফাইলটি আপলোড করার অনুমতি নেই। লগইন করুন।";
+          } else if (error.code === 'storage/canceled') {
+            message = "আপলোড বাতিল করা হয়েছে।";
+          }
+          
           toast({
             title: "আপলোড ব্যর্থ",
-            description: "ফায়ারবেস স্টোরেজে ফাইল আপলোড করা যায়নি। আপনার ইন্টারনেট সংযোগ বা পারমিশন চেক করুন।",
+            description: message,
             variant: "destructive",
           });
         },
@@ -87,6 +127,7 @@ export default function SettingsPage() {
               fileName: file.name,
               pdfUrl: downloadUrl,
               uploadedAt: serverTimestamp(),
+              userId: user.uid,
             };
 
             addDoc(collection(db, 'books'), bookData)
@@ -130,7 +171,7 @@ export default function SettingsPage() {
   };
 
   const removeBook = (bookId: string) => {
-    if (!db) return;
+    if (!db || !user) return;
     
     if (!confirm("আপনি কি নিশ্চিত যে আপনি এই বইটি মুছে ফেলতে চান?")) return;
 
@@ -159,7 +200,23 @@ export default function SettingsPage() {
         </div>
       </header>
 
-      <section className="space-y-4">
+      {!userLoading && !user && (
+        <Card className="border-accent/30 bg-accent/5">
+          <CardContent className="pt-6 flex flex-col items-center text-center space-y-4">
+            <AlertCircle className="w-10 h-10 text-accent" />
+            <div className="space-y-1">
+              <h3 className="font-bold">লগইন প্রয়োজন</h3>
+              <p className="text-sm text-muted-foreground">বই আপলোড করতে অনুগ্রহ করে প্রথমে গুগল দিয়ে লগইন করুন।</p>
+            </div>
+            <Button onClick={handleLogin} className="bg-accent hover:bg-accent/90 gap-2">
+              <LogIn className="w-4 h-4" />
+              গুগল দিয়ে লগইন করুন
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      <section className={!user ? "opacity-50 pointer-events-none" : "space-y-4"}>
         <h3 className="text-lg font-bold text-primary flex items-center gap-2">
           <Upload className="w-5 h-5" />
           নতুন বই যোগ করুন (PDF)
@@ -220,7 +277,7 @@ export default function SettingsPage() {
           <CardFooter className="flex justify-end border-t bg-muted/20 py-4">
             <Button 
               onClick={handleUpload} 
-              disabled={uploading || !file || !classId || !subject} 
+              disabled={uploading || !file || !classId || !subject || !user} 
               className="gap-2 bg-accent hover:bg-accent/90 min-w-[120px]"
             >
               {uploading ? (
