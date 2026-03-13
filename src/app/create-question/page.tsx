@@ -22,26 +22,27 @@ type Question = {
   shortMarks?: number;
 };
 
-// উন্নত গাণিতিক সংকেত প্রসেসর
+// উন্নত গাণিতিক সংকেত প্রসেসর (LaTeX-style)
 function formatMath(text: string) {
   if (!text) return '';
   return text
-    // Fractions: \frac{a}{b} -> <span class="math-frac">...</span>
+    // Fractions: \frac{a}{b}
     .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '<span class="math-frac"><sup>$1</sup>/<sub>$2</sub></span>')
-    // Superscript: x^{100} or x^2
+    // Superscript: x^2 or x^{100}
     .replace(/\^\{([^}]+)\}/g, '<sup>$1</sup>')
     .replace(/\^(\d+|[a-z]+)/g, '<sup>$1</sup>')
-    // Subscript: x_{i} or H_2O
+    // Subscript: H_2O or x_{i}
     .replace(/_\{([^}]+)\}/g, '<sub>$1</sub>')
     .replace(/_(\d+|[a-z]+)/g, '<sub>$1</sub>')
     // Square Root: sqrt(x)
     .replace(/sqrt\(([^)]+)\)/g, '<span class="sqrt">√<span class="sqrt-stem">$1</span></span>')
     .replace(/sqrt/g, '√')
-    // Common Symbols
-    .replace(/\+-/g, '±')
-    .replace(/degree/g, '°')
+    // Greek Symbols
     .replace(/theta/g, 'θ')
     .replace(/pi/g, 'π')
+    .replace(/degree/g, '°')
+    // Operators
+    .replace(/\+-/g, '±')
     .replace(/\*/g, '×')
     .replace(/\//g, '÷')
     .replace(/<=/g, '≤')
@@ -425,7 +426,7 @@ function CreateQuestionContent() {
               font-family: 'Inter', sans-serif; 
               font-size: 9pt; 
               color: black !important; 
-              line-height: 1.0 !important; 
+              line-height: 1.1 !important; 
               background: white !important; 
             }
             .paper { width: 100%; text-align: justify; }
@@ -441,10 +442,10 @@ function CreateQuestionContent() {
             .sub-q { display: flex; justify-content: space-between; margin-bottom: 1px; align-items: flex-start; }
             .mark { font-weight: bold; width: 25px; text-align: right; min-width: 25px; }
             
-            /* Math Specific Styles */
+            /* উন্নত গাণিতিক স্টাইল */
             sup, sub { line-height: 0; position: relative; vertical-align: baseline; font-size: 0.75em; }
             sup { top: -0.4em; }
-            sub { bottom: -0.2em; }
+            sub { bottom: -0.25em; }
             .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
             .math-frac sup { position: static; top: 0; }
             .math-frac sub { position: static; bottom: 0; border-top: 0.5px solid black; }
