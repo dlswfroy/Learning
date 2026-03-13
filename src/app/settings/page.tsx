@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Settings, Upload, FileText, CheckCircle, Trash2, Loader2, AlertCircle, ShieldAlert, LogIn, Info, Link as LinkIcon, Globe } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useStorage, useUser } from '@/firebase';
-import { collection, addDoc, deleteDoc, doc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, doc, serverTimestamp, getDoc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -23,17 +23,16 @@ export default function SettingsPage() {
   const storage = useStorage();
   const { user, loading: userLoading } = useUser();
   
-  const [classId, setClassId] = useState('');
-  const [subject, setSubject] = useState('');
+  const [classId, setClassId] = useState<string>('');
+  const [subject, setSubject] = useState<string>('');
   const [file, setFile] = useState<File | null>(null);
-  const [pdfUrl, setPdfUrl] = useState('');
+  const [pdfUrl, setPdfUrl] = useState<string>('');
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminChecking, setAdminChecking] = useState(true);
   const [uploadMethod, setUploadMethod] = useState<'file' | 'link'>('file');
 
-  // Check admin status
   useEffect(() => {
     async function checkAdmin() {
       if (!user || !db) {
@@ -43,11 +42,15 @@ export default function SettingsPage() {
       }
       
       try {
-        const adminDoc = await getDoc(doc(db, 'config', 'admin'));
-        if (adminDoc.exists() && adminDoc.data().adminUid === user.uid) {
-          setIsAdmin(true);
+        const adminDocRef = doc(db, 'config', 'admin');
+        const adminDoc = await getDoc(adminDocRef);
+        
+        if (adminDoc.exists()) {
+          setIsAdmin(adminDoc.data().adminUid === user.uid);
         } else {
-          setIsAdmin(false);
+          // If no admin exists, current user is admin
+          await setDoc(adminDocRef, { adminUid: user.uid });
+          setIsAdmin(true);
         }
       } catch (e) {
         console.error("Admin check failed", e);
@@ -93,7 +96,6 @@ export default function SettingsPage() {
         return;
       }
       
-      // Handle File Upload
       setUploading(true);
       setProgress(0);
       
@@ -121,7 +123,6 @@ export default function SettingsPage() {
         toast({ title: "ত্রুটি", description: error.message, variant: "destructive" });
       }
     } else {
-      // Handle Link/URL
       if (!pdfUrl) {
         toast({ title: "লিঙ্ক নেই", description: "অনুগ্রহ করে এনসিটিবি বা অন্য সোর্স থেকে ডাউনলোড লিঙ্কটি দিন।", variant: "destructive" });
         return;
@@ -212,7 +213,7 @@ export default function SettingsPage() {
             <ShieldAlert className="w-10 h-10 text-destructive" />
             <div className="space-y-1">
               <h3 className="font-bold text-destructive">এডমিন অ্যাক্সেস নেই</h3>
-              <p className="text-sm text-muted-foreground">শুধুমাত্র প্রথম ইউজার (এডমিন) বই যোগ করতে পারবেন।</p>
+              <p className="text-sm text-muted-foreground">শুধুমাত্র এডমিন বই যোগ বা ডিলিট করতে পারবেন।</p>
             </div>
           </CardContent>
         </Card>
@@ -304,7 +305,7 @@ export default function SettingsPage() {
                 </div>
                 <Progress value={progress} className="h-2" />
                 {file && file.size > 50 * 1024 * 1024 && (
-                  <p className="text-[10px] text-orange-600 text-center">আপনার ফাইলটি বড়, দয়া করে ট্যাবটি বন্ধ করবেন না।</p>
+                  <p className="text-[10px] text-orange-600 text-center">আপনার ফাইলটি বড়, ট্যাবটি বন্ধ করবেন না।</p>
                 )}
               </div>
             )}

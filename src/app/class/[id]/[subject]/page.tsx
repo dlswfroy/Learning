@@ -7,7 +7,7 @@ import { CLASSES } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { BookOpen, HelpCircle, FileText, Download, Loader2, X, ExternalLink } from 'lucide-react';
+import { BookOpen, HelpCircle, FileText, Download, Loader2, X, ExternalLink, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { useFirestore, useCollection } from '@/firebase';
@@ -17,6 +17,7 @@ export default function SubjectPage() {
   const params = useParams();
   const db = useFirestore();
   const [showReader, setShowReader] = useState(false);
+  const [readerError, setReaderError] = useState(false);
   
   const id = params.id as string;
   const encodedSubject = params.subject as string;
@@ -28,7 +29,6 @@ export default function SubjectPage() {
     notFound();
   }
 
-  // Simple query without complex indexing
   const bookQuery = useMemo(() => {
     if (!db || !id || !subject) return null;
     return query(
@@ -58,15 +58,18 @@ export default function SubjectPage() {
               href={pdfUrl} 
               target="_blank" 
               rel="noopener noreferrer"
-              className="p-2 hover:bg-white/10 rounded-full transition-colors hidden sm:block"
-              title="নতুন ট্যাবে ওপেন করুন"
+              className="flex items-center gap-1 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-md text-xs font-bold transition-colors"
             >
-              <ExternalLink className="w-5 h-5" />
+              <ExternalLink className="w-4 h-4" />
+              সরাসরি ওপেন করুন
             </a>
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={() => setShowReader(false)}
+              onClick={() => {
+                setShowReader(false);
+                setReaderError(false);
+              }}
               className="text-primary-foreground hover:bg-white/10"
             >
               <X className="w-6 h-6" />
@@ -74,11 +77,32 @@ export default function SubjectPage() {
           </div>
         </header>
         <div className="flex-1 bg-muted relative">
-          <iframe 
-            src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0`} 
-            className="w-full h-full border-none"
-            title="PDF Reader"
-          />
+          {readerError ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
+              <AlertTriangle className="w-12 h-12 text-orange-500 mb-4" />
+              <h3 className="text-lg font-bold">পিডিএফ সরাসরি এখানে লোড করা যাচ্ছে না</h3>
+              <p className="text-sm text-muted-foreground mb-6 max-w-sm">
+                নিরাপত্তার কারণে কিছু পিডিএফ ব্রাউজারের আইফ্রেমে লোড হতে বাধা দেয়। অনুগ্রহ করে নিচের বাটনে ক্লিক করে সরাসরি দেখুন।
+              </p>
+              <a 
+                href={pdfUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+              >
+                <Button className="gap-2 font-bold shadow-lg">
+                  <ExternalLink className="w-4 h-4" />
+                  নতুন ট্যাবে ওপেন করুন
+                </Button>
+              </a>
+            </div>
+          ) : (
+            <iframe 
+              src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0`} 
+              className="w-full h-full border-none"
+              title="PDF Reader"
+              onError={() => setReaderError(true)}
+            />
+          )}
         </div>
       </div>
     );
@@ -129,12 +153,20 @@ export default function SubjectPage() {
               </div>
               <h3 className="text-xl font-bold mb-2">{subject} বই পাওয়া গেছে</h3>
               <p className="text-muted-foreground mb-6 text-sm">
-                ফাইল নাম: <span className="font-semibold text-foreground">{books[0].fileName}</span>
+                ফাইল: <span className="font-semibold text-foreground truncate block max-w-xs mx-auto">{books[0].fileName}</span>
               </p>
-              <Button className="gap-2 px-10 h-12 text-base font-bold shadow-lg bg-primary hover:bg-primary/90" onClick={() => setShowReader(true)}>
-                <BookOpen className="w-5 h-5" />
-                পড়া শুরু করুন
-              </Button>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <Button className="gap-2 px-10 h-12 text-base font-bold shadow-lg bg-primary hover:bg-primary/90 w-full sm:w-auto" onClick={() => setShowReader(true)}>
+                  <BookOpen className="w-5 h-5" />
+                  পড়া শুরু করুন
+                </Button>
+                <a href={books[0].pdfUrl} target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
+                  <Button variant="outline" className="gap-2 px-6 h-12 border-primary text-primary w-full">
+                    <ExternalLink className="w-4 h-4" />
+                    সরাসরি ওপেন
+                  </Button>
+                </a>
+              </div>
             </Card>
           ) : (
             <Card className="border-2 border-dashed border-primary/20 bg-primary/5 min-h-[350px] flex flex-col items-center justify-center p-12 text-center">
@@ -143,11 +175,11 @@ export default function SubjectPage() {
               </div>
               <h3 className="text-xl font-bold mb-2 text-foreground/80">বইটি এখনো নেই</h3>
               <p className="text-muted-foreground max-w-sm mb-6 text-sm">
-                দুঃখিত, এই মুহূর্তের জন্য এই বইটির ডিজিটাল কপি সিস্টেমে নেই। আপনি সেটিং থেকে বইটি আপলোড করতে পারেন।
+                দুঃখিত, এই মুহূর্তের জন্য এই বইটির ডিজিটাল কপি সিস্টেমে নেই। আপনি সেটিং থেকে বইটি আপলোড বা লিঙ্ক যোগ করতে পারেন।
               </p>
               <Link href="/settings">
                 <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-white transition-all font-bold">
-                  বই আপলোড করুন
+                  বই যোগ করুন
                 </Button>
               </Link>
             </Card>
