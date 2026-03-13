@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -6,11 +7,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { Progress } from '@/components/ui/progress';
 import { Settings, Upload, FileText, CheckCircle, Trash2, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useStorage } from '@/firebase';
-import { collection, addDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { collection, addDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -21,13 +23,24 @@ export default function SettingsPage() {
   const [subject, setSubject] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   const booksQuery = useMemo(() => {
     if (!db) return null;
-    return query(collection(db, 'books'), orderBy('uploadedAt', 'desc'));
+    return collection(db, 'books');
   }, [db]);
 
-  const { data: uploadedBooks, loading: loadingBooks } = useCollection(booksQuery);
+  const { data: rawBooks, loading: loadingBooks } = useCollection(booksQuery);
+
+  // Client-side sorting to avoid Firestore Index requirement
+  const uploadedBooks = useMemo(() => {
+    if (!rawBooks) return [];
+    return [...rawBooks].sort((a, b) => {
+      const dateA = a.uploadedAt?.toDate?.() || new Date(0);
+      const dateB = b.uploadedAt?.toDate?.() || new Date(0);
+      return dateB.getTime() - dateA.getTime();
+    });
+  }, [rawBooks]);
 
   const subjects = classId ? getSubjectsForClass(classId) : [];
 
@@ -42,48 +55,64 @@ export default function SettingsPage() {
     }
 
     setUploading(true);
+    setProgress(0);
     
     try {
-      // 1. Upload file to Firebase Storage
       const storagePath = `books/${classId}/${subject}/${Date.now()}_${file.name}`;
       const storageRef = ref(storage, storagePath);
-      const snapshot = await uploadBytes(storageRef, file);
-      const downloadUrl = await getDownloadURL(snapshot.ref);
+      const uploadTask = uploadBytesResumable(storageRef, file);
 
-      // 2. Save book metadata to Firestore
-      const bookData = {
-        classId,
-        className: CLASSES.find(c => c.id === classId)?.label,
-        subject,
-        fileName: file.name,
-        pdfUrl: downloadUrl,
-        uploadedAt: serverTimestamp(),
-      };
-
-      addDoc(collection(db, 'books'), bookData)
-        .then(() => {
+      uploadTask.on('state_changed', 
+        (snapshot) => {
+          const progressPercent = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setProgress(progressPercent);
+        },
+        (error) => {
           setUploading(false);
-          setFile(null);
           toast({
-            title: "আপলোড সফল",
-            description: `${subject} বইটি সেভ করা হয়েছে। এখন আপনি এটি পড়তে পারবেন।`,
+            title: "আপলোড ব্যর্থ",
+            description: error.message,
+            variant: "destructive",
           });
-        })
-        .catch(async (error) => {
-          setUploading(false);
-          const permissionError = new FirestorePermissionError({
-            path: 'books',
-            operation: 'create',
-            requestResourceData: bookData,
-          });
-          errorEmitter.emit('permission-error', permissionError);
-        });
+        },
+        async () => {
+          const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+          const bookData = {
+            classId,
+            className: CLASSES.find(c => c.id === classId)?.label,
+            subject,
+            fileName: file.name,
+            pdfUrl: downloadUrl,
+            uploadedAt: serverTimestamp(),
+          };
+
+          addDoc(collection(db, 'books'), bookData)
+            .then(() => {
+              setUploading(false);
+              setFile(null);
+              setProgress(0);
+              toast({
+                title: "আপলোড সফল",
+                description: `${subject} বইটি সেভ করা হয়েছে।`,
+              });
+            })
+            .catch(async () => {
+              setUploading(false);
+              const permissionError = new FirestorePermissionError({
+                path: 'books',
+                operation: 'create',
+                requestResourceData: bookData,
+              });
+              errorEmitter.emit('permission-error', permissionError);
+            });
+        }
+      );
 
     } catch (error: any) {
       setUploading(false);
       toast({
-        title: "আপলোড ব্যর্থ",
-        description: error.message || "ফাইল আপলোড করতে সমস্যা হয়েছে।",
+        title: "ত্রুটি",
+        description: error.message || "ফাইল প্রসেস করতে সমস্যা হয়েছে।",
         variant: "destructive",
       });
     }
@@ -159,15 +188,25 @@ export default function SettingsPage() {
                 accept=".pdf" 
                 onChange={(e) => setFile(e.target.files?.[0] || null)}
                 className="cursor-pointer"
+                disabled={uploading}
               />
             </div>
           </CardContent>
+          {uploading && (
+            <div className="px-6 pb-2">
+              <div className="flex justify-between text-xs mb-1">
+                <span>আপলোড হচ্ছে...</span>
+                <span>{Math.round(progress)}%</span>
+              </div>
+              <Progress value={progress} className="h-2" />
+            </div>
+          )}
           <CardFooter className="flex justify-end border-t py-4">
             <Button onClick={handleUpload} disabled={uploading || !file} className="gap-2 bg-accent hover:bg-accent/90">
               {uploading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  আপলোড হচ্ছে...
+                  প্রসেসিং...
                 </>
               ) : (
                 <>
@@ -186,7 +225,7 @@ export default function SettingsPage() {
           <div className="flex justify-center p-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
-        ) : !uploadedBooks || uploadedBooks.length === 0 ? (
+        ) : uploadedBooks.length === 0 ? (
           <Card className="p-12 text-center border-dashed border-2 bg-secondary/20">
             <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
             <p className="text-muted-foreground">কোনো বই আপলোড করা হয়নি।</p>

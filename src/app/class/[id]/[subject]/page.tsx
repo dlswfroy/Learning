@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useMemo, useState } from 'react';
@@ -27,6 +28,7 @@ export default function SubjectPage() {
     notFound();
   }
 
+  // Simple query to avoid index requirements
   const bookQuery = useMemo(() => {
     if (!db || !id || !subject) return null;
     return query(
@@ -62,9 +64,6 @@ export default function SubjectPage() {
             className="w-full h-full border-none"
             title="PDF Reader"
           />
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-4 py-2 rounded-full text-xs backdrop-blur-sm">
-            বইটি পড়ার জন্য উপরে স্ক্রল করুন
-          </div>
         </div>
       </div>
     );
