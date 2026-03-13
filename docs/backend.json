@@ -17,6 +17,41 @@
       },
       "required": ["classId", "subject", "fileName", "pdfUrl"]
     },
+    "QuestionSet": {
+      "title": "Question Set",
+      "description": "A collection of questions for an exam.",
+      "type": "object",
+      "properties": {
+        "institutionName": { "type": "string" },
+        "examName": { "type": "string" },
+        "classId": { "type": "string" },
+        "subject": { "type": "string" },
+        "time": { "type": "string" },
+        "totalMarks": { "type": "string" },
+        "questions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string", "enum": ["creative", "short"] },
+              "stimulus": { "type": "string" },
+              "qA": { "type": "string" },
+              "qB": { "type": "string" },
+              "qC": { "type": "string" },
+              "qD": { "type": "string" },
+              "marksA": { "type": "number" },
+              "marksB": { "type": "number" },
+              "marksC": { "type": "number" },
+              "marksD": { "type": "number" },
+              "shortText": { "type": "string" },
+              "shortMarks": { "type": "number" }
+            }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "userId": { "type": "string" }
+      }
+    },
     "AdminConfig": {
       "title": "Admin Config",
       "description": "Stores the UID of the first registered admin.",
@@ -33,6 +68,10 @@
     "/books/{bookId}": {
       "schema": "Book",
       "description": "Collection of uploaded books metadata."
+    },
+    "/questions/{questionId}": {
+      "schema": "QuestionSet",
+      "description": "Stored question sets created by users."
     },
     "/config/admin": {
       "schema": "AdminConfig",

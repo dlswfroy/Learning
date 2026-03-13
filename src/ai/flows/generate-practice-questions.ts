@@ -1,74 +1,60 @@
+
 'use server';
 /**
- * @fileOverview A Genkit flow for generating practice questions for a given class and subject.
- *
- * - generatePracticeQuestions - A function that handles the practice question generation process.
- * - GeneratePracticeQuestionsInput - The input type for the generatePracticeQuestions function.
- * - GeneratePracticeQuestionsOutput - The return type for the generatePracticeQuestions function.
+ * @fileOverview A Genkit flow for generating structured board-style questions.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-// Input schema
+const QuestionSchema = z.object({
+  type: z.enum(['creative', 'short']),
+  stimulus: z.string().optional().describe(' উদ্দীপক (উদ্দীপকটি সৃজনশীল প্রশ্নের জন্য)'),
+  qA: z.string().optional().describe('জ্ঞানমূলক প্রশ্ন'),
+  qB: z.string().optional().describe('অনুধাবনমূলক প্রশ্ন'),
+  qC: z.string().optional().describe('প্রয়োগমূলক প্রশ্ন'),
+  qD: z.string().optional().describe('উচ্চতর দক্ষতামূলক প্রশ্ন'),
+  marksA: z.number().optional().default(1),
+  marksB: z.number().optional().default(2),
+  marksC: z.number().optional().default(3),
+  marksD: z.number().optional().default(4),
+  shortText: z.string().optional().describe('সংক্ষিপ্ত প্রশ্ন'),
+  shortMarks: z.number().optional().default(5),
+});
+
 const GeneratePracticeQuestionsInputSchema = z.object({
-  classId: z.string().describe('The ID of the class (e.g., "sixth", "seventh").'),
-  subject: z.string().describe('The name of the subject (e.g., "বাংলা ১ম", "গণিত").'),
-  numberOfQuestions: z.number().int().positive().optional().default(5).describe('The number of practice questions to generate.'),
+  classId: z.string(),
+  subject: z.string(),
+  type: z.enum(['creative', 'short', 'mixed']).default('mixed'),
+  count: z.number().optional().default(3),
 });
 export type GeneratePracticeQuestionsInput = z.infer<typeof GeneratePracticeQuestionsInputSchema>;
 
-// Output schema
 const GeneratePracticeQuestionsOutputSchema = z.object({
-  questions: z.array(
-    z.object({
-      question: z.string().describe('The generated practice question text.'),
-      answer: z.string().describe('The correct answer to the practice question.'),
-    })
-  ).describe('A list of generated practice questions with their answers.'),
+  questions: z.array(QuestionSchema),
 });
 export type GeneratePracticeQuestionsOutput = z.infer<typeof GeneratePracticeQuestionsOutputSchema>;
 
-// Prompt definition
 const generateQuestionsPrompt = ai.definePrompt({
   name: 'generateQuestionsPrompt',
   input: {schema: GeneratePracticeQuestionsInputSchema},
   output: {schema: GeneratePracticeQuestionsOutputSchema},
-  prompt: `You are an expert educator. Your task is to create practice questions for students based on their class and subject.
-Generate exactly {{numberOfQuestions}} practice questions for Class {{classId}} in the subject "{{subject}}".
-Each question should be relevant to the curriculum typically covered in that class and subject. Provide the correct answer for each question.
+  prompt: `You are an expert Bangladeshi board examiner.
+Generate {{count}} board-standard questions for Class {{classId}} in "{{subject}}".
+The question type should be {{type}}.
 
-Output your response as a JSON array of objects, where each object has a 'question' field for the question text and an 'answer' field for the correct answer.
+For creative (সৃজনশীল) questions:
+- Provide a high-quality stimulus (উদ্দীপক).
+- Provide 4 sub-questions (ক, খ, গ, ঘ) with marks 1, 2, 3, 4 respectively.
+- Ensure proper use of mathematical/scientific symbols (e.g., H₂O, √x, x², ±, θ) where applicable.
 
-Example format:
-{
-  "questions": [
-    {
-      "question": "What is 2+2?",
-      "answer": "4"
-    },
-    {
-      "question": "What is the capital of France?",
-      "answer": "Paris"
-    }
-  ]
-}`,
+For short (সংক্ষিপ্ত) questions:
+- Provide the question text and assigned marks.
+
+Always output in Bengali language. Ensure the quality matches NCTB curriculum.`,
 });
 
-// Flow definition
-const generatePracticeQuestionsFlow = ai.defineFlow(
-  {
-    name: 'generatePracticeQuestionsFlow',
-    inputSchema: GeneratePracticeQuestionsInputSchema,
-    outputSchema: GeneratePracticeQuestionsOutputSchema,
-  },
-  async (input) => {
-    const {output} = await generateQuestionsPrompt(input);
-    return output!;
-  }
-);
-
-// Wrapper function
 export async function generatePracticeQuestions(input: GeneratePracticeQuestionsInput): Promise<GeneratePracticeQuestionsOutput> {
-  return generatePracticeQuestionsFlow(input);
+  const {output} = await generateQuestionsPrompt(input);
+  return output!;
 }
