@@ -7,7 +7,7 @@ import { CLASSES } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { BookOpen, HelpCircle, FileText, Download, Loader2, ExternalLink } from 'lucide-react';
+import { BookOpen, HelpCircle, FileText, Download, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { useFirestore, useCollection } from '@/firebase';
