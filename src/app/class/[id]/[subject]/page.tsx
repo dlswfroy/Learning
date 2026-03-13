@@ -82,7 +82,7 @@ export default function SubjectPage() {
               <AlertTriangle className="w-12 h-12 text-orange-500 mb-4" />
               <h3 className="text-lg font-bold">পিডিএফ সরাসরি এখানে লোড করা যাচ্ছে না</h3>
               <p className="text-sm text-muted-foreground mb-6 max-w-sm">
-                নিরাপত্তার কারণে কিছু পিডিএফ ব্রাউজারের আইফ্রেমে লোড হতে বাধা দেয়। অনুগ্রহ করে নিচের বাটনে ক্লিক করে সরাসরি দেখুন।
+                নিরাপত্তার কারণে কিছু পিডিএফ ব্রাউজারের আইফ্রেমে লোড হতে বাধা দেয়। অনুগ্রহ করে সরাসরি ওপেন বাটনে ক্লিক করুন।
               </p>
               <a 
                 href={pdfUrl} 
@@ -148,8 +148,15 @@ export default function SubjectPage() {
             </div>
           ) : hasBook ? (
             <Card className="p-8 text-center border-2 border-primary/20 bg-primary/5 shadow-sm">
-              <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-primary mx-auto mb-6 shadow-md border-4 border-primary/10">
-                <FileText className="w-10 h-10" />
+              <div className="w-32 h-44 bg-white rounded-lg flex items-center justify-center text-primary mx-auto mb-6 shadow-md border overflow-hidden">
+                {books[0].coverImageUrl ? (
+                  <img src={books[0].coverImageUrl} alt="Book Cover" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="flex flex-col items-center justify-center p-4">
+                    <FileText className="w-10 h-10 mb-2 opacity-30" />
+                    <span className="text-[10px] font-bold text-muted-foreground">{subject}</span>
+                  </div>
+                )}
               </div>
               <h3 className="text-xl font-bold mb-2">{subject} বই পাওয়া গেছে</h3>
               <p className="text-muted-foreground mb-6 text-sm">
@@ -175,7 +182,7 @@ export default function SubjectPage() {
               </div>
               <h3 className="text-xl font-bold mb-2 text-foreground/80">বইটি এখনো নেই</h3>
               <p className="text-muted-foreground max-w-sm mb-6 text-sm">
-                দুঃখিত, এই মুহূর্তের জন্য এই বইটির ডিজিটাল কপি সিস্টেমে নেই। আপনি সেটিং থেকে বইটি আপলোড বা লিঙ্ক যোগ করতে পারেন।
+                দুঃখিত, এই বইটির ডিজিটাল কপি সিস্টেমে নেই। আপনি সেটিং থেকে বইয়ের লিঙ্ক যোগ করতে পারেন।
               </p>
               <Link href="/settings">
                 <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-white transition-all font-bold">

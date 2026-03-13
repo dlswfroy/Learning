@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, Upload, FileText, CheckCircle, Trash2, Loader2, AlertCircle, ShieldAlert, LogIn, Info, Link as LinkIcon, Globe } from 'lucide-react';
+import { Settings, Upload, FileText, CheckCircle, Trash2, Loader2, AlertCircle, ShieldAlert, LogIn, Link as LinkIcon, Globe, Image as ImageIcon } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useStorage, useUser } from '@/firebase';
 import { collection, addDoc, deleteDoc, doc, serverTimestamp, getDoc, setDoc } from 'firebase/firestore';
@@ -27,6 +27,7 @@ export default function SettingsPage() {
   const [subject, setSubject] = useState<string>('');
   const [file, setFile] = useState<File | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string>('');
+  const [coverImageUrl, setCoverImageUrl] = useState<string>('');
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -48,7 +49,6 @@ export default function SettingsPage() {
         if (adminDoc.exists()) {
           setIsAdmin(adminDoc.data().adminUid === user.uid);
         } else {
-          // If no admin exists, current user becomes admin
           await setDoc(adminDocRef, { adminUid: user.uid });
           setIsAdmin(true);
         }
@@ -138,6 +138,7 @@ export default function SettingsPage() {
       subject,
       fileName: fileName,
       pdfUrl: url,
+      coverImageUrl: coverImageUrl || '',
       uploadedAt: serverTimestamp(),
       userId: user?.uid,
     };
@@ -147,6 +148,7 @@ export default function SettingsPage() {
         setUploading(false);
         setFile(null);
         setPdfUrl('');
+        setCoverImageUrl('');
         setProgress(0);
         toast({ title: "সফল", description: "বইটি সফলভাবে যুক্ত করা হয়েছে।" });
       })
@@ -240,58 +242,74 @@ export default function SettingsPage() {
                 </TabsList>
               </Tabs>
             </CardHeader>
-            <CardContent className="pt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold">শ্রেণি</label>
-                <Select onValueChange={setClassId} value={classId || ''}>
-                  <SelectTrigger className="bg-background">
-                    <SelectValue placeholder="নির্বাচন করুন" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CLASSES.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <CardContent className="pt-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold">শ্রেণি</label>
+                  <Select onValueChange={setClassId} value={classId || ''}>
+                    <SelectTrigger className="bg-background">
+                      <SelectValue placeholder="নির্বাচন করুন" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CLASSES.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold">বিষয়</label>
+                  <Select onValueChange={setSubject} value={subject || ''} disabled={!classId}>
+                    <SelectTrigger className="bg-background">
+                      <SelectValue placeholder="নির্বাচন করুন" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {subjects.map((s) => (
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold">বিষয়</label>
-                <Select onValueChange={setSubject} value={subject || ''} disabled={!classId}>
-                  <SelectTrigger className="bg-background">
-                    <SelectValue placeholder="নির্বাচন করুন" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {subjects.map((s) => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  {uploadMethod === 'file' ? (
+                    <>
+                      <label className="text-sm font-semibold">PDF ফাইল</label>
+                      <Input 
+                        type="file" 
+                        accept=".pdf" 
+                        onChange={(e) => setFile(e.target.files?.[0] || null)}
+                        className="cursor-pointer"
+                        disabled={uploading}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <label className="text-sm font-semibold">বইয়ের ডাউনলোড লিঙ্ক (URL)</label>
+                      <Input 
+                        placeholder="https://nctb.gov.bd/..." 
+                        value={pdfUrl || ''}
+                        onChange={(e) => setPdfUrl(e.target.value)}
+                        disabled={uploading}
+                      />
+                    </>
+                  )}
+                </div>
 
-              <div className="space-y-2">
-                {uploadMethod === 'file' ? (
-                  <>
-                    <label className="text-sm font-semibold">PDF ফাইল</label>
-                    <Input 
-                      type="file" 
-                      accept=".pdf" 
-                      onChange={(e) => setFile(e.target.files?.[0] || null)}
-                      className="cursor-pointer"
-                      disabled={uploading}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <label className="text-sm font-semibold">ডাউনলোড লিঙ্ক (URL)</label>
-                    <Input 
-                      placeholder="https://nctb.gov.bd/..." 
-                      value={pdfUrl || ''}
-                      onChange={(e) => setPdfUrl(e.target.value)}
-                      disabled={uploading}
-                    />
-                  </>
-                )}
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold flex items-center gap-1">
+                    <ImageIcon className="w-3 h-3" /> কভার ইমেজ লিঙ্ক (ঐচ্ছিক)
+                  </label>
+                  <Input 
+                    placeholder="https://example.com/cover.jpg" 
+                    value={coverImageUrl || ''}
+                    onChange={(e) => setCoverImageUrl(e.target.value)}
+                    disabled={uploading}
+                  />
+                </div>
               </div>
             </CardContent>
 
@@ -304,16 +322,13 @@ export default function SettingsPage() {
                   <span className="text-primary">{Math.round(progress)}%</span>
                 </div>
                 <Progress value={progress} className="h-2" />
-                {file && file.size > 50 * 1024 * 1024 && (
-                  <p className="text-[10px] text-orange-600 text-center">আপনার ফাইলটি বড়, ট্যাবটি বন্ধ করবেন না।</p>
-                )}
               </div>
             )}
 
             <CardFooter className="flex justify-between border-t bg-muted/20 py-4">
               <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                 <Globe className="w-3 h-3" />
-                এনসিটিবি সাইট থেকে লিঙ্ক দিলে কোনো আপলোড সময় লাগবে না।
+                সরাসরি লিঙ্ক দিলে আপলোড সময় লাগবে না।
               </div>
               <Button 
                 onClick={handleSaveBook} 
@@ -348,8 +363,12 @@ export default function SettingsPage() {
             {uploadedBooks.map((book) => (
               <Card key={book.id} className="p-4 flex items-center justify-between hover:border-primary/30 transition-all group">
                 <div className="flex items-center gap-4 overflow-hidden">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors shrink-0">
-                    <FileText className="w-6 h-6" />
+                  <div className="w-12 h-16 rounded-md bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors shrink-0 overflow-hidden border">
+                    {book.coverImageUrl ? (
+                      <img src={book.coverImageUrl} alt="Cover" className="w-full h-full object-cover" />
+                    ) : (
+                      <FileText className="w-6 h-6" />
+                    )}
                   </div>
                   <div className="overflow-hidden">
                     <h4 className="font-bold text-sm truncate">{book.subject} - {CLASSES.find(c => c.id === book.classId)?.label} শ্রেণি</h4>

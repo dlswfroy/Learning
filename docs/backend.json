@@ -11,6 +11,7 @@
         "subject": { "type": "string" },
         "fileName": { "type": "string" },
         "pdfUrl": { "type": "string" },
+        "coverImageUrl": { "type": "string", "description": "URL to the book's cover image." },
         "uploadedAt": { "type": "string", "format": "date-time" },
         "userId": { "type": "string" }
       },
