@@ -1,13 +1,13 @@
 
 "use client";
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { CLASSES } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { BookOpen, HelpCircle, FileText, Download, Loader2 } from 'lucide-react';
+import { BookOpen, HelpCircle, FileText, Download, Loader2, X } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { useFirestore, useCollection } from '@/firebase';
@@ -16,6 +16,7 @@ import { collection, query, where } from 'firebase/firestore';
 export default function SubjectPage() {
   const params = useParams();
   const db = useFirestore();
+  const [showReader, setShowReader] = useState(false);
   
   const id = params.id as string;
   const encodedSubject = params.subject as string;
@@ -38,6 +39,37 @@ export default function SubjectPage() {
 
   const { data: books, loading: loadingBooks } = useCollection(bookQuery);
   const hasBook = books && books.length > 0;
+
+  if (showReader && hasBook) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-background flex flex-col animate-fade-in">
+        <header className="h-14 border-b bg-primary text-primary-foreground flex items-center justify-between px-4">
+          <div className="flex items-center gap-2">
+            <BookOpen className="w-5 h-5" />
+            <h2 className="font-bold text-sm sm:text-base">{subject} - {currentClass.label} শ্রেণি</h2>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setShowReader(false)}
+            className="text-primary-foreground hover:bg-white/10"
+          >
+            <X className="w-6 h-6" />
+          </Button>
+        </header>
+        <div className="flex-1 bg-muted relative">
+          <iframe 
+            src={`${books[0].pdfUrl}#toolbar=0`} 
+            className="w-full h-full border-none"
+            title="PDF Reader"
+          />
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-4 py-2 rounded-full text-xs backdrop-blur-sm">
+            বইটি পড়ার জন্য উপরে স্ক্রল করুন
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -86,7 +118,7 @@ export default function SubjectPage() {
               <p className="text-muted-foreground mb-6">
                 বইটির ফাইল নাম: <span className="font-semibold">{books[0].fileName}</span>
               </p>
-              <Button className="gap-2 px-8">
+              <Button className="gap-2 px-8" onClick={() => setShowReader(true)}>
                 <BookOpen className="w-4 h-4" />
                 পড়া শুরু করুন
               </Button>

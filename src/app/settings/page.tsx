@@ -42,11 +42,15 @@ export default function SettingsPage() {
 
     setUploading(true);
     
+    // For prototype purposes, we use a sample PDF URL since we are not uploading to Firebase Storage yet
+    const samplePdfUrl = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
+
     const bookData = {
       classId,
       className: CLASSES.find(c => c.id === classId)?.label,
       subject,
       fileName: file.name,
+      pdfUrl: samplePdfUrl,
       uploadedAt: serverTimestamp(),
     };
 
@@ -56,7 +60,7 @@ export default function SettingsPage() {
         setFile(null);
         toast({
           title: "আপলোড সফল",
-          description: `${subject} বইটি সেভ করা হয়েছে।`,
+          description: `${subject} বইটি সেভ করা হয়েছে। এখন আপনি এটি পড়তে পারবেন।`,
         });
       })
       .catch(async (error) => {

@@ -10,6 +10,7 @@
         "classId": { "type": "string" },
         "subject": { "type": "string" },
         "fileName": { "type": "string" },
+        "pdfUrl": { "type": "string" },
         "uploadedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["classId", "subject", "fileName"]
