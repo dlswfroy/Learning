@@ -22,36 +22,31 @@ type Question = {
   shortMarks?: number;
 };
 
-// Advanced Utility to format math symbols for professional printing
+// উন্নত গাণিতিক সংকেত প্রসেসর
 function formatMath(text: string) {
   if (!text) return '';
   return text
-    // Power/Exponent: x^2 or x^(n+1)
-    .replace(/\^(\d+|[a-z]+|\([^)]+\))/g, (match, p1) => `<sup>${p1.replace(/[()]/g, '')}</sup>`)
-    // Subscript: H_2O or x_i
-    .replace(/_(\d+|[a-z]+|\([^)]+\))/g, (match, p1) => `<sub>${p1.replace(/[()]/g, '')}</sub>`)
+    // Fractions: \frac{a}{b} -> <span class="math-frac">...</span>
+    .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '<span class="math-frac"><sup>$1</sup>/<sub>$2</sub></span>')
+    // Superscript: x^{100} or x^2
+    .replace(/\^\{([^}]+)\}/g, '<sup>$1</sup>')
+    .replace(/\^(\d+|[a-z]+)/g, '<sup>$1</sup>')
+    // Subscript: x_{i} or H_2O
+    .replace(/_\{([^}]+)\}/g, '<sub>$1</sub>')
+    .replace(/_(\d+|[a-z]+)/g, '<sub>$1</sub>')
     // Square Root: sqrt(x)
-    .replace(/sqrt\(([^)]+)\)/g, '√<span style="text-decoration:overline; margin-left:-2px;">$1</span>')
+    .replace(/sqrt\(([^)]+)\)/g, '<span class="sqrt">√<span class="sqrt-stem">$1</span></span>')
     .replace(/sqrt/g, '√')
-    // Common Math Symbols
+    // Common Symbols
     .replace(/\+-/g, '±')
     .replace(/degree/g, '°')
     .replace(/theta/g, 'θ')
     .replace(/pi/g, 'π')
-    .replace(/alpha/g, 'α')
-    .replace(/beta/g, 'β')
-    .replace(/gamma/g, 'γ')
-    .replace(/phi/g, 'φ')
-    .replace(/omega/g, 'ω')
-    .replace(/lambda/g, 'λ')
-    .replace(/delta/g, 'Δ')
-    .replace(/sigma/g, 'σ')
     .replace(/\*/g, '×')
     .replace(/\//g, '÷')
     .replace(/<=/g, '≤')
     .replace(/>=/g, '≥')
-    .replace(/!=/g, '≠')
-    .replace(/approx/g, '≈');
+    .replace(/!=/g, '≠');
 }
 
 function CreateQuestionContent() {
@@ -166,7 +161,6 @@ function CreateQuestionContent() {
     const parts = { stimulus: '', qA: '', qB: '', qC: '', qD: '' };
     let currentText = text;
 
-    // Split based on markers
     const posA = currentText.indexOf('ক.');
     const posB = currentText.indexOf('খ.');
     const posC = currentText.indexOf('গ.');
@@ -427,22 +421,36 @@ function CreateQuestionContent() {
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
             @page { size: A4; margin: 0.5in; }
-            body { font-family: 'Inter', sans-serif; font-size: 9pt; color: black !important; line-height: 1.0; background: white !important; }
+            body { 
+              font-family: 'Inter', sans-serif; 
+              font-size: 9pt; 
+              color: black !important; 
+              line-height: 1.0 !important; 
+              background: white !important; 
+            }
             .paper { width: 100%; text-align: justify; }
-            .header { text-align: center; margin-bottom: 15px; border-bottom: 2px solid black; padding-bottom: 5px; }
-            .inst-name { font-size: 16pt; font-weight: 800; margin-bottom: 2px; }
-            .exam-name { font-size: 12pt; font-weight: 700; margin-bottom: 2px; }
-            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px; font-size: 10pt; }
-            .section-label-container { text-align: center; width: 100%; margin-top: 20px; margin-bottom: 10px; }
-            .section-label { font-size: 11pt; font-weight: bold; border-bottom: 1.5px solid black; display: inline-block; padding: 0 10px; }
-            .instruction { font-style: italic; font-size: 9pt; margin-bottom: 10px; text-align: center; width: 100%; }
-            .q-block { margin-bottom: 15px; page-break-inside: avoid; }
-            .stimulus { margin-bottom: 5px; white-space: pre-wrap; line-height: 1.1; text-align: justify; }
-            .sub-q { display: flex; justify-content: space-between; margin-bottom: 2px; align-items: flex-start; }
-            .mark { font-weight: bold; width: 30px; text-align: right; min-width: 30px; }
-            sup { vertical-align: super; font-size: 0.7em; }
-            sub { vertical-align: sub; font-size: 0.7em; }
-            .math-text { font-family: 'Times New Roman', serif; font-style: italic; }
+            .header { text-align: center; margin-bottom: 10px; border-bottom: 2px solid black; padding-bottom: 5px; }
+            .inst-name { font-size: 14pt; font-weight: 800; margin-bottom: 2px; }
+            .exam-name { font-size: 11pt; font-weight: 700; margin-bottom: 2px; }
+            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px; font-size: 9pt; }
+            .section-label-container { text-align: center; width: 100%; margin-top: 15px; margin-bottom: 5px; }
+            .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1.5px solid black; display: inline-block; padding: 0 10px; }
+            .instruction { font-style: italic; font-size: 8.5pt; margin-bottom: 8px; text-align: center; width: 100%; }
+            .q-block { margin-bottom: 12px; page-break-inside: avoid; }
+            .stimulus { margin-bottom: 4px; white-space: pre-wrap; line-height: 1.1; text-align: justify; }
+            .sub-q { display: flex; justify-content: space-between; margin-bottom: 1px; align-items: flex-start; }
+            .mark { font-weight: bold; width: 25px; text-align: right; min-width: 25px; }
+            
+            /* Math Specific Styles */
+            sup, sub { line-height: 0; position: relative; vertical-align: baseline; font-size: 0.75em; }
+            sup { top: -0.4em; }
+            sub { bottom: -0.2em; }
+            .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
+            .math-frac sup { position: static; top: 0; }
+            .math-frac sub { position: static; bottom: 0; border-top: 0.5px solid black; }
+            .sqrt { position: relative; display: inline-block; vertical-align: middle; }
+            .sqrt-stem { border-top: 0.8px solid black; padding-top: 1px; margin-left: 1px; display: inline-block; }
+            
             .no-print { display: none !important; }
           }
         `}} />
@@ -470,7 +478,7 @@ function CreateQuestionContent() {
                   <div key={idx} className="q-block">
                     <div className="font-bold mb-1">{idx + 1}. নিচের উদ্দীপকটি পড়ো এবং প্রশ্নগুলোর উত্তর দাও:</div>
                     <div className="stimulus" dangerouslySetInnerHTML={{ __html: formatMath(parsed.stimulus) }} />
-                    <div className="space-y-0.5">
+                    <div className="space-y-0">
                       {parsed.qA && (
                         <div className="sub-q">
                           <span dangerouslySetInnerHTML={{ __html: 'ক. ' + formatMath(parsed.qA) }} />
