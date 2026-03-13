@@ -45,7 +45,7 @@ export default function SettingsPage() {
     
     try {
       // 1. Upload file to Firebase Storage
-      const storagePath = `books/${classId}/${subject}/${file.name}`;
+      const storagePath = `books/${classId}/${subject}/${Date.now()}_${file.name}`;
       const storageRef = ref(storage, storagePath);
       const snapshot = await uploadBytes(storageRef, file);
       const downloadUrl = await getDownloadURL(snapshot.ref);
