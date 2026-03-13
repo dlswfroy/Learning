@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -50,9 +49,26 @@ export default function SettingsPage() {
   const handleLogin = async () => {
     try {
       const provider = new GoogleAuthProvider();
+      // Use popup for better UX on most devices, fallback to redirect if needed
       await signInWithPopup(auth, provider);
-    } catch (error) {
-      toast({ variant: "destructive", title: "লগইন ব্যর্থ" });
+      toast({ title: "সফল লগইন", description: "আপনি সফলভাবে লগইন করেছেন।" });
+    } catch (error: any) {
+      console.error("Login error:", error);
+      let errorMessage = "গুগল লগইন করা সম্ভব হয়নি।";
+      
+      if (error.code === 'auth/unauthorized-domain') {
+        errorMessage = "এই ডোমেইনটি ফায়ারবেসে অনুমোদিত নয়। ফায়ারবেস কনসোলে এই লিঙ্কটি যুক্ত করুন।";
+      } else if (error.code === 'auth/popup-blocked') {
+        errorMessage = "আপনার ব্রাউজারে পপ-আপ ব্লক করা আছে। এটি আনলক করুন।";
+      } else if (error.code === 'auth/popup-closed-by-user') {
+        errorMessage = "লগইন পপ-আপটি আপনি বন্ধ করে দিয়েছেন।";
+      }
+
+      toast({ 
+        variant: "destructive", 
+        title: "লগইন ব্যর্থ", 
+        description: errorMessage 
+      });
     }
   };
 
@@ -75,7 +91,6 @@ export default function SettingsPage() {
       return;
     }
 
-    // Check file size (limit to 50MB for example)
     if (file.size > 50 * 1024 * 1024) {
       toast({
         title: "ফাইল অনেক বড়",
@@ -101,16 +116,11 @@ export default function SettingsPage() {
           }
         },
         (error) => {
-          console.error("Upload error detail:", error);
           setUploading(false);
-          let message = "ফায়ারবেস স্টোরেজে ফাইল আপলোড করা যায়নি।";
-          
+          let message = "ফাইল আপলোড করা যায়নি।";
           if (error.code === 'storage/unauthorized') {
-            message = "আপনার এই ফাইলটি আপলোড করার অনুমতি নেই। লগইন করুন।";
-          } else if (error.code === 'storage/canceled') {
-            message = "আপলোড বাতিল করা হয়েছে।";
+            message = "আপনার ফাইল আপলোড করার অনুমতি নেই।";
           }
-          
           toast({
             title: "আপলোড ব্যর্থ",
             description: message,

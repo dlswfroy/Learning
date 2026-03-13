@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from 'next/link';
@@ -27,10 +26,19 @@ export function Navbar() {
       await signInWithPopup(auth, provider);
       toast({ title: "সফল লগইন", description: "আপনি সফলভাবে লগইন করেছেন।" });
     } catch (error: any) {
+      console.error("Login error:", error);
+      let errorMessage = "গুগল লগইন করা সম্ভব হয়নি।";
+      
+      if (error.code === 'auth/unauthorized-domain') {
+        errorMessage = "এই ডোমেইনটি ফায়ারবেসে অনুমোদিত নয়। ফায়ারবেস কনসোলে এই লিঙ্কটি যুক্ত করুন।";
+      } else if (error.code === 'auth/popup-blocked') {
+        errorMessage = "পপ-আপ ব্লক করা আছে। ব্রাউজার সেটিংস চেক করুন।";
+      }
+
       toast({ 
         variant: "destructive", 
         title: "লগইন ব্যর্থ", 
-        description: "গুগল লগইন করা সম্ভব হয়নি।" 
+        description: errorMessage 
       });
     }
   };
