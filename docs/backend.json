@@ -1,0 +1,27 @@
+
+{
+  "entities": {
+    "Book": {
+      "title": "Book",
+      "description": "Information about an uploaded PDF book.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "classId": { "type": "string" },
+        "subject": { "type": "string" },
+        "fileName": { "type": "string" },
+        "uploadedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["classId", "subject", "fileName"]
+    }
+  },
+  "auth": {
+    "providers": ["google.com"]
+  },
+  "firestore": {
+    "/books/{bookId}": {
+      "schema": "Book",
+      "description": "Collection of uploaded books metadata."
+    }
+  }
+}

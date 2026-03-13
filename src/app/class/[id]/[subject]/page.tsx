@@ -1,23 +1,43 @@
+
+"use client";
+
+import { useMemo } from 'react';
+import { useParams } from 'next/navigation';
 import { CLASSES } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { BookOpen, HelpCircle, FileText, Download } from 'lucide-react';
+import { BookOpen, HelpCircle, FileText, Download, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { useFirestore, useCollection } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
 
-export default async function SubjectPage({ 
-  params 
-}: { 
-  params: Promise<{ id: string, subject: string }> 
-}) {
-  const { id, subject: encodedSubject } = await params;
+export default function SubjectPage() {
+  const params = useParams();
+  const db = useFirestore();
+  
+  const id = params.id as string;
+  const encodedSubject = params.subject as string;
   const subject = decodeURIComponent(encodedSubject);
+  
   const currentClass = CLASSES.find(c => c.id === id);
   
   if (!currentClass) {
     notFound();
   }
+
+  const bookQuery = useMemo(() => {
+    if (!db || !id || !subject) return null;
+    return query(
+      collection(db, 'books'),
+      where('classId', '==', id),
+      where('subject', '==', subject)
+    );
+  }, [db, id, subject]);
+
+  const { data: books, loading: loadingBooks } = useCollection(bookQuery);
+  const hasBook = books && books.length > 0;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -52,20 +72,41 @@ export default async function SubjectPage({
         </TabsList>
         
         <TabsContent value="read">
-          <Card className="border-2 border-dashed border-primary/20 bg-primary/5 min-h-[400px] flex flex-col items-center justify-center p-12 text-center">
-            <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-primary mb-6 shadow-sm">
-              <BookOpen className="w-10 h-10" />
+          {loadingBooks ? (
+            <div className="flex flex-col items-center justify-center p-20">
+              <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
+              <p className="text-muted-foreground">লোড হচ্ছে...</p>
             </div>
-            <h3 className="text-xl font-bold mb-2">ডিজিটাল পাঠ্যবই</h3>
-            <p className="text-muted-foreground max-w-sm mb-6">
-              দুঃখিত, এই মুহূর্তের জন্য এই বইটির PDF কপি সিস্টেমে নেই। আপনি সেটিং থেকে বইটি আপলোড করতে পারেন।
-            </p>
-            <Link href="/settings">
-              <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-white">
-                বই আপলোড করুন
+          ) : hasBook ? (
+            <Card className="p-8 text-center border-2 border-primary/20 bg-primary/5">
+              <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-primary mx-auto mb-6 shadow-sm">
+                <FileText className="w-10 h-10" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">{subject} বই পাওয়া গেছে</h3>
+              <p className="text-muted-foreground mb-6">
+                বইটির ফাইল নাম: <span className="font-semibold">{books[0].fileName}</span>
+              </p>
+              <Button className="gap-2 px-8">
+                <BookOpen className="w-4 h-4" />
+                পড়া শুরু করুন
               </Button>
-            </Link>
-          </Card>
+            </Card>
+          ) : (
+            <Card className="border-2 border-dashed border-primary/20 bg-primary/5 min-h-[400px] flex flex-col items-center justify-center p-12 text-center">
+              <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-primary mb-6 shadow-sm">
+                <BookOpen className="w-10 h-10" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">ডিজিটাল পাঠ্যবই</h3>
+              <p className="text-muted-foreground max-w-sm mb-6">
+                দুঃখিত, এই মুহূর্তের জন্য এই বইটির PDF কপি সিস্টেমে নেই। আপনি সেটিং থেকে বইটি আপলোড করতে পারেন।
+              </p>
+              <Link href="/settings">
+                <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-white">
+                  বই আপলোড করুন
+                </Button>
+              </Link>
+            </Card>
+          )}
         </TabsContent>
         
         <TabsContent value="resources">

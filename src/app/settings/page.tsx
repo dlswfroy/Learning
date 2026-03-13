@@ -1,25 +1,37 @@
+
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { CLASSES, getSubjectsForClass } from '@/lib/constants';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Settings, Upload, FileText, CheckCircle, Trash2 } from 'lucide-react';
+import { Settings, Upload, FileText, CheckCircle, Trash2, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { useFirestore, useCollection } from '@/firebase';
+import { collection, addDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function SettingsPage() {
+  const db = useFirestore();
   const [classId, setClassId] = useState('');
   const [subject, setSubject] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [uploadedBooks, setUploadedBooks] = useState<any[]>([]);
+
+  const booksQuery = useMemo(() => {
+    if (!db) return null;
+    return query(collection(db, 'books'), orderBy('uploadedAt', 'desc'));
+  }, [db]);
+
+  const { data: uploadedBooks, loading: loadingBooks } = useCollection(booksQuery);
 
   const subjects = classId ? getSubjectsForClass(classId) : [];
 
   const handleUpload = () => {
-    if (!classId || !subject || !file) {
+    if (!classId || !subject || !file || !db) {
       toast({
         title: "তথ্য অসম্পূর্ণ",
         description: "শ্রেণি, বিষয় এবং ফাইল নির্বাচন করুন।",
@@ -29,27 +41,49 @@ export default function SettingsPage() {
     }
 
     setUploading(true);
-    // Simulate upload
-    setTimeout(() => {
-      const newBook = {
-        id: Math.random().toString(36).substr(2, 9),
-        className: CLASSES.find(c => c.id === classId)?.label,
-        subject,
-        fileName: file.name,
-      };
-      setUploadedBooks([newBook, ...uploadedBooks]);
-      setUploading(false);
-      setFile(null);
-      toast({
-        title: "আপলোড সফল",
-        description: `${subject} বইটি ${newBook.className} শ্রেণিতে যুক্ত হয়েছে।`,
+    
+    const bookData = {
+      classId,
+      className: CLASSES.find(c => c.id === classId)?.label,
+      subject,
+      fileName: file.name,
+      uploadedAt: serverTimestamp(),
+    };
+
+    addDoc(collection(db, 'books'), bookData)
+      .then(() => {
+        setUploading(false);
+        setFile(null);
+        toast({
+          title: "আপলোড সফল",
+          description: `${subject} বইটি সেভ করা হয়েছে।`,
+        });
+      })
+      .catch(async (error) => {
+        setUploading(false);
+        const permissionError = new FirestorePermissionError({
+          path: 'books',
+          operation: 'create',
+          requestResourceData: bookData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
       });
-    }, 1500);
   };
 
-  const removeBook = (id: string) => {
-    setUploadedBooks(uploadedBooks.filter(b => b.id !== id));
-    toast({ title: "বই অপসারিত", description: "বইটি আপনার তালিকা থেকে মুছে ফেলা হয়েছে।" });
+  const removeBook = (bookId: string) => {
+    if (!db) return;
+    
+    deleteDoc(doc(db, 'books', bookId))
+      .then(() => {
+        toast({ title: "বই অপসারিত", description: "বইটি আপনার তালিকা থেকে মুছে ফেলা হয়েছে।" });
+      })
+      .catch(async () => {
+        const permissionError = new FirestorePermissionError({
+          path: `books/${bookId}`,
+          operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
 
   return (
@@ -111,8 +145,17 @@ export default function SettingsPage() {
           </CardContent>
           <CardFooter className="flex justify-end border-t py-4">
             <Button onClick={handleUpload} disabled={uploading || !file} className="gap-2 bg-accent hover:bg-accent/90">
-              {uploading ? 'আপলোড হচ্ছে...' : 'বই সেভ করুন'}
-              <CheckCircle className="w-4 h-4" />
+              {uploading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  আপলোড হচ্ছে...
+                </>
+              ) : (
+                <>
+                  বই সেভ করুন
+                  <CheckCircle className="w-4 h-4" />
+                </>
+              )}
             </Button>
           </CardFooter>
         </Card>
@@ -120,7 +163,11 @@ export default function SettingsPage() {
 
       <section className="space-y-4">
         <h3 className="text-lg font-bold text-foreground">আপনার আপলোড করা বইসমূহ</h3>
-        {uploadedBooks.length === 0 ? (
+        {loadingBooks ? (
+          <div className="flex justify-center p-12">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        ) : !uploadedBooks || uploadedBooks.length === 0 ? (
           <Card className="p-12 text-center border-dashed border-2 bg-secondary/20">
             <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
             <p className="text-muted-foreground">কোনো বই আপলোড করা হয়নি।</p>
@@ -134,7 +181,7 @@ export default function SettingsPage() {
                     <FileText className="w-6 h-6" />
                   </div>
                   <div>
-                    <h4 className="font-bold">{book.subject} - {book.className} শ্রেণি</h4>
+                    <h4 className="font-bold">{book.subject} - {CLASSES.find(c => c.id === book.classId)?.label} শ্রেণি</h4>
                     <p className="text-xs text-muted-foreground italic">{book.fileName}</p>
                   </div>
                 </div>
