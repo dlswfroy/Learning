@@ -23,7 +23,7 @@ type Question = {
   shortMarks?: number;
 };
 
-// প্রফেশনাল গাণিতিক ও জ্যামিতিক সংকেত প্রসেসর
+// প্রফেশনাল গাণিতিক ও জ্যামিতিক সংকেত প্রসেসর (LaTeX Style Support)
 function formatMath(text: string) {
   if (!text) return '';
   
@@ -33,13 +33,13 @@ function formatMath(text: string) {
   formatted = formatted.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, 
     '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
   
-  // 2. Handle Power: x^2 or x^{10}
+  // 2. Handle Power: x^2 or x^{10} or x^n
   formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
-  formatted = formatted.replace(/\^(\d+|[a-z])/g, '<sup class="math-sup">$1</sup>');
+  formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
   
-  // 3. Handle Subscript: H_2O
+  // 3. Handle Subscript: H_2O or H_{2}
   formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
-  formatted = formatted.replace(/_(\d+|[a-z])/g, '<sub class="math-sub">$1</sub>');
+  formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
   
   // 4. Handle Square Root: \sqrt{x}
   formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>');
@@ -55,7 +55,8 @@ function formatMath(text: string) {
     .replace(/\\times/g, '×')
     .replace(/\\neq/g, '≠')
     .replace(/\\leq/g, '≤')
-    .replace(/\\geq/g, '≥');
+    .replace(/\\geq/g, '≥')
+    .replace(/\\degree/g, '°');
     
   return formatted;
 }
@@ -404,7 +405,10 @@ function CreateQuestionContent() {
       <div className="print-only">
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
-            @page { size: A4; margin: 0.5in; }
+            @page { 
+              size: A4; 
+              margin: 0.5in 0.5in 0.3in 0.5in; /* Top: 0.5, Right: 0.5, Bottom: 0.3, Left: 0.5 */
+            }
             body { 
               font-family: 'Inter', sans-serif; 
               font-size: 9pt; 
@@ -425,21 +429,21 @@ function CreateQuestionContent() {
             .instruction { font-style: italic; font-size: 9pt; margin-bottom: 10px; text-align: center; display: block; width: 100%; }
             
             .q-block { margin-bottom: 12px; page-break-inside: avoid; clear: both; width: 100%; position: relative; }
-            .stimulus { margin-bottom: 6px; white-space: pre-wrap; text-align: justify; display: block; }
+            .stimulus { margin-bottom: 6px; white-space: pre-wrap; text-align: justify; display: block; overflow: visible; }
             
             .sub-qs { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
-            .sub-q { display: flex; justify-content: space-between; align-items: flex-start; line-height: 1.1; width: 100%; }
-            .q-text-part { flex: 1; text-align: justify; }
+            .sub-q { display: flex; justify-content: space-between; align-items: flex-start; line-height: 1.1; width: 100%; overflow: visible; }
+            .q-text-part { flex: 1; text-align: justify; padding-right: 10px; }
             .mark { font-weight: bold; width: 30px; text-align: right; min-width: 30px; margin-left: 10px; }
             
             /* Professional Math Rendering */
             .math-sup { font-size: 0.7em; vertical-align: super; line-height: 0; }
             .math-sub { font-size: 0.7em; vertical-align: sub; line-height: 0; }
-            .math-frac { display: inline-block; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 0.2em; }
+            .math-frac { display: inline-block; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 0.2em; line-height: 1; }
             .math-num { display: block; border-bottom: 0.5pt solid black; padding: 0 0.1em; line-height: 1; }
             .math-den { display: block; padding: 0 0.1em; line-height: 1; }
-            .math-sqrt { display: inline-flex; align-items: flex-start; vertical-align: middle; }
-            .math-sqrt-stem { border-top: 0.5pt solid black; margin-top: 0.5pt; padding-top: 1pt; display: inline-block; }
+            .math-sqrt { display: inline-flex; align-items: flex-start; vertical-align: middle; position: relative; }
+            .math-sqrt-stem { border-top: 0.5pt solid black; margin-top: 0.5pt; padding-top: 1pt; display: inline-block; line-height: 1; }
             
             .no-print { display: none !important; }
           }
