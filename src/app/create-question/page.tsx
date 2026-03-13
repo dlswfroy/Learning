@@ -1,10 +1,10 @@
 
 "use client";
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { CLASSES, getSubjectsForClass } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -17,16 +17,7 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 type Question = {
   type: 'creative' | 'short';
-  stimulus?: string;
-  qA?: string;
-  qB?: string;
-  qC?: string;
-  qD?: string;
-  marksA?: number;
-  marksB?: number;
-  marksC?: number;
-  marksD?: number;
-  shortText?: string;
+  content: string; // One box for everything
   shortMarks?: number;
 };
 
@@ -50,8 +41,8 @@ export default function CreateQuestionPage() {
 
   const handleAddQuestion = (type: 'creative' | 'short') => {
     const newQ: Question = type === 'creative' 
-      ? { type, stimulus: '', qA: '', qB: '', qC: '', qD: '', marksA: 1, marksB: 2, marksC: 3, marksD: 4 }
-      : { type, shortText: '', shortMarks: 5 };
+      ? { type, content: '' }
+      : { type, content: '', shortMarks: 2 };
     setQuestions([...questions, newQ]);
   };
 
@@ -65,6 +56,51 @@ export default function CreateQuestionPage() {
     setQuestions(updated);
   };
 
+  const parseCreative = (text: string) => {
+    // Basic logic to split stimulus and parts based on markers ক. খ. গ. ঘ.
+    const parts = {
+      stimulus: '',
+      qA: '',
+      qB: '',
+      qC: '',
+      qD: ''
+    };
+
+    const markers = ['ক.', 'খ.', 'গ.', 'ঘ.'];
+    let lastIndex = 0;
+    let currentMarker = '';
+
+    // Simple parser: Find marker positions
+    const posA = text.indexOf('ক.');
+    const posB = text.indexOf('খ.');
+    const posC = text.indexOf('গ.');
+    const posD = text.indexOf('ঘ.');
+
+    if (posA !== -1) {
+      parts.stimulus = text.substring(0, posA).trim();
+      if (posB !== -1) {
+        parts.qA = text.substring(posA + 2, posB).trim();
+        if (posC !== -1) {
+          parts.qB = text.substring(posB + 2, posC).trim();
+          if (posD !== -1) {
+            parts.qC = text.substring(posC + 2, posD).trim();
+            parts.qD = text.substring(posD + 2).trim();
+          } else {
+            parts.qC = text.substring(posC + 2).trim();
+          }
+        } else {
+          parts.qB = text.substring(posB + 2).trim();
+        }
+      } else {
+        parts.qA = text.substring(posA + 2).trim();
+      }
+    } else {
+      parts.stimulus = text;
+    }
+
+    return parts;
+  };
+
   const handleSaveToDb = async () => {
     if (!user) {
       toast({ title: "লগইন প্রয়োজন", description: "প্রশ্নপত্র সেভ করতে অনুগ্রহ করে লগইন করুন।", variant: "destructive" });
@@ -76,25 +112,46 @@ export default function CreateQuestionPage() {
     }
 
     setSaving(true);
+    // Transform data for firestore to match backend.json schema if possible
+    const formattedQuestions = questions.map(q => {
+      if (q.type === 'creative') {
+        const parsed = parseCreative(q.content);
+        return {
+          type: 'creative',
+          stimulus: parsed.stimulus,
+          qA: parsed.qA,
+          qB: parsed.qB,
+          qC: parsed.qC,
+          qD: parsed.qD,
+          marksA: 1, marksB: 2, marksC: 3, marksD: 4
+        };
+      }
+      return {
+        type: 'short',
+        shortText: q.content,
+        shortMarks: q.shortMarks
+      };
+    });
+
     const questionSetData = {
       ...meta,
-      questions,
+      questions: formattedQuestions,
       userId: user.uid,
       createdAt: serverTimestamp(),
     };
 
-    try {
-      await addDoc(collection(db, 'questions'), questionSetData);
-      toast({ title: "সফল!", description: "প্রশ্নপত্রটি ডাটাবেসে সেভ করা হয়েছে।" });
-    } catch (error: any) {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: 'questions',
-        operation: 'create',
-        requestResourceData: questionSetData
-      }));
-    } finally {
-      setSaving(false);
-    }
+    addDoc(collection(db, 'questions'), questionSetData)
+      .then(() => {
+        toast({ title: "সফল!", description: "প্রশ্নপত্রটি ডাটাবেসে সেভ করা হয়েছে।" });
+      })
+      .catch(async () => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: 'questions',
+          operation: 'create',
+          requestResourceData: questionSetData
+        }));
+      })
+      .finally(() => setSaving(false));
   };
 
   const handlePrint = () => {
@@ -109,7 +166,7 @@ export default function CreateQuestionPage() {
         </div>
         <div>
           <h2 className="text-2xl font-bold text-primary">ম্যানুয়াল প্রশ্নপত্র নির্মাতা</h2>
-          <p className="text-sm text-muted-foreground">বোর্ড স্ট্যান্ডার্ড সৃজনশীল ও সংক্ষিপ্ত প্রশ্নপত্র তৈরি করুন</p>
+          <p className="text-sm text-muted-foreground">উদ্দীপক ও প্রশ্ন এক বক্সে লিখে বোর্ড স্ট্যান্ডার্ড প্রশ্নপত্র তৈরি করুন</p>
         </div>
       </header>
 
@@ -205,38 +262,15 @@ export default function CreateQuestionPage() {
               </div>
 
               {q.type === 'creative' ? (
-                <div className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-muted-foreground">উদ্দীপক (Stimulus)</label>
-                    <Textarea 
-                      placeholder="উদ্দীপকটি এখানে লিখুন... (গাণিতিক চিহ্নের জন্য Unicode ব্যবহার করুন)" 
-                      value={q.stimulus || ''} 
-                      onChange={e => updateQuestion(idx, {stimulus: e.target.value})}
-                      className="min-h-[120px]"
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 gap-4">
-                    <div className="grid grid-cols-[30px_1fr_80px] gap-2 items-center">
-                      <span className="font-bold">ক.</span>
-                      <Input placeholder="জ্ঞানমূলক প্রশ্ন..." value={q.qA || ''} onChange={e => updateQuestion(idx, {qA: e.target.value})} />
-                      <Input type="number" placeholder="মান" value={q.marksA || 1} onChange={e => updateQuestion(idx, {marksA: Number(e.target.value)})} />
-                    </div>
-                    <div className="grid grid-cols-[30px_1fr_80px] gap-2 items-center">
-                      <span className="font-bold">খ.</span>
-                      <Input placeholder="অনুধাবনমূলক প্রশ্ন..." value={q.qB || ''} onChange={e => updateQuestion(idx, {qB: e.target.value})} />
-                      <Input type="number" placeholder="মান" value={q.marksB || 2} onChange={e => updateQuestion(idx, {marksB: Number(e.target.value)})} />
-                    </div>
-                    <div className="grid grid-cols-[30px_1fr_80px] gap-2 items-center">
-                      <span className="font-bold">গ.</span>
-                      <Input placeholder="প্রয়োগমূলক প্রশ্ন..." value={q.qC || ''} onChange={e => updateQuestion(idx, {qC: e.target.value})} />
-                      <Input type="number" placeholder="মান" value={q.marksC || 3} onChange={e => updateQuestion(idx, {marksC: Number(e.target.value)})} />
-                    </div>
-                    <div className="grid grid-cols-[30px_1fr_80px] gap-2 items-center">
-                      <span className="font-bold">ঘ.</span>
-                      <Input placeholder="উচ্চতর দক্ষতামূলক প্রশ্ন..." value={q.qD || ''} onChange={e => updateQuestion(idx, {qD: e.target.value})} />
-                      <Input type="number" placeholder="মান" value={q.marksD || 4} onChange={e => updateQuestion(idx, {marksD: Number(e.target.value)})} />
-                    </div>
-                  </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-muted-foreground">উদ্দীপক ও প্রশ্ন (ক. খ. গ. ঘ. সহ একসাথে লিখুন)</label>
+                  <Textarea 
+                    placeholder="উদ্দীপক লিখুন... তারপর ক. খ. গ. ঘ. দিয়ে প্রশ্নগুলো লিখুন।" 
+                    value={q.content || ''} 
+                    onChange={e => updateQuestion(idx, {content: e.target.value})}
+                    className="min-h-[180px]"
+                  />
+                  <p className="text-[10px] text-muted-foreground">টিপস: "ক.", "খ.", "গ.", "ঘ." ব্যবহার করলে সিস্টেম অটোমেটিক নম্বর ও প্রশ্ন আলাদা করে দেবে।</p>
                 </div>
               ) : (
                 <div className="flex flex-col md:flex-row gap-4">
@@ -244,13 +278,13 @@ export default function CreateQuestionPage() {
                     <label className="text-xs font-bold text-muted-foreground">সংক্ষিপ্ত প্রশ্ন</label>
                     <Input 
                       placeholder="প্রশ্নটি এখানে লিখুন..."
-                      value={q.shortText || ''} 
-                      onChange={e => updateQuestion(idx, {shortText: e.target.value})} 
+                      value={q.content || ''} 
+                      onChange={e => updateQuestion(idx, {content: e.target.value})} 
                     />
                   </div>
                   <div className="w-full md:w-32 space-y-1">
                     <label className="text-xs font-bold text-muted-foreground">নম্বর</label>
-                    <Input type="number" value={q.shortMarks || 5} onChange={e => updateQuestion(idx, {shortMarks: Number(e.target.value)})} />
+                    <Input type="number" value={q.shortMarks || 2} onChange={e => updateQuestion(idx, {shortMarks: Number(e.target.value)})} />
                   </div>
                 </div>
               )}
@@ -332,7 +366,6 @@ export default function CreateQuestionPage() {
             .stimulus-text {
               margin-bottom: 12px;
               white-space: pre-wrap;
-              font-style: italic;
               text-align: justify;
             }
             .sub-questions {
@@ -374,39 +407,50 @@ export default function CreateQuestionPage() {
           </div>
 
           <div className="questions-container">
-            {questions.map((q, idx) => (
-              <div key={idx} className="q-block">
-                {q.type === 'creative' ? (
-                  <>
+            {questions.map((q, idx) => {
+              if (q.type === 'creative') {
+                const parsed = parseCreative(q.content);
+                return (
+                  <div key={idx} className="q-block">
                     <div className="q-title">{idx + 1}. নিচের উদ্দীপকটি পড়ো এবং প্রশ্নগুলোর উত্তর দাও:</div>
-                    <div className="stimulus-text">{q.stimulus}</div>
+                    <div className="stimulus-text">{parsed.stimulus}</div>
                     <div className="sub-questions">
-                      <div className="sub-q-row">
-                        <span>ক. {q.qA}</span>
-                        <span className="q-mark">{q.marksA}</span>
-                      </div>
-                      <div className="sub-q-row">
-                        <span>খ. {q.qB}</span>
-                        <span className="q-mark">{q.marksB}</span>
-                      </div>
-                      <div className="sub-q-row">
-                        <span>গ. {q.qC}</span>
-                        <span className="q-mark">{q.marksC}</span>
-                      </div>
-                      <div className="sub-q-row">
-                        <span>ঘ. {q.qD}</span>
-                        <span className="q-mark">{q.marksD}</span>
-                      </div>
+                      {parsed.qA && (
+                        <div className="sub-q-row">
+                          <span>ক. {parsed.qA}</span>
+                          <span className="q-mark">১</span>
+                        </div>
+                      )}
+                      {parsed.qB && (
+                        <div className="sub-q-row">
+                          <span>খ. {parsed.qB}</span>
+                          <span className="q-mark">২</span>
+                        </div>
+                      )}
+                      {parsed.qC && (
+                        <div className="sub-q-row">
+                          <span>গ. {parsed.qC}</span>
+                          <span className="q-mark">৩</span>
+                        </div>
+                      )}
+                      {parsed.qD && (
+                        <div className="sub-q-row">
+                          <span>ঘ. {parsed.qD}</span>
+                          <span className="q-mark">৪</span>
+                        </div>
+                      )}
                     </div>
-                  </>
-                ) : (
-                  <div className="short-q-block">
-                    <span>{idx + 1}. {q.shortText}</span>
+                  </div>
+                );
+              } else {
+                return (
+                  <div key={idx} className="short-q-block">
+                    <span>{idx + 1}. {q.content}</span>
                     <span className="q-mark">{q.shortMarks}</span>
                   </div>
-                )}
-              </div>
-            ))}
+                );
+              }
+            })}
           </div>
         </div>
       </div>
