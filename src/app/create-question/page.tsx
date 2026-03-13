@@ -23,29 +23,33 @@ type Question = {
   shortMarks?: number;
 };
 
-// গাণিতিক সংকেত প্রসেসর - বোর্ড স্ট্যান্ডার্ড
+// প্রফেশনাল গাণিতিক সংকেত প্রসেসর - বোর্ড স্ট্যান্ডার্ড
 function formatMath(text: string) {
   if (!text) return '';
   
   let formatted = text;
   
+  // 1. Handle Fractions: \frac{num}{den} -> Stacked look
+  formatted = formatted.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, 
+    '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
+  
+  // 2. Handle Power: x^2 or x^{10} - Using sup for better alignment
+  formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
+  formatted = formatted.replace(/\^(\d+|[a-z])/g, '<sup class="math-sup">$1</sup>');
+  
+  // 3. Handle Subscript: H_2O
+  formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
+  formatted = formatted.replace(/_(\d+|[a-z])/g, '<sub class="math-sub">$1</sub>');
+  
+  // 4. Handle Square Root: \sqrt{x}
+  formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">&radic;<span class="math-sqrt-stem">$1</span></span>');
+  formatted = formatted.replace(/sqrt\(([^)]+)\)/g, '<span class="math-sqrt">&radic;<span class="math-sqrt-stem">$1</span></span>');
+  
+  // 5. Common Symbols
   formatted = formatted
-    // Fractions: \frac{num}{den} -> Stacked look
-    .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>')
-    
-    // Power: x^2 or x^{10}
-    .replace(/\^\{([^}]+)\}/g, '<span class="math-sup">$1</span>')
-    .replace(/\^(\d+|[a-z])/g, '<span class="math-sup">$1</span>')
-    
-    // Subscript: H_2O
-    .replace(/_\{([^}]+)\}/g, '<span class="math-sub">$1</span>')
-    .replace(/_(\d+|[a-z])/g, '<span class="math-sub">$1</span>')
-    
-    // Square Root: \sqrt{x}
-    .replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>')
-    .replace(/sqrt\(([^)]+)\)/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>')
-    
-    // Symbols
+    .replace(/\\triangle/g, '&#9651;')
+    .replace(/\\angle/g, '&ang;')
+    .replace(/\\circ/g, '&deg;')
     .replace(/theta/g, '&theta;')
     .replace(/pi/g, '&pi;')
     .replace(/degree/g, '&deg;')
@@ -133,7 +137,7 @@ function CreateQuestionContent() {
             shortInstruction: data.shortInstruction || '',
           });
           
-          const reconstructed = data.questions.map((q: any, idx: number) => {
+          const reconstructed = data.questions.map((q: any) => {
             if (q.type === 'creative') {
               let content = q.stimulus || '';
               const parts = [];
@@ -188,7 +192,11 @@ function CreateQuestionContent() {
     if (!text) return parts;
     
     const markers = ['ক.', 'খ.', 'গ.', 'ঘ.'];
-    let positions = markers.map(m => text.indexOf(m));
+    let positions = markers.map(m => {
+      const idx = text.indexOf(m);
+      return idx;
+    });
+    
     const firstMarkerIndex = positions.findIndex(p => p !== -1);
     
     if (firstMarkerIndex !== -1) {
@@ -203,7 +211,6 @@ function CreateQuestionContent() {
             break;
           }
         }
-        // Remove the marker itself from the content to avoid duplication
         const content = text.substring(start + markers[i].length, end).trim();
         if (i === 0) parts.qA = content;
         else if (i === 1) parts.qB = content;
@@ -415,16 +422,16 @@ function CreateQuestionContent() {
               padding: 0;
             }
             .paper { width: 100%; text-align: justify; }
-            .header { text-align: center; margin-bottom: 10px; border-bottom: 2px solid black; padding-bottom: 8px; }
-            .inst-name { font-size: 14pt; font-weight: 800; margin-bottom: 2px; text-transform: uppercase; }
+            .header { text-align: center; margin-bottom: 12px; border-bottom: 1.5pt solid black; padding-bottom: 10px; }
+            .inst-name { font-size: 16pt; font-weight: 800; margin-bottom: 2px; }
             .exam-name { font-size: 10pt; font-weight: 700; margin-bottom: 2px; }
-            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px; }
+            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px; font-size: 9pt; }
             
-            .section-header-container { text-align: center; width: 100%; margin-top: 15px; margin-bottom: 5px; position: relative; }
-            .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1.5px solid black; display: inline-block; padding: 0 15px; }
-            .instruction { font-style: italic; font-size: 8.5pt; margin-bottom: 8px; text-align: center; display: block; width: 100%; }
+            .section-header-container { text-align: center; width: 100%; margin-top: 15px; margin-bottom: 5px; }
+            .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 20px; text-transform: uppercase; }
+            .instruction { font-style: italic; font-size: 9pt; margin-bottom: 10px; text-align: center; display: block; width: 100%; }
             
-            .q-block { margin-bottom: 12px; page-break-inside: avoid; clear: both; width: 100%; position: relative; }
+            .q-block { margin-bottom: 12px; page-break-inside: avoid; clear: both; width: 100%; }
             .stimulus { margin-bottom: 6px; white-space: pre-wrap; text-align: justify; display: block; }
             
             .sub-qs { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
@@ -432,14 +439,14 @@ function CreateQuestionContent() {
             .q-text-part { flex: 1; text-align: justify; }
             .mark { font-weight: bold; width: 30px; text-align: right; min-width: 30px; margin-left: 10px; }
             
-            /* Enhanced Math Styles - No Overlap */
-            .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; line-height: 1; }
-            .math-num { border-bottom: 0.5pt solid black; padding: 0 2px; }
-            .math-den { padding: 0 2px; }
-            .math-sup { font-size: 0.7em; vertical-align: top; line-height: 0; position: relative; top: -0.2em; margin-left: 1px; }
-            .math-sub { font-size: 0.7em; vertical-align: bottom; line-height: 0; position: relative; bottom: -0.1em; margin-left: 1px; }
+            /* Professional Math Rendering */
+            .math-sup { font-size: 0.75em; line-height: 0; vertical-align: baseline; position: relative; top: -0.4em; }
+            .math-sub { font-size: 0.75em; line-height: 0; vertical-align: baseline; position: relative; bottom: -0.2em; }
+            .math-frac { display: inline-block; vertical-align: middle; text-align: center; font-size: 0.9em; margin: 0 0.2em; }
+            .math-num { display: block; border-bottom: 0.5pt solid black; padding: 0 0.1em; line-height: 1; }
+            .math-den { display: block; padding: 0 0.1em; line-height: 1; }
             .math-sqrt { display: inline-flex; align-items: flex-start; vertical-align: middle; }
-            .math-sqrt-stem { border-top: 1px solid black; margin-top: 1px; padding-top: 1px; display: inline-block; }
+            .math-sqrt-stem { border-top: 0.5pt solid black; margin-top: 0.5pt; padding-top: 1pt; display: inline-block; }
             
             .no-print { display: none !important; }
           }
