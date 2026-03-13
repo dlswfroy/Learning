@@ -23,7 +23,6 @@ export default function SettingsPage() {
   const storage = useStorage();
   const { user, loading: userLoading } = useUser();
   
-  // Initialize states with empty strings to avoid controlled/uncontrolled warnings
   const [classId, setClassId] = useState('');
   const [subject, setSubject] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -164,12 +163,18 @@ export default function SettingsPage() {
   };
 
   const removeBook = (bookId: string) => {
-    if (!isAdmin || !db) return;
-    if (!confirm("মুছে ফেলতে চান?")) return;
+    if (!isAdmin || !db) {
+      toast({ title: "অনুমতি নেই", description: "শুধুমাত্র এডমিন বই মুছতে পারবেন।", variant: "destructive" });
+      return;
+    }
+    
+    if (!confirm("আপনি কি নিশ্চিতভাবে এই বইটি মুছে ফেলতে চান?")) return;
 
     deleteDoc(doc(db, 'books', bookId))
-      .then(() => toast({ title: "মুছে ফেলা হয়েছে" }))
-      .catch(() => {
+      .then(() => {
+        toast({ title: "সফল", description: "বইটি মুছে ফেলা হয়েছে।" });
+      })
+      .catch(async () => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
           path: `books/${bookId}`, operation: 'delete'
         }));
@@ -249,7 +254,7 @@ export default function SettingsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">শ্রেণি</label>
-                  <Select onValueChange={setClassId} value={classId}>
+                  <Select onValueChange={setClassId} value={classId || ''}>
                     <SelectTrigger className="bg-background">
                       <SelectValue placeholder="নির্বাচন করুন" />
                     </SelectTrigger>
@@ -263,7 +268,7 @@ export default function SettingsPage() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">বিষয়</label>
-                  <Select onValueChange={setSubject} value={subject} disabled={!classId}>
+                  <Select onValueChange={setSubject} value={subject || ''} disabled={!classId}>
                     <SelectTrigger className="bg-background">
                       <SelectValue placeholder="নির্বাচন করুন" />
                     </SelectTrigger>
@@ -294,7 +299,7 @@ export default function SettingsPage() {
                       <label className="text-sm font-semibold">বইয়ের ডাউনলোড লিঙ্ক (URL)</label>
                       <Input 
                         placeholder="https://nctb.gov.bd/..." 
-                        value={pdfUrl}
+                        value={pdfUrl || ''}
                         onChange={(e) => setPdfUrl(e.target.value)}
                         disabled={uploading}
                       />
@@ -308,7 +313,7 @@ export default function SettingsPage() {
                   </label>
                   <Input 
                     placeholder="https://example.com/cover.jpg" 
-                    value={coverImageUrl}
+                    value={coverImageUrl || ''}
                     onChange={(e) => setCoverImageUrl(e.target.value)}
                     disabled={uploading}
                   />
@@ -378,9 +383,16 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => removeBook(book.id)}>
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  {isAdmin && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="text-destructive hover:bg-destructive/10" 
+                      onClick={() => removeBook(book.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
               </Card>
             ))}
