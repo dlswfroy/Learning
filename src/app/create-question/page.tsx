@@ -178,7 +178,9 @@ function CreateQuestionContent() {
   };
 
   const handleRemoveQuestion = (id: string) => {
-    setQuestions(questions.filter(q => q.id !== id));
+    if (confirm("আপনি কি নিশ্চিতভাবে এই প্রশ্নটি মুছে ফেলতে চান?")) {
+      setQuestions(questions.filter(q => q.id !== id));
+    }
   };
 
   const updateQuestion = (id: string, data: Partial<Question>) => {
@@ -411,7 +413,7 @@ function CreateQuestionContent() {
             }
             body { 
               font-family: 'Inter', sans-serif; 
-              font-size: 9pt; 
+              font-size: 10pt; 
               color: black !important; 
               line-height: 1.1 !important; 
               background: white !important; 
@@ -419,31 +421,31 @@ function CreateQuestionContent() {
               padding: 0;
             }
             .paper { width: 100%; text-align: justify; }
-            .header { text-align: center; margin-bottom: 12px; border-bottom: 1.5pt solid black; padding-bottom: 10px; }
-            .inst-name { font-size: 16pt; font-weight: 800; margin-bottom: 2px; }
-            .exam-name { font-size: 10pt; font-weight: 700; margin-bottom: 2px; }
-            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px; font-size: 9pt; }
+            .header { text-align: center; margin-bottom: 15px; border-bottom: 1.5pt solid black; padding-bottom: 10px; }
+            .inst-name { font-size: 18pt; font-weight: 800; margin-bottom: 2px; }
+            .exam-name { font-size: 11pt; font-weight: 700; margin-bottom: 2px; }
+            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px; font-size: 10pt; }
             
-            .section-header-container { text-align: center; width: 100%; margin-top: 15px; margin-bottom: 5px; }
-            .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 20px; text-transform: uppercase; }
-            .instruction { font-style: italic; font-size: 9pt; margin-bottom: 10px; text-align: center; display: block; width: 100%; }
+            .section-header-container { text-align: center; width: 100%; margin-top: 20px; margin-bottom: 5px; }
+            .section-label { font-size: 11pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 25px; text-transform: uppercase; }
+            .instruction { font-style: italic; font-size: 10pt; margin-bottom: 12px; text-align: center; display: block; width: 100%; }
             
-            .q-block { margin-bottom: 12px; page-break-inside: avoid; clear: both; width: 100%; position: relative; }
-            .stimulus { margin-bottom: 6px; white-space: pre-wrap; text-align: justify; display: block; overflow: visible; }
+            .q-block { margin-bottom: 15px; page-break-inside: avoid; clear: both; width: 100%; position: relative; }
+            .stimulus { margin-bottom: 8px; white-space: pre-wrap; text-align: justify; display: block; }
             
-            .sub-qs { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
-            .sub-q { display: flex; justify-content: space-between; align-items: flex-start; line-height: 1.1; width: 100%; overflow: visible; }
-            .q-text-part { flex: 1; text-align: justify; padding-right: 10px; }
-            .mark { font-weight: bold; width: 30px; text-align: right; min-width: 30px; margin-left: 10px; }
+            .sub-qs { display: flex; flex-direction: column; gap: 5px; margin-top: 5px; }
+            .sub-q { display: flex; justify-content: space-between; align-items: flex-start; line-height: 1.1; width: 100%; }
+            .q-text-part { flex: 1; text-align: justify; padding-right: 15px; }
+            .mark { font-weight: bold; width: 35px; text-align: right; min-width: 35px; margin-left: 10px; }
             
             /* Professional Math Rendering */
-            .math-sup { font-size: 0.7em; vertical-align: super; line-height: 0; }
-            .math-sub { font-size: 0.7em; vertical-align: sub; line-height: 0; }
-            .math-frac { display: inline-block; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 0.2em; line-height: 1; }
-            .math-num { display: block; border-bottom: 0.5pt solid black; padding: 0 0.1em; line-height: 1; }
-            .math-den { display: block; padding: 0 0.1em; line-height: 1; }
+            .math-sup { font-size: 0.75em; vertical-align: super; line-height: 0; position: relative; top: -0.1em; }
+            .math-sub { font-size: 0.75em; vertical-align: sub; line-height: 0; position: relative; bottom: -0.1em; }
+            .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.9em; margin: 0 0.2em; line-height: 1; }
+            .math-num { display: block; border-bottom: 0.5pt solid black; padding: 0 0.2em; }
+            .math-den { display: block; padding: 0 0.2em; }
             .math-sqrt { display: inline-flex; align-items: flex-start; vertical-align: middle; position: relative; }
-            .math-sqrt-stem { border-top: 0.5pt solid black; margin-top: 0.5pt; padding-top: 1pt; display: inline-block; line-height: 1; }
+            .math-sqrt-stem { border-top: 0.5pt solid black; margin-top: 0.5pt; padding-top: 1.5pt; display: inline-block; line-height: 1; }
             
             .no-print { display: none !important; }
           }
@@ -451,8 +453,8 @@ function CreateQuestionContent() {
         
         <div className="paper">
           <div className="header">
-            <div className="inst-name">{meta.institution}</div>
-            <div className="exam-name">{meta.exam}</div>
+            <div className="inst-name">{meta.institution || 'শিক্ষা প্রতিষ্ঠানের নাম'}</div>
+            <div className="exam-name">{meta.exam || 'পরীক্ষার নাম'}</div>
             <div className="font-bold">শ্রেণি: {CLASSES.find(c => c.id === meta.classId)?.label || ''} | বিষয়: {meta.subject}</div>
             <div className="meta-info">
               <div>সময়: {meta.time}</div>

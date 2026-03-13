@@ -6,7 +6,28 @@ import { useFirestore, useUser, useCollection } from '@/firebase';
 import { collection, query, where, deleteDoc, doc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, Edit, Trash2, Loader2, Calendar, BookOpen, GraduationCap, PlusCircle } from 'lucide-react';
+import { 
+  FileText, 
+  Edit, 
+  Trash2, 
+  Loader2, 
+  Calendar, 
+  BookOpen, 
+  GraduationCap, 
+  PlusCircle,
+  AlertTriangle 
+} from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
@@ -40,7 +61,6 @@ export default function MyQuestionsPage() {
   }, [rawQuestions]);
 
   const handleDelete = async (id: string) => {
-    if (!confirm("আপনি কি নিশ্চিতভাবে এই প্রশ্নপত্রটি মুছে ফেলতে চান?")) return;
     setDeleting(id);
     try {
       await deleteDoc(doc(db!, 'questions', id));
@@ -119,15 +139,38 @@ export default function MyQuestionsPage() {
                 </p>
               </CardContent>
               <CardFooter className="border-t bg-muted/10 flex justify-end gap-2 p-3">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-destructive hover:bg-destructive/10"
-                  onClick={() => handleDelete(q.id)}
-                  disabled={deleting === q.id}
-                >
-                  {deleting === q.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-destructive hover:bg-destructive/10"
+                      disabled={deleting === q.id}
+                    >
+                      {deleting === q.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="flex items-center gap-2">
+                        <AlertTriangle className="text-destructive w-5 h-5" /> আপনি কি নিশ্চিত?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        এই প্রশ্নপত্রটি স্থায়ীভাবে মুছে ফেলা হবে। এটি আর ফিরে পাওয়া সম্ভব নয়।
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>বাতিল</AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={() => handleDelete(q.id)}
+                        className="bg-destructive hover:bg-destructive/90"
+                      >
+                        হ্যাঁ, মুছে ফেলুন
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+
                 <Link href={`/create-question?id=${q.id}`}>
                   <Button variant="outline" size="sm" className="gap-2 border-primary text-primary hover:bg-primary/5">
                     <Edit className="w-3 h-3" /> এডিট করুন
@@ -144,7 +187,7 @@ export default function MyQuestionsPage() {
           </div>
           <h3 className="text-xl font-bold text-foreground/80 mb-2">কোনো প্রশ্নপত্র নেই</h3>
           <p className="text-muted-foreground max-w-sm mb-6">
-            আপনি এখনো কোনো প্রশ্নপত্র তৈরি করেননি অথবা সেগুলো ডাটাবেসে লোড হচ্ছে।
+            আপনি এখনো কোনো প্রশ্নপত্র তৈরি করেননি।
           </p>
           <Link href="/create-question">
             <Button className="font-bold px-8">প্রথম প্রশ্ন তৈরি করুন</Button>
