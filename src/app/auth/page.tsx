@@ -39,14 +39,14 @@ export default function AuthPage() {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(userCredential.user, { displayName: name });
         
-        // Check if this is the first user ever
+        // Check if this is the first user ever to assign admin
         const adminDocRef = doc(db, 'config', 'admin');
         const adminDoc = await getDoc(adminDocRef);
         
         if (!adminDoc.exists()) {
           // First user becomes admin
           await setDoc(adminDocRef, { adminUid: userCredential.user.uid });
-          toast({ title: "অভিনন্দন!", description: "আপনি এই সিস্টেমের প্রথম ইউজার এবং এডমিন হিসেবে নিযুক্ত হলেন।" });
+          toast({ title: "অভিনন্দন!", description: "আপনি প্রথম ইউজার এবং এডমিন হিসেবে নিযুক্ত হলেন।" });
         } else {
           toast({ title: "সফল রেজিস্ট্রেশন", description: "আপনার অ্যাকাউন্ট তৈরি হয়েছে।" });
         }
@@ -55,8 +55,8 @@ export default function AuthPage() {
     } catch (error: any) {
       let message = "অথেনটিকেশন ব্যর্থ হয়েছে।";
       if (error.code === 'auth/email-already-in-use') message = "এই ইমেইলটি ইতিপূর্বে ব্যবহার করা হয়েছে।";
-      if (error.code === 'auth/wrong-password') message = "ভুল পাসওয়ার্ড।";
-      if (error.code === 'auth/user-not-found') message = "এই ইমেইলে কোনো ইউজার পাওয়া যায়নি।";
+      if (error.code === 'auth/invalid-credential') message = "ইমেইল বা পাসওয়ার্ড ভুল।";
+      if (error.code === 'auth/weak-password') message = "পাসওয়ার্ড অন্তত ৬ অক্ষরের হতে হবে।";
       
       toast({ variant: "destructive", title: "ত্রুটি", description: message });
     } finally {
@@ -82,7 +82,7 @@ export default function AuthPage() {
                 <label className="text-sm font-semibold">আপনার নাম</label>
                 <Input 
                   placeholder="পুরো নাম লিখুন" 
-                  value={name} 
+                  value={name || ''} 
                   onChange={(e) => setName(e.target.value)} 
                   required={!isLogin}
                 />
@@ -93,7 +93,7 @@ export default function AuthPage() {
               <Input 
                 type="email" 
                 placeholder="example@gmail.com" 
-                value={email} 
+                value={email || ''} 
                 onChange={(e) => setEmail(e.target.value)} 
                 required 
               />
@@ -103,7 +103,7 @@ export default function AuthPage() {
               <Input 
                 type="password" 
                 placeholder="******" 
-                value={password} 
+                value={password || ''} 
                 onChange={(e) => setPassword(e.target.value)} 
                 required 
               />

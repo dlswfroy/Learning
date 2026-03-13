@@ -48,7 +48,7 @@ export default function SettingsPage() {
         if (adminDoc.exists()) {
           setIsAdmin(adminDoc.data().adminUid === user.uid);
         } else {
-          // If no admin exists, current user is admin
+          // If no admin exists, current user becomes admin
           await setDoc(adminDocRef, { adminUid: user.uid });
           setIsAdmin(true);
         }
@@ -128,7 +128,7 @@ export default function SettingsPage() {
         return;
       }
       setUploading(true);
-      saveToFirestore(pdfUrl, `${subject}_Book_Link`);
+      saveToFirestore(pdfUrl, `${subject}_বই_লিঙ্ক`);
     }
   };
 
@@ -148,7 +148,7 @@ export default function SettingsPage() {
         setFile(null);
         setPdfUrl('');
         setProgress(0);
-        toast({ title: "সফল", description: "বইটি সফলভাবে সেকশনে যুক্ত করা হয়েছে।" });
+        toast({ title: "সফল", description: "বইটি সফলভাবে যুক্ত করা হয়েছে।" });
       })
       .catch(async () => {
         setUploading(false);
@@ -243,7 +243,7 @@ export default function SettingsPage() {
             <CardContent className="pt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-semibold">শ্রেণি</label>
-                <Select onValueChange={setClassId} value={classId}>
+                <Select onValueChange={setClassId} value={classId || ''}>
                   <SelectTrigger className="bg-background">
                     <SelectValue placeholder="নির্বাচন করুন" />
                   </SelectTrigger>
@@ -257,7 +257,7 @@ export default function SettingsPage() {
 
               <div className="space-y-2">
                 <label className="text-sm font-semibold">বিষয়</label>
-                <Select onValueChange={setSubject} value={subject} disabled={!classId}>
+                <Select onValueChange={setSubject} value={subject || ''} disabled={!classId}>
                   <SelectTrigger className="bg-background">
                     <SelectValue placeholder="নির্বাচন করুন" />
                   </SelectTrigger>
@@ -286,7 +286,7 @@ export default function SettingsPage() {
                     <label className="text-sm font-semibold">ডাউনলোড লিঙ্ক (URL)</label>
                     <Input 
                       placeholder="https://nctb.gov.bd/..." 
-                      value={pdfUrl}
+                      value={pdfUrl || ''}
                       onChange={(e) => setPdfUrl(e.target.value)}
                       disabled={uploading}
                     />
