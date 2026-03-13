@@ -125,7 +125,7 @@ export default function SettingsPage() {
       }
     } else {
       if (!pdfUrl) {
-        toast({ title: "লিঙ্ক নেই", description: "অনুগ্রহ করে এনসিটিবি বা অন্য সোর্স থেকে ডাউনলোড লিঙ্কটি দিন।", variant: "destructive" });
+        toast({ title: "লিঙ্ক নেই", description: "অনুগ্রহ করে ডাউনলোড লিঙ্কটি দিন।", variant: "destructive" });
         return;
       }
       setUploading(true);
@@ -297,7 +297,7 @@ export default function SettingsPage() {
                     <>
                       <label className="text-sm font-semibold">বইয়ের ডাউনলোড লিঙ্ক (URL)</label>
                       <Input 
-                        placeholder="https://nctb.gov.bd/..." 
+                        placeholder="https://example.com/..." 
                         value={pdfUrl || ''}
                         onChange={(e) => setPdfUrl(e.target.value)}
                         disabled={uploading}
