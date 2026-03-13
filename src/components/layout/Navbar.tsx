@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { BookOpenText, LogIn, LogOut, User as UserIcon } from 'lucide-react';
 import { useUser, useAuth } from '@/firebase';
-import { signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
+import { signOut } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -21,34 +21,10 @@ export function Navbar() {
   const { user, loading } = useUser();
   const auth = useAuth();
 
-  const handleLogin = async () => {
-    try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-      toast({ title: "সফল লগইন", description: "আপনি সফলভাবে লগইন করেছেন।" });
-    } catch (error: any) {
-      console.error("Login error:", error);
-      let errorMessage = "গুগল লগইন করা সম্ভব হয়নি।";
-      const currentDomain = typeof window !== 'undefined' ? window.location.hostname : '';
-      
-      if (error.code === 'auth/unauthorized-domain') {
-        errorMessage = `এই ডোমেইনটি (${currentDomain}) ফায়ারবেসে অনুমোদিত নয়। ফায়ারবেস কনসোলে Authorized Domains এ এটি যুক্ত করুন।`;
-      } else if (error.code === 'auth/popup-blocked') {
-        errorMessage = "পপ-আপ ব্লক করা আছে। ব্রাউজার সেটিংস চেক করুন।";
-      }
-
-      toast({ 
-        variant: "destructive", 
-        title: "লগইন ব্যর্থ", 
-        description: errorMessage 
-      });
-    }
-  };
-
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      toast({ title: "লগআউট", description: "আপনি লগআউট করেছেন।" });
+      toast({ title: "লগআউট", description: "আপনি সফলভাবে লগআউট করেছেন।" });
     } catch (error) {
       toast({ variant: "destructive", title: "ত্রুটি", description: "লগআউট করা সম্ভব হয়নি।" });
     }
@@ -71,34 +47,37 @@ export function Navbar() {
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                   <Avatar className="h-10 w-10 border-2 border-white/20">
                     <AvatarImage src={user.photoURL || ''} alt={user.displayName || ''} />
-                    <AvatarFallback><UserIcon className="w-5 h-5" /></AvatarFallback>
+                    <AvatarFallback className="bg-secondary text-primary font-bold">
+                      {user.displayName?.charAt(0) || user.email?.charAt(0) || 'U'}
+                    </AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{user.displayName}</p>
+                    <p className="text-sm font-medium leading-none">{user.displayName || 'ব্যবহারকারী'}</p>
                     <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive cursor-pointer">
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>লগআউট</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button 
-              variant="secondary" 
-              size="sm" 
-              onClick={handleLogin}
-              className="gap-2 font-bold"
-            >
-              <LogIn className="w-4 h-4" />
-              লগইন
-            </Button>
+            <Link href="/auth">
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                className="gap-2 font-bold"
+              >
+                <LogIn className="w-4 h-4" />
+                লগইন
+              </Button>
+            </Link>
           )
         )}
       </div>

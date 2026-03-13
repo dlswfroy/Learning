@@ -11,18 +11,31 @@
         "subject": { "type": "string" },
         "fileName": { "type": "string" },
         "pdfUrl": { "type": "string" },
-        "uploadedAt": { "type": "string", "format": "date-time" }
+        "uploadedAt": { "type": "string", "format": "date-time" },
+        "userId": { "type": "string" }
       },
-      "required": ["classId", "subject", "fileName"]
+      "required": ["classId", "subject", "fileName", "pdfUrl"]
+    },
+    "AdminConfig": {
+      "title": "Admin Config",
+      "description": "Stores the UID of the first registered admin.",
+      "type": "object",
+      "properties": {
+        "adminUid": { "type": "string" }
+      }
     }
   },
   "auth": {
-    "providers": ["google.com"]
+    "providers": ["password"]
   },
   "firestore": {
     "/books/{bookId}": {
       "schema": "Book",
       "description": "Collection of uploaded books metadata."
+    },
+    "/config/admin": {
+      "schema": "AdminConfig",
+      "description": "Global config to store the first admin's UID."
     }
   }
 }
