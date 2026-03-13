@@ -3,6 +3,7 @@ import './globals.css';
 import { Navbar } from '@/components/layout/Navbar';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { Toaster } from '@/components/ui/toaster';
+import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 export const metadata: Metadata = {
   title: 'আমার প্রশ্ন - শিক্ষা সহায়ক অ্যাপ্লিকেশন',
@@ -22,12 +23,14 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased min-h-screen flex flex-col bg-background">
-        <Navbar />
-        <main className="flex-1 pt-16 pb-20 container mx-auto px-4">
-          {children}
-        </main>
-        <BottomNav />
-        <Toaster />
+        <FirebaseClientProvider>
+          <Navbar />
+          <main className="flex-1 pt-16 pb-20 container mx-auto px-4">
+            {children}
+          </main>
+          <BottomNav />
+          <Toaster />
+        </FirebaseClientProvider>
       </body>
     </html>
   );
