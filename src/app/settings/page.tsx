@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -10,7 +11,7 @@ import { Progress } from '@/components/ui/progress';
 import { Settings, Upload, FileText, CheckCircle, Trash2, Loader2, AlertCircle, LogIn } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useStorage, useUser, useAuth } from '@/firebase';
-import { collection, addDoc, deleteDoc, doc, serverTimestamp, query, where } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -49,19 +50,17 @@ export default function SettingsPage() {
   const handleLogin = async () => {
     try {
       const provider = new GoogleAuthProvider();
-      // Use popup for better UX on most devices, fallback to redirect if needed
       await signInWithPopup(auth, provider);
       toast({ title: "সফল লগইন", description: "আপনি সফলভাবে লগইন করেছেন।" });
     } catch (error: any) {
       console.error("Login error:", error);
       let errorMessage = "গুগল লগইন করা সম্ভব হয়নি।";
+      const currentDomain = typeof window !== 'undefined' ? window.location.hostname : '';
       
       if (error.code === 'auth/unauthorized-domain') {
-        errorMessage = "এই ডোমেইনটি ফায়ারবেসে অনুমোদিত নয়। ফায়ারবেস কনসোলে এই লিঙ্কটি যুক্ত করুন।";
+        errorMessage = `এই ডোমেইনটি (${currentDomain}) ফায়ারবেসে অনুমোদিত নয়। ফায়ারবেস কনসোলে Authorized Domains এ এটি যুক্ত করুন।`;
       } else if (error.code === 'auth/popup-blocked') {
         errorMessage = "আপনার ব্রাউজারে পপ-আপ ব্লক করা আছে। এটি আনলক করুন।";
-      } else if (error.code === 'auth/popup-closed-by-user') {
-        errorMessage = "লগইন পপ-আপটি আপনি বন্ধ করে দিয়েছেন।";
       }
 
       toast({ 
@@ -119,7 +118,7 @@ export default function SettingsPage() {
           setUploading(false);
           let message = "ফাইল আপলোড করা যায়নি।";
           if (error.code === 'storage/unauthorized') {
-            message = "আপনার ফাইল আপলোড করার অনুমতি নেই।";
+            message = "আপনার ফাইল আপলোড করার অনুমতি নেই (অথবা লগইন করা নেই)।";
           }
           toast({
             title: "আপলোড ব্যর্থ",

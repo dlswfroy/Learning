@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -28,9 +29,10 @@ export function Navbar() {
     } catch (error: any) {
       console.error("Login error:", error);
       let errorMessage = "গুগল লগইন করা সম্ভব হয়নি।";
+      const currentDomain = typeof window !== 'undefined' ? window.location.hostname : '';
       
       if (error.code === 'auth/unauthorized-domain') {
-        errorMessage = "এই ডোমেইনটি ফায়ারবেসে অনুমোদিত নয়। ফায়ারবেস কনসোলে এই লিঙ্কটি যুক্ত করুন।";
+        errorMessage = `এই ডোমেইনটি (${currentDomain}) ফায়ারবেসে অনুমোদিত নয়। ফায়ারবেস কনসোলে Authorized Domains এ এটি যুক্ত করুন।`;
       } else if (error.code === 'auth/popup-blocked') {
         errorMessage = "পপ-আপ ব্লক করা আছে। ব্রাউজার সেটিংস চেক করুন।";
       }
