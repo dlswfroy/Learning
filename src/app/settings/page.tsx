@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
-import { Settings, Upload, FileText, CheckCircle, Trash2, Loader2 } from 'lucide-react';
+import { Settings, Upload, FileText, CheckCircle, Trash2, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useStorage } from '@/firebase';
 import { collection, addDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
@@ -32,7 +32,6 @@ export default function SettingsPage() {
 
   const { data: rawBooks, loading: loadingBooks } = useCollection(booksQuery);
 
-  // Client-side sorting to avoid Firestore Index requirement
   const uploadedBooks = useMemo(() => {
     if (!rawBooks) return [];
     return [...rawBooks].sort((a, b) => {
@@ -65,46 +64,58 @@ export default function SettingsPage() {
       uploadTask.on('state_changed', 
         (snapshot) => {
           const progressPercent = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          setProgress(progressPercent);
+          if (!isNaN(progressPercent)) {
+            setProgress(progressPercent);
+          }
         },
         (error) => {
+          console.error("Upload error:", error);
           setUploading(false);
           toast({
             title: "আপলোড ব্যর্থ",
-            description: error.message,
+            description: "ফায়ারবেস স্টোরেজে ফাইল আপলোড করা যায়নি। আপনার ইন্টারনেট সংযোগ বা পারমিশন চেক করুন।",
             variant: "destructive",
           });
         },
         async () => {
-          const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
-          const bookData = {
-            classId,
-            className: CLASSES.find(c => c.id === classId)?.label,
-            subject,
-            fileName: file.name,
-            pdfUrl: downloadUrl,
-            uploadedAt: serverTimestamp(),
-          };
+          try {
+            const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+            const bookData = {
+              classId,
+              className: CLASSES.find(c => c.id === classId)?.label,
+              subject,
+              fileName: file.name,
+              pdfUrl: downloadUrl,
+              uploadedAt: serverTimestamp(),
+            };
 
-          addDoc(collection(db, 'books'), bookData)
-            .then(() => {
-              setUploading(false);
-              setFile(null);
-              setProgress(0);
-              toast({
-                title: "আপলোড সফল",
-                description: `${subject} বইটি সেভ করা হয়েছে।`,
+            addDoc(collection(db, 'books'), bookData)
+              .then(() => {
+                setUploading(false);
+                setFile(null);
+                setProgress(0);
+                toast({
+                  title: "আপলোড সফল",
+                  description: `${subject} বইটি সেভ করা হয়েছে।`,
+                });
+              })
+              .catch(async (err) => {
+                setUploading(false);
+                const permissionError = new FirestorePermissionError({
+                  path: 'books',
+                  operation: 'create',
+                  requestResourceData: bookData,
+                });
+                errorEmitter.emit('permission-error', permissionError);
               });
-            })
-            .catch(async () => {
-              setUploading(false);
-              const permissionError = new FirestorePermissionError({
-                path: 'books',
-                operation: 'create',
-                requestResourceData: bookData,
-              });
-              errorEmitter.emit('permission-error', permissionError);
+          } catch (urlError: any) {
+            setUploading(false);
+            toast({
+              title: "লিঙ্ক তৈরিতে সমস্যা",
+              description: "ফাইলের ডাউনলোড লিঙ্ক পাওয়া যায়নি।",
+              variant: "destructive",
             });
+          }
         }
       );
 
@@ -121,6 +132,8 @@ export default function SettingsPage() {
   const removeBook = (bookId: string) => {
     if (!db) return;
     
+    if (!confirm("আপনি কি নিশ্চিত যে আপনি এই বইটি মুছে ফেলতে চান?")) return;
+
     deleteDoc(doc(db, 'books', bookId))
       .then(() => {
         toast({ title: "বই অপসারিত", description: "বইটি আপনার তালিকা থেকে মুছে ফেলা হয়েছে।" });
@@ -151,12 +164,12 @@ export default function SettingsPage() {
           <Upload className="w-5 h-5" />
           নতুন বই যোগ করুন (PDF)
         </h3>
-        <Card>
+        <Card className="border-2 border-primary/10">
           <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-semibold">শ্রেণি</label>
               <Select onValueChange={setClassId} value={classId}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-background">
                   <SelectValue placeholder="নির্বাচন করুন" />
                 </SelectTrigger>
                 <SelectContent>
@@ -170,7 +183,7 @@ export default function SettingsPage() {
             <div className="space-y-2">
               <label className="text-sm font-semibold">বিষয়</label>
               <Select onValueChange={setSubject} value={subject} disabled={!classId}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-background">
                   <SelectValue placeholder="নির্বাচন করুন" />
                 </SelectTrigger>
                 <SelectContent>
@@ -187,22 +200,29 @@ export default function SettingsPage() {
                 type="file" 
                 accept=".pdf" 
                 onChange={(e) => setFile(e.target.files?.[0] || null)}
-                className="cursor-pointer"
+                className="cursor-pointer bg-background"
                 disabled={uploading}
               />
             </div>
           </CardContent>
           {uploading && (
-            <div className="px-6 pb-2">
-              <div className="flex justify-between text-xs mb-1">
-                <span>আপলোড হচ্ছে...</span>
-                <span>{Math.round(progress)}%</span>
+            <div className="px-6 pb-4 space-y-2">
+              <div className="flex justify-between text-xs font-medium">
+                <span className="text-primary flex items-center gap-1">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  আপলোড হচ্ছে...
+                </span>
+                <span className="text-primary">{Math.round(progress)}%</span>
               </div>
-              <Progress value={progress} className="h-2" />
+              <Progress value={progress} className="h-2 bg-secondary" />
             </div>
           )}
-          <CardFooter className="flex justify-end border-t py-4">
-            <Button onClick={handleUpload} disabled={uploading || !file} className="gap-2 bg-accent hover:bg-accent/90">
+          <CardFooter className="flex justify-end border-t bg-muted/20 py-4">
+            <Button 
+              onClick={handleUpload} 
+              disabled={uploading || !file || !classId || !subject} 
+              className="gap-2 bg-accent hover:bg-accent/90 min-w-[120px]"
+            >
               {uploading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -220,27 +240,31 @@ export default function SettingsPage() {
       </section>
 
       <section className="space-y-4">
-        <h3 className="text-lg font-bold text-foreground">আপনার আপলোড করা বইসমূহ</h3>
+        <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+          <FileText className="w-5 h-5 text-muted-foreground" />
+          আপনার আপলোড করা বইসমূহ
+        </h3>
         {loadingBooks ? (
-          <div className="flex justify-center p-12">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <div className="flex flex-col items-center justify-center p-12 bg-secondary/10 rounded-lg">
+            <Loader2 className="w-10 h-10 animate-spin text-primary mb-2" />
+            <p className="text-sm text-muted-foreground">বই তালিকা লোড হচ্ছে...</p>
           </div>
         ) : uploadedBooks.length === 0 ? (
-          <Card className="p-12 text-center border-dashed border-2 bg-secondary/20">
-            <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+          <Card className="p-12 text-center border-dashed border-2 bg-secondary/10">
+            <AlertCircle className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
             <p className="text-muted-foreground">কোনো বই আপলোড করা হয়নি।</p>
           </Card>
         ) : (
           <div className="grid grid-cols-1 gap-3">
             {uploadedBooks.map((book) => (
-              <Card key={book.id} className="p-4 flex items-center justify-between hover:shadow-sm transition-shadow">
+              <Card key={book.id} className="p-4 flex items-center justify-between hover:border-primary/30 transition-all group">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
                     <FileText className="w-6 h-6" />
                   </div>
                   <div>
                     <h4 className="font-bold">{book.subject} - {CLASSES.find(c => c.id === book.classId)?.label} শ্রেণি</h4>
-                    <p className="text-xs text-muted-foreground italic">{book.fileName}</p>
+                    <p className="text-[10px] text-muted-foreground italic truncate max-w-[200px] sm:max-w-xs">{book.fileName}</p>
                   </div>
                 </div>
                 <div className="flex gap-2">
