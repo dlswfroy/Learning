@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, GraduationCap, PlusCircle, Settings, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, GraduationCap, PlusCircle, Settings, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CLASSES } from '@/lib/constants';
 
@@ -10,19 +10,15 @@ export function BottomNav() {
   const pathname = usePathname();
 
   const navItems = [
-    { label: 'ড্যাশবোর্ড', icon: LayoutDashboard, href: '/' },
-    ...CLASSES.map((c) => ({
-      label: c.label,
-      icon: GraduationCap,
-      href: `/class/${c.id}`,
-    })),
+    { label: 'হোম', icon: LayoutDashboard, href: '/' },
     { label: 'প্রশ্ন তৈরি', icon: PlusCircle, href: '/create-question' },
+    { label: 'আমার প্রশ্ন', icon: FileText, href: '/my-questions' },
     { label: 'সেটিং', icon: Settings, href: '/settings' },
   ];
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-primary border-t border-primary/20 text-primary-foreground z-50 h-20 shadow-lg">
-      <div className="h-full max-w-5xl mx-auto flex items-center justify-between overflow-x-auto hide-scrollbar px-4 sm:px-6 gap-2">
+      <div className="h-full max-w-5xl mx-auto flex items-center justify-around overflow-x-auto hide-scrollbar px-4 gap-2">
         {navItems.map((item) => {
           const isActive = pathname === item.href || (item.href !== '/' && pathname?.startsWith(item.href));
           return (

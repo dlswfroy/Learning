@@ -58,6 +58,34 @@
   }
 }
 
+/* Print Specific Styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+    position: relative !important;
+    width: 100% !important;
+  }
+  body, html, main {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+  .container {
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+}
+
+.print-only {
+  display: none;
+}
+
 /* Custom styles for navigation scrolling */
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
