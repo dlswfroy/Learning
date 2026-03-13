@@ -22,13 +22,17 @@ type Question = {
   shortMarks?: number;
 };
 
-// প্রফেশনাল গাণিতিক সংকেত প্রসেসর (HTML ভিত্তিক)
+// নিখুঁত গাণিতিক সংকেত প্রসেসর
 function formatMath(text: string) {
   if (!text) return '';
-  return text
+  
+  // স্পেশাল ক্যারেক্টার প্রোটেকশন
+  let formatted = text;
+  
+  formatted = formatted
     // Fractions: \frac{num}{den}
     .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>')
-    // Power/Superscript: x^2 or x^{10}
+    // Power: x^2 or x^{10}
     .replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>')
     .replace(/\^(\d+|[a-z]+)/g, '<sup class="math-sup">$1</sup>')
     // Subscript: H_2O
@@ -37,16 +41,17 @@ function formatMath(text: string) {
     // Square Root: \sqrt{x} or sqrt(x)
     .replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>')
     .replace(/sqrt\(([^)]+)\)/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>')
-    // Greek & Scientific Symbols
+    // Symbols
     .replace(/theta/g, '&theta;')
     .replace(/pi/g, '&pi;')
     .replace(/degree/g, '&deg;')
     .replace(/\+-/g, '&plusmn;')
     .replace(/\*/g, '&times;')
-    .replace(/\//g, '&divide;')
+    .replace(/!=/g, '&ne;')
     .replace(/<=/g, '&le;')
-    .replace(/>=/g, '&ge;')
-    .replace(/!=/g, '&ne;');
+    .replace(/>=/g, '&ge;');
+    
+  return formatted;
 }
 
 function CreateQuestionContent() {
@@ -76,7 +81,6 @@ function CreateQuestionContent() {
 
   const [questions, setQuestions] = useState<Question[]>([]);
 
-  // ড্রাফট লোড করা (শুধুমাত্র নতুন প্রশ্নের ক্ষেত্রে)
   useEffect(() => {
     if (!editId) {
       const draft = localStorage.getItem('question_draft');
@@ -90,14 +94,12 @@ function CreateQuestionContent() {
     }
   }, [editId]);
 
-  // ড্রাফট সেভ করা
   useEffect(() => {
     if (!editId && questions.length > 0) {
       localStorage.setItem('question_draft', JSON.stringify({ meta, questions }));
     }
   }, [meta, questions, editId]);
 
-  // ফায়ারবেস থেকে ডাটা লোড করা
   useEffect(() => {
     async function loadQuestion() {
       if (!editId || !db || !user) return;
@@ -173,17 +175,13 @@ function CreateQuestionContent() {
     
     const markers = ['ক.', 'খ.', 'গ.', 'ঘ.'];
     let positions = markers.map(m => text.indexOf(m));
-    
-    // প্রথম মার্কারের পজিশন খুঁজি
     const firstMarkerIndex = positions.findIndex(p => p !== -1);
     
     if (firstMarkerIndex !== -1) {
       parts.stimulus = text.substring(0, positions[firstMarkerIndex]).trim();
-      
       for (let i = 0; i < markers.length; i++) {
         const start = positions[i];
         if (start === -1) continue;
-        
         let end = text.length;
         for (let j = i + 1; j < markers.length; j++) {
           if (positions[j] !== -1) {
@@ -191,7 +189,6 @@ function CreateQuestionContent() {
             break;
           }
         }
-        
         const content = text.substring(start + 2, end).trim();
         if (i === 0) parts.qA = content;
         else if (i === 1) parts.qB = content;
@@ -243,15 +240,12 @@ function CreateQuestionContent() {
     };
 
     const docRef = doc(db!, 'questions', docId);
-    
     setDoc(docRef, questionSetData, { merge: true })
       .then(() => {
         setSaving(false);
         localStorage.removeItem('question_draft');
         toast({ title: "সফল!", description: "প্রশ্নপত্রটি ফায়ারবেসে স্থায়ীভাবে সেভ হয়েছে।" });
-        if (!editId) {
-          router.replace(`/create-question?id=${docId}`);
-        }
+        if (!editId) router.replace(`/create-question?id=${docId}`);
       })
       .catch(async () => {
         setSaving(false);
@@ -335,29 +329,6 @@ function CreateQuestionContent() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm border-primary/20 bg-primary/5">
-          <CardHeader className="py-2 border-b">
-            <CardTitle className="text-xs font-bold uppercase text-primary">সৃজনশীল প্রশ্নের মান বণ্টন (গ্লোবাল)</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-4 flex gap-4">
-            {['ক', 'খ', 'গ', 'ঘ'].map((key, i) => (
-              <div key={key} className="flex-1 space-y-1">
-                <label className="text-xs font-bold">{key}. নম্বর</label>
-                <Input type="number" className="h-8 text-center font-bold" 
-                  value={i === 0 ? meta.marksA : i === 1 ? meta.marksB : i === 2 ? meta.marksC : meta.marksD} 
-                  onChange={e => {
-                    const v = Number(e.target.value);
-                    if (i === 0) setMeta({...meta, marksA: v});
-                    else if (i === 1) setMeta({...meta, marksB: v});
-                    else if (i === 2) setMeta({...meta, marksC: v});
-                    else setMeta({...meta, marksD: v});
-                  }} 
-                />
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-sm font-bold">সৃজনশীল নির্দেশনা</label>
@@ -400,12 +371,6 @@ function CreateQuestionContent() {
                   onChange={e => updateQuestion(idx, {content: e.target.value})}
                   className="min-h-[100px] text-sm leading-relaxed"
                 />
-                {q.type === 'short' && (
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs font-bold">নম্বর:</label>
-                    <Input type="number" className="w-16 h-8 text-center" value={q.shortMarks || 2} onChange={e => updateQuestion(idx, {shortMarks: Number(e.target.value)})} />
-                  </div>
-                )}
               </CardContent>
             </Card>
           ))}
@@ -426,7 +391,7 @@ function CreateQuestionContent() {
           @media print {
             @page { size: A4; margin: 0.5in; }
             body { 
-              font-family: 'Inter', 'SolaimanLipi', sans-serif; 
+              font-family: 'Inter', sans-serif; 
               font-size: 9pt; 
               color: black !important; 
               line-height: 1.1 !important; 
@@ -438,23 +403,23 @@ function CreateQuestionContent() {
             .header { text-align: center; margin-bottom: 15px; border-bottom: 2px solid black; padding-bottom: 8px; }
             .inst-name { font-size: 14pt; font-weight: 800; margin-bottom: 2px; text-transform: uppercase; }
             .exam-name { font-size: 10pt; font-weight: 700; margin-bottom: 2px; }
-            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px; border-top: 1px solid #eee; padding-top: 3px; }
+            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px; }
             
-            .section-label-container { text-align: center; width: 100%; margin-top: 15px; margin-bottom: 5px; }
+            .section-label-container { text-align: center; width: 100%; margin-top: 20px; margin-bottom: 5px; }
             .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1.5px solid black; display: inline-block; padding: 0 10px; }
-            .instruction { font-style: italic; font-size: 8.5pt; margin-bottom: 8px; text-align: center; width: 100%; }
+            .instruction { font-style: italic; font-size: 8.5pt; margin-bottom: 10px; text-align: center; width: 100%; }
             
-            .q-block { margin-bottom: 12px; page-break-inside: avoid; }
-            .stimulus { margin-bottom: 4px; white-space: pre-wrap; text-align: justify; font-size: 9pt; }
+            .q-block { margin-bottom: 15px; page-break-inside: avoid; }
+            .stimulus { margin-bottom: 5px; white-space: pre-wrap; text-align: justify; }
             
-            .sub-qs { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
+            .sub-qs { display: flex; flex-direction: column; gap: 3px; margin-top: 5px; }
             .sub-q { display: flex; justify-content: space-between; align-items: flex-start; }
             .q-text-part { flex: 1; text-align: justify; }
             .mark { font-weight: bold; width: 30px; text-align: right; min-width: 30px; margin-left: 10px; }
             
-            /* Math styles */
-            .math-sup { font-size: 0.7em; vertical-align: baseline; position: relative; top: -0.4em; }
-            .math-sub { font-size: 0.7em; vertical-align: baseline; position: relative; top: 0.2em; }
+            /* Math Styles */
+            .math-sup { font-size: 0.75em; vertical-align: super; line-height: 0; }
+            .math-sub { font-size: 0.75em; vertical-align: sub; line-height: 0; }
             .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
             .math-num { border-bottom: 0.5px solid currentColor; padding: 0 2px; }
             .math-den { padding: 0 2px; }
