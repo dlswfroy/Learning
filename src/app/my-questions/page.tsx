@@ -1,8 +1,9 @@
+
 "use client";
 
 import { useMemo, useState } from 'react';
 import { useFirestore, useUser, useCollection } from '@/firebase';
-import { collection, query, where, orderBy, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, where, deleteDoc, doc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, Edit, Trash2, Loader2, Calendar, BookOpen, GraduationCap, PlusCircle } from 'lucide-react';
@@ -17,16 +18,26 @@ export default function MyQuestionsPage() {
   const { user } = useUser();
   const [deleting, setDeleting] = useState<string | null>(null);
 
+  // কুয়েরি সহজ রাখা হয়েছে যাতে ইনডেক্সিং এরর না আসে
   const questionsQuery = useMemo(() => {
     if (!db || !user) return null;
     return query(
       collection(db, 'questions'),
-      where('userId', '==', user.uid),
-      orderBy('createdAt', 'desc')
+      where('userId', '==', user.uid)
     );
   }, [db, user]);
 
-  const { data: questions, loading } = useCollection(questionsQuery);
+  const { data: rawQuestions, loading } = useCollection(questionsQuery);
+
+  // ক্লায়েন্ট সাইডে সর্টিং করা হয়েছে
+  const questions = useMemo(() => {
+    if (!rawQuestions) return [];
+    return [...rawQuestions].sort((a, b) => {
+      const dateA = a.updatedAt?.toDate?.() || a.createdAt?.toDate?.() || new Date(0);
+      const dateB = b.updatedAt?.toDate?.() || b.createdAt?.toDate?.() || new Date(0);
+      return dateB.getTime() - dateA.getTime();
+    });
+  }, [rawQuestions]);
 
   const handleDelete = async (id: string) => {
     if (!confirm("আপনি কি নিশ্চিতভাবে এই প্রশ্নপত্রটি মুছে ফেলতে চান?")) return;
@@ -63,7 +74,7 @@ export default function MyQuestionsPage() {
           </div>
           <div>
             <h2 className="text-2xl font-bold">আমার প্রশ্নসমূহ</h2>
-            <p className="text-sm text-muted-foreground">আপনার তৈরি করা সকল প্রশ্নপত্রের তালিকা</p>
+            <p className="text-sm text-muted-foreground">আপনার তৈরি করা সব প্রশ্নপত্রের তালিকা ({questions.length})</p>
           </div>
         </div>
         <Link href="/create-question">
@@ -78,18 +89,18 @@ export default function MyQuestionsPage() {
           <Loader2 className="w-10 h-10 animate-spin text-primary" />
           <p className="mt-4 text-muted-foreground font-medium">লোড হচ্ছে...</p>
         </div>
-      ) : questions && questions.length > 0 ? (
+      ) : questions.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {questions.map((q) => (
             <Card key={q.id} className="hover:border-primary/40 transition-all group shadow-sm">
               <CardHeader className="pb-3">
                 <div className="flex justify-between items-start mb-2">
                   <div className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded-full uppercase">
-                    {CLASSES.find(c => c.id === q.classId)?.label} শ্রেণি
+                    {CLASSES.find(c => c.id === q.classId)?.label || 'অজানা'} শ্রেণি
                   </div>
                   <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                     <Calendar className="w-3 h-3" />
-                    {q.createdAt?.toDate ? format(q.createdAt.toDate(), 'dd MMMM, yyyy', { locale: bn }) : 'অজানা তারিখ'}
+                    {q.updatedAt?.toDate ? format(q.updatedAt.toDate(), 'dd MMMM, yyyy', { locale: bn }) : 'অজানা তারিখ'}
                   </div>
                 </div>
                 <CardTitle className="text-lg font-bold group-hover:text-primary transition-colors truncate">
@@ -133,7 +144,7 @@ export default function MyQuestionsPage() {
           </div>
           <h3 className="text-xl font-bold text-foreground/80 mb-2">কোনো প্রশ্নপত্র নেই</h3>
           <p className="text-muted-foreground max-w-sm mb-6">
-            আপনি এখনো কোনো প্রশ্নপত্র তৈরি করেননি। শুরু করতে নিচের বাটনে ক্লিক করুন।
+            আপনি এখনো কোনো প্রশ্নপত্র তৈরি করেননি অথবা সেগুলো ডাটাবেসে লোড হচ্ছে।
           </p>
           <Link href="/create-question">
             <Button className="font-bold px-8">প্রথম প্রশ্ন তৈরি করুন</Button>

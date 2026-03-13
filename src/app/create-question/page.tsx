@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, Plus, Trash2, BookOpen, Clock, Award, Save, FileText, ArrowLeft, Loader2 } from 'lucide-react';
+import { Printer, Plus, Trash2, BookOpen, Save, FileText, ArrowLeft, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useUser } from '@/firebase';
 import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
@@ -22,22 +22,19 @@ type Question = {
   shortMarks?: number;
 };
 
-// উন্নত গাণিতিক সংকেত প্রসেসর
+// প্রফেশনাল গাণিতিক সংকেত প্রসেসর
 function formatMath(text: string) {
   if (!text) return '';
   return text
-    // Fractions: \frac{a}{b}
-    .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '<span class="math-frac"><sup>$1</sup>/<sub>$2</sub></span>')
-    // Superscript: x^2 or x^{100}
+    // Power/Superscript: x^2 or x^{10}
     .replace(/\^\{([^}]+)\}/g, '<sup>$1</sup>')
     .replace(/\^(\d+|[a-z]+)/g, '<sup>$1</sup>')
-    // Subscript: H_2O or x_{i}
+    // Subscript: H_2O
     .replace(/_\{([^}]+)\}/g, '<sub>$1</sub>')
     .replace(/_(\d+|[a-z]+)/g, '<sub>$1</sub>')
     // Square Root: sqrt(x)
     .replace(/sqrt\(([^)]+)\)/g, '<span class="sqrt">√<span class="sqrt-stem">$1</span></span>')
-    .replace(/sqrt/g, '√')
-    // Greek Symbols & Others
+    // Greek & Scientific Symbols
     .replace(/theta/g, 'θ')
     .replace(/pi/g, 'π')
     .replace(/degree/g, '°')
@@ -76,6 +73,7 @@ function CreateQuestionContent() {
 
   const [questions, setQuestions] = useState<Question[]>([]);
 
+  // ড্রাফট লোড করা (যদি নতুন প্রশ্ন হয়)
   useEffect(() => {
     if (!editId) {
       const savedDraft = localStorage.getItem('question_draft');
@@ -89,12 +87,14 @@ function CreateQuestionContent() {
     }
   }, [editId]);
 
+  // ড্রাফট সেভ করা
   useEffect(() => {
     if (!editId && (questions.length > 0 || meta.institution)) {
       localStorage.setItem('question_draft', JSON.stringify({ meta, questions }));
     }
   }, [meta, questions, editId]);
 
+  // ফায়ারবেস থেকে প্রশ্ন লোড করা
   useEffect(() => {
     async function loadQuestion() {
       if (!editId || !db) return;
@@ -121,10 +121,11 @@ function CreateQuestionContent() {
           const reconstructed = data.questions.map((q: any) => {
             if (q.type === 'creative') {
               let content = q.stimulus || '';
-              if (q.qA) content += `\nক. ${q.qA}`;
-              if (q.qB) content += `\nখ. ${q.qB}`;
-              if (q.qC) content += `\nগ. ${q.qC}`;
-              if (q.qD) content += `\nঘ. ${q.qD}`;
+              // Avoid duplicate ক. খ. গ. ঘ.
+              if (q.qA && !content.includes('ক.')) content += `\nক. ${q.qA}`;
+              if (q.qB && !content.includes('খ.')) content += `\nখ. ${q.qB}`;
+              if (q.qC && !content.includes('গ.')) content += `\nগ. ${q.qC}`;
+              if (q.qD && !content.includes('ঘ.')) content += `\nঘ. ${q.qD}`;
               return { type: 'creative', content };
             }
             return { type: 'short', content: q.shortText || '', shortMarks: q.shortMarks || 2 };
@@ -229,7 +230,7 @@ function CreateQuestionContent() {
       .then(() => {
         setSaving(false);
         localStorage.removeItem('question_draft');
-        toast({ title: "সফল!", description: "প্রশ্নপত্রটি ফায়ারবেসে সেভ করা হয়েছে।" });
+        toast({ title: "সফল!", description: "প্রশ্নপত্রটি ফায়ারবেসে স্থায়ীভাবে সেভ হয়েছে।" });
         if (!editId) {
           router.replace(`/create-question?id=${docId}`);
         }
@@ -240,10 +241,6 @@ function CreateQuestionContent() {
           path: docRef.path, operation: 'write', requestResourceData: questionSetData
         }));
       });
-  };
-
-  const handlePrint = () => {
-    window.print();
   };
 
   const creativeQuestions = questions.filter(q => q.type === 'creative');
@@ -268,7 +265,7 @@ function CreateQuestionContent() {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-primary">প্রশ্নপত্র নির্মাতা</h2>
-              <p className="text-sm text-muted-foreground">ম্যানুয়ালি প্রশ্ন তৈরি ও প্রিন্ট করুন</p>
+              <p className="text-sm text-muted-foreground">বোর্ড স্ট্যান্ডার্ড প্রশ্ন তৈরি করুন</p>
             </div>
           </div>
           <Button variant="ghost" onClick={() => router.push('/my-questions')} className="gap-2">
@@ -379,20 +376,16 @@ function CreateQuestionContent() {
                   </span>
                   <span className="text-sm font-bold">প্রশ্ন নং: {idx + 1}</span>
                 </div>
-                {q.type === 'creative' ? (
-                  <Textarea 
-                    placeholder="উদ্দীপক ও প্রশ্ন একসাথে (ক. খ. গ. ঘ. সহ) লিখুন। উদা: উদ্দীপক... ক. প্রশ্ন খ. প্রশ্ন..." 
-                    value={q.content || ''} 
-                    onChange={e => updateQuestion(idx, {content: e.target.value})}
-                    className="min-h-[150px] text-sm leading-relaxed"
-                  />
-                ) : (
-                  <div className="flex gap-4">
-                    <Input className="flex-1" value={q.content || ''} onChange={e => updateQuestion(idx, {content: e.target.value})} placeholder="সংক্ষিপ্ত প্রশ্ন লিখুন..." />
-                    <div className="flex items-center gap-2">
-                      <label className="text-xs font-bold">মান:</label>
-                      <Input type="number" className="w-16 h-8 text-center" value={q.shortMarks || 2} onChange={e => updateQuestion(idx, {shortMarks: Number(e.target.value)})} />
-                    </div>
+                <Textarea 
+                  placeholder={q.type === 'creative' ? "উদ্দীপক ও প্রশ্ন একসাথে (ক. খ. গ. ঘ. সহ) লিখুন।" : "সংক্ষিপ্ত প্রশ্ন লিখুন..."} 
+                  value={q.content || ''} 
+                  onChange={e => updateQuestion(idx, {content: e.target.value})}
+                  className="min-h-[100px] text-sm leading-relaxed"
+                />
+                {q.type === 'short' && (
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-bold">নম্বর:</label>
+                    <Input type="number" className="w-16 h-8 text-center" value={q.shortMarks || 2} onChange={e => updateQuestion(idx, {shortMarks: Number(e.target.value)})} />
                   </div>
                 )}
               </CardContent>
@@ -405,7 +398,7 @@ function CreateQuestionContent() {
             <Button onClick={handleSaveToDb} disabled={saving} variant="outline" className="gap-2 px-8 border-primary text-primary rounded-full font-bold">
               <Save className="w-4 h-4" /> {saving ? 'সেভ হচ্ছে...' : 'সেভ করুন'}
             </Button>
-            <Button onClick={handlePrint} size="lg" className="bg-primary hover:bg-primary/90 gap-2 px-10 shadow-lg font-bold rounded-full text-white">
+            <Button onClick={() => window.print()} size="lg" className="bg-primary hover:bg-primary/90 gap-2 px-10 shadow-lg font-bold rounded-full text-white">
               <Printer className="w-4 h-4" /> প্রিন্ট / পিডিএফ
             </Button>
           </div>
@@ -426,29 +419,25 @@ function CreateQuestionContent() {
               padding: 0;
             }
             .paper { width: 100%; text-align: justify; }
-            .header { text-align: center; margin-bottom: 12px; border-bottom: 2px solid black; padding-bottom: 6px; }
-            .inst-name { font-size: 14pt; font-weight: 800; margin-bottom: 2px; }
-            .exam-name { font-size: 11pt; font-weight: 700; margin-bottom: 2px; }
-            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px; font-size: 9pt; }
+            .header { text-align: center; margin-bottom: 15px; border-bottom: 2px solid black; padding-bottom: 8px; }
+            .inst-name { font-size: 15pt; font-weight: 800; margin-bottom: 3px; text-transform: uppercase; }
+            .exam-name { font-size: 11pt; font-weight: 700; margin-bottom: 3px; }
+            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px; border-top: 1px solid #eee; padding-top: 3px; }
             
-            .section-label-container { text-align: center; width: 100%; margin-top: 15px; margin-bottom: 5px; }
-            .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1.5px solid black; display: inline-block; padding: 0 10px; }
-            .instruction { font-style: italic; font-size: 8.5pt; margin-bottom: 8px; text-align: center; width: 100%; }
+            .section-label-container { text-align: center; width: 100%; margin-top: 20px; margin-bottom: 8px; }
+            .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1.5px solid black; display: inline-block; padding: 0 12px; }
+            .instruction { font-style: italic; font-size: 8.5pt; margin-bottom: 10px; text-align: center; width: 100%; }
             
-            .q-block { margin-bottom: 12px; page-break-inside: avoid; }
-            .stimulus { margin-bottom: 4px; white-space: pre-wrap; line-height: 1.1; text-align: justify; }
-            .sub-q { display: flex; justify-content: space-between; margin-bottom: 1px; align-items: flex-start; }
-            .mark { font-weight: bold; width: 25px; text-align: right; min-width: 25px; }
+            .q-block { margin-bottom: 15px; page-break-inside: avoid; }
+            .stimulus { margin-bottom: 6px; white-space: pre-wrap; text-align: justify; font-size: 9pt; }
+            .sub-q { display: flex; justify-content: space-between; margin-bottom: 2px; align-items: flex-start; }
+            .mark { font-weight: bold; width: 30px; text-align: right; min-width: 30px; }
             
-            /* গাণিতিক স্টাইল */
-            sup, sub { line-height: 0; position: relative; vertical-align: baseline; font-size: 0.7em; }
+            sup, sub { line-height: 0; position: relative; vertical-align: baseline; font-size: 0.75em; }
             sup { top: -0.4em; }
             sub { bottom: -0.2em; }
-            .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.8em; margin: 0 2px; }
-            .math-frac sup { position: static; top: 0; }
-            .math-frac sub { position: static; bottom: 0; border-top: 0.5px solid black; }
             .sqrt { position: relative; display: inline-block; vertical-align: middle; }
-            .sqrt-stem { border-top: 0.8px solid black; padding-top: 1px; margin-left: 1px; display: inline-block; }
+            .sqrt-stem { border-top: 1px solid black; padding-top: 1px; margin-left: 1px; display: inline-block; }
             
             .no-print { display: none !important; }
           }
@@ -477,7 +466,7 @@ function CreateQuestionContent() {
                   <div key={idx} className="q-block">
                     <div className="font-bold mb-1">{idx + 1}. নিচের উদ্দীপকটি পড়ো এবং প্রশ্নগুলোর উত্তর দাও:</div>
                     <div className="stimulus" dangerouslySetInnerHTML={{ __html: formatMath(parsed.stimulus) }} />
-                    <div className="space-y-0">
+                    <div className="space-y-0.5">
                       {parsed.qA && (
                         <div className="sub-q">
                           <span dangerouslySetInnerHTML={{ __html: 'ক. ' + formatMath(parsed.qA) }} />
