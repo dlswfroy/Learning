@@ -7,7 +7,7 @@ import { CLASSES } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { BookOpen, HelpCircle, FileText, Download, Loader2, X, ExternalLink, AlertTriangle } from 'lucide-react';
+import { BookOpen, HelpCircle, FileText, Download, Loader2, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { useFirestore, useCollection } from '@/firebase';
@@ -16,8 +16,6 @@ import { collection, query, where } from 'firebase/firestore';
 export default function SubjectPage() {
   const params = useParams();
   const db = useFirestore();
-  const [showReader, setShowReader] = useState(false);
-  const [readerError, setReaderError] = useState(false);
   
   const id = params.id as string;
   const encodedSubject = params.subject as string;
@@ -41,73 +39,6 @@ export default function SubjectPage() {
   const { data: books, loading: loadingBooks } = useCollection(bookQuery);
   const hasBook = books && books.length > 0;
 
-  if (showReader && hasBook) {
-    const pdfUrl = books[0].pdfUrl;
-    
-    return (
-      <div className="fixed inset-0 z-[100] bg-background flex flex-col animate-fade-in overflow-hidden">
-        <header className="h-14 border-b bg-primary text-primary-foreground flex items-center justify-between px-4 shrink-0">
-          <div className="flex items-center gap-2">
-            <BookOpen className="w-5 h-5" />
-            <h2 className="font-bold text-sm truncate max-w-[200px] sm:max-w-none">
-              {subject} - {currentClass.label} শ্রেণি
-            </h2>
-          </div>
-          <div className="flex items-center gap-2">
-            <a 
-              href={pdfUrl} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-md text-xs font-bold transition-colors"
-            >
-              <ExternalLink className="w-4 h-4" />
-              সরাসরি ওপেন করুন
-            </a>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => {
-                setShowReader(false);
-                setReaderError(false);
-              }}
-              className="text-primary-foreground hover:bg-white/10"
-            >
-              <X className="w-6 h-6" />
-            </Button>
-          </div>
-        </header>
-        <div className="flex-1 bg-muted relative">
-          {readerError ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
-              <AlertTriangle className="w-12 h-12 text-orange-500 mb-4" />
-              <h3 className="text-lg font-bold">পিডিএফ সরাসরি এখানে লোড করা যাচ্ছে না</h3>
-              <p className="text-sm text-muted-foreground mb-6 max-w-sm">
-                নিরাপত্তার কারণে কিছু পিডিএফ ব্রাউজারের আইফ্রেমে লোড হতে বাধা দেয়। অনুগ্রহ করে সরাসরি ওপেন বাটনে ক্লিক করুন।
-              </p>
-              <a 
-                href={pdfUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-              >
-                <Button className="gap-2 font-bold shadow-lg">
-                  <ExternalLink className="w-4 h-4" />
-                  নতুন ট্যাবে ওপেন করুন
-                </Button>
-              </a>
-            </div>
-          ) : (
-            <iframe 
-              src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0`} 
-              className="w-full h-full border-none"
-              title="PDF Reader"
-              onError={() => setReaderError(true)}
-            />
-          )}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -121,7 +52,7 @@ export default function SubjectPage() {
           </div>
         </div>
         <Link href={`/create-question?classId=${id}&subject=${encodeURIComponent(subject)}`}>
-          <Button className="w-full md:w-auto gap-2 shadow-md bg-accent hover:bg-accent/90">
+          <Button className="w-full md:w-auto gap-2 shadow-md bg-accent text-white hover:bg-accent/90">
             <HelpCircle className="w-4 h-4" />
             AI প্রশ্ন তৈরি করুন
           </Button>
@@ -147,29 +78,33 @@ export default function SubjectPage() {
               <p className="text-muted-foreground font-medium">বইটি খোঁজা হচ্ছে...</p>
             </div>
           ) : hasBook ? (
-            <Card className="p-8 text-center border-2 border-primary/20 bg-primary/5 shadow-sm">
-              <div className="w-32 h-44 bg-white rounded-lg flex items-center justify-center text-primary mx-auto mb-6 shadow-md border overflow-hidden">
+            <Card className="p-8 text-center border-2 border-primary/10 bg-primary/5 shadow-sm">
+              <div className="w-40 h-56 bg-white rounded-lg flex items-center justify-center text-primary mx-auto mb-6 shadow-md border overflow-hidden relative group">
                 {books[0].coverImageUrl ? (
-                  <img src={books[0].coverImageUrl} alt="Book Cover" className="w-full h-full object-cover" />
+                  <img src={books[0].coverImageUrl} alt="Book Cover" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
                 ) : (
                   <div className="flex flex-col items-center justify-center p-4">
-                    <FileText className="w-10 h-10 mb-2 opacity-30" />
-                    <span className="text-[10px] font-bold text-muted-foreground text-center">{subject}</span>
+                    <FileText className="w-12 h-12 mb-2 opacity-30" />
+                    <span className="text-xs font-bold text-muted-foreground text-center uppercase tracking-tighter">পাঠ্যবই</span>
                   </div>
                 )}
               </div>
-              <h3 className="text-xl font-bold mb-6">{subject}</h3>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                <Button className="gap-2 px-10 h-12 text-base font-bold shadow-lg bg-primary hover:bg-primary/90 w-full sm:w-auto" onClick={() => setShowReader(true)}>
-                  <BookOpen className="w-5 h-5" />
-                  পড়া শুরু করুন
-                </Button>
-                <a href={books[0].pdfUrl} target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
-                  <Button variant="outline" className="gap-2 px-6 h-12 border-primary text-primary w-full">
-                    <ExternalLink className="w-4 h-4" />
-                    সরাসরি ওপেন
+              <h3 className="text-2xl font-bold mb-8 text-primary">{subject}</h3>
+              <div className="flex flex-col items-center justify-center gap-3">
+                <a 
+                  href={books[0].pdfUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="w-full sm:w-auto"
+                >
+                  <Button className="gap-3 px-16 h-14 text-lg font-bold shadow-xl bg-primary hover:bg-primary/90 w-full sm:min-w-[240px] rounded-xl">
+                    <BookOpen className="w-6 h-6" />
+                    বই পড়ুন
                   </Button>
                 </a>
+                <p className="text-[10px] text-muted-foreground mt-2">
+                  বড় ফাইল সরাসরি ওপেন করলে পড়া আরও সহজ হয়
+                </p>
               </div>
             </Card>
           ) : (
@@ -179,7 +114,7 @@ export default function SubjectPage() {
               </div>
               <h3 className="text-xl font-bold mb-2 text-foreground/80">বইটি এখনো নেই</h3>
               <p className="text-muted-foreground max-w-sm mb-6 text-sm">
-                দুঃখিত, এই বইটির ডিজিটাল কপি সিস্টেমে নেই। আপনি সেটিং থেকে বইয়ের লিঙ্ক যোগ করতে পারেন।
+                দুঃখিত, এই বইটির ডিজিটাল কপি সিস্টেমে নেই। আপনি এডমিন হয়ে থাকলে সেটিং থেকে বইয়ের লিঙ্ক যোগ করতে পারেন।
               </p>
               <Link href="/settings">
                 <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-white transition-all font-bold">

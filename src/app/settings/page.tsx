@@ -49,7 +49,6 @@ export default function SettingsPage() {
         if (adminDoc.exists()) {
           setIsAdmin(adminDoc.data().adminUid === user.uid);
         } else {
-          // If no admin exists, first user becomes admin
           await setDoc(adminDocRef, { adminUid: user.uid });
           setIsAdmin(true);
         }
@@ -129,19 +128,19 @@ export default function SettingsPage() {
         return;
       }
       setUploading(true);
-      saveToFirestore(pdfUrl, `${subject}`);
+      saveToFirestore(pdfUrl, subject);
     }
   };
 
   const saveToFirestore = (url: string, fileName: string) => {
     const bookData = {
-      classId,
-      subject,
-      fileName: fileName,
-      pdfUrl: url,
-      coverImageUrl: coverImageUrl,
+      classId: classId || '',
+      subject: subject || '',
+      fileName: fileName || '',
+      pdfUrl: url || '',
+      coverImageUrl: coverImageUrl || '',
       uploadedAt: serverTimestamp(),
-      userId: user?.uid,
+      userId: user?.uid || '',
     };
 
     addDoc(collection(db!, 'books'), bookData)
@@ -247,7 +246,7 @@ export default function SettingsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">শ্রেণি</label>
-                  <Select onValueChange={setClassId} value={classId}>
+                  <Select onValueChange={setClassId} value={classId || ''}>
                     <SelectTrigger className="bg-background">
                       <SelectValue placeholder="নির্বাচন করুন" />
                     </SelectTrigger>
@@ -261,7 +260,7 @@ export default function SettingsPage() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">বিষয়</label>
-                  <Select onValueChange={setSubject} value={subject} disabled={!classId}>
+                  <Select onValueChange={setSubject} value={subject || ''} disabled={!classId}>
                     <SelectTrigger className="bg-background">
                       <SelectValue placeholder="নির্বাচন করুন" />
                     </SelectTrigger>
@@ -292,7 +291,7 @@ export default function SettingsPage() {
                       <label className="text-sm font-semibold">বইয়ের ডাউনলোড লিঙ্ক (URL)</label>
                       <Input 
                         placeholder="https://nctb.gov.bd/..." 
-                        value={pdfUrl}
+                        value={pdfUrl || ''}
                         onChange={(e) => setPdfUrl(e.target.value)}
                         disabled={uploading}
                       />
@@ -306,7 +305,7 @@ export default function SettingsPage() {
                   </label>
                   <Input 
                     placeholder="https://example.com/cover.jpg" 
-                    value={coverImageUrl}
+                    value={coverImageUrl || ''}
                     onChange={(e) => setCoverImageUrl(e.target.value)}
                     disabled={uploading}
                   />
@@ -334,7 +333,7 @@ export default function SettingsPage() {
               <Button 
                 onClick={handleSaveBook} 
                 disabled={uploading || (uploadMethod === 'file' ? !file : !pdfUrl) || !classId || !subject} 
-                className="gap-2 bg-accent hover:bg-accent/90"
+                className="gap-2 bg-accent text-white hover:bg-accent/90"
               >
                 {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
                 {uploadMethod === 'link' ? 'তাৎক্ষণিক সেভ করুন' : 'বই সেভ করুন'}
