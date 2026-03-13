@@ -154,14 +154,11 @@ export default function SubjectPage() {
                 ) : (
                   <div className="flex flex-col items-center justify-center p-4">
                     <FileText className="w-10 h-10 mb-2 opacity-30" />
-                    <span className="text-[10px] font-bold text-muted-foreground">{subject}</span>
+                    <span className="text-[10px] font-bold text-muted-foreground text-center">{subject}</span>
                   </div>
                 )}
               </div>
-              <h3 className="text-xl font-bold mb-2">{subject} বই পাওয়া গেছে</h3>
-              <p className="text-muted-foreground mb-6 text-sm">
-                ফাইল: <span className="font-semibold text-foreground truncate block max-w-xs mx-auto">{books[0].fileName}</span>
-              </p>
+              <h3 className="text-xl font-bold mb-6">{subject}</h3>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                 <Button className="gap-2 px-10 h-12 text-base font-bold shadow-lg bg-primary hover:bg-primary/90 w-full sm:w-auto" onClick={() => setShowReader(true)}>
                   <BookOpen className="w-5 h-5" />
