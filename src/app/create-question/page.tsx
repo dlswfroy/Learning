@@ -36,7 +36,7 @@ function formatMath(text: string) {
 
 function CreateQuestionContent() {
   const db = useFirestore();
-  const { user } = useUser();
+  const { user, loading: userLoading } = useUser();
   const searchParams = useSearchParams();
   const router = useRouter();
   
@@ -60,6 +60,30 @@ function CreateQuestionContent() {
   });
 
   const [questions, setQuestions] = useState<Question[]>([]);
+
+  // Load draft from localStorage on mount (only for new questions)
+  useEffect(() => {
+    if (!editId) {
+      const savedDraft = localStorage.getItem('question_draft');
+      if (savedDraft) {
+        try {
+          const { meta: dMeta, questions: dQs } = JSON.parse(savedDraft);
+          setMeta(prev => ({ ...prev, ...dMeta }));
+          setQuestions(dQs || []);
+          toast({ title: "ড্রাফট রিকভার করা হয়েছে", description: "আপনার আগের কাজগুলো ফিরিয়ে আনা হয়েছে।" });
+        } catch (e) {
+          console.error("Failed to load draft", e);
+        }
+      }
+    }
+  }, [editId]);
+
+  // Auto-save draft to localStorage (only for new questions)
+  useEffect(() => {
+    if (!editId && (questions.length > 0 || meta.institution)) {
+      localStorage.setItem('question_draft', JSON.stringify({ meta, questions }));
+    }
+  }, [meta, questions, editId]);
 
   useEffect(() => {
     async function loadQuestion() {
@@ -143,12 +167,18 @@ function CreateQuestionContent() {
             parts.qD = text.substring(posD + 2).trim();
           } else {
             parts.qC = text.substring(posC + 2).trim();
+            parts.qD = '';
           }
         } else {
           parts.qB = text.substring(posB + 2).trim();
+          parts.qC = '';
+          parts.qD = '';
         }
       } else {
         parts.qA = text.substring(posA + 2).trim();
+        parts.qB = '';
+        parts.qC = '';
+        parts.qD = '';
       }
     } else {
       parts.stimulus = text;
@@ -192,21 +222,25 @@ function CreateQuestionContent() {
       updatedAt: serverTimestamp(),
     };
 
-    const operation = editId ? updateDoc(doc(db!, 'questions', editId), questionSetData) : addDoc(collection(db!, 'questions'), { ...questionSetData, createdAt: serverTimestamp() });
-
-    operation
-      .then(() => {
+    try {
+      if (editId) {
+        await updateDoc(doc(db!, 'questions', editId), questionSetData);
+        toast({ title: "সফল!", description: "প্রশ্নপত্রটি আপডেট করা হয়েছে।" });
+      } else {
+        const newDoc = await addDoc(collection(db!, 'questions'), { ...questionSetData, createdAt: serverTimestamp() });
+        localStorage.removeItem('question_draft'); // Clear draft after save
         toast({ title: "সফল!", description: "প্রশ্নপত্রটি সেভ করা হয়েছে।" });
-        router.push('/my-questions');
-      })
-      .catch(async () => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: editId ? `questions/${editId}` : 'questions',
-          operation: 'write',
-          requestResourceData: questionSetData
-        }));
-      })
-      .finally(() => setSaving(false));
+        router.replace(`/create-question?id=${newDoc.id}`);
+      }
+    } catch (e: any) {
+      errorEmitter.emit('permission-error', new FirestorePermissionError({
+        path: editId ? `questions/${editId}` : 'questions',
+        operation: 'write',
+        requestResourceData: questionSetData
+      }));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handlePrint = () => {
@@ -215,6 +249,15 @@ function CreateQuestionContent() {
 
   const creativeQuestions = questions.filter(q => q.type === 'creative');
   const shortQuestions = questions.filter(q => q.type === 'short');
+
+  if (loading || userLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center p-20 min-h-[50vh]">
+        <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground font-medium">প্রশ্নপত্র লোড হচ্ছে...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-32">
@@ -229,8 +272,8 @@ function CreateQuestionContent() {
               <p className="text-sm text-muted-foreground">বোর্ড স্ট্যান্ডার্ড ফরম্যাটে প্রশ্ন তৈরি করুন</p>
             </div>
           </div>
-          <Button variant="ghost" onClick={() => router.back()} className="gap-2">
-            <ArrowLeft className="w-4 h-4" /> ফিরে যান
+          <Button variant="ghost" onClick={() => router.push('/my-questions')} className="gap-2">
+            <ArrowLeft className="w-4 h-4" /> আমার প্রশ্নসমূহ
           </Button>
         </header>
 
@@ -287,16 +330,15 @@ function CreateQuestionContent() {
           <CardContent className="pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-xs font-bold text-muted-foreground uppercase">সৃজনশীল নির্দেশিকা</label>
-              <Input value={meta.creativeInstruction} onChange={e => setMeta({...meta, creativeInstruction: e.target.value})} placeholder="উদা: যেকোনো ৭টি প্রশ্নের উত্তর দাও" />
+              <Input value={meta.creativeInstruction || ''} onChange={e => setMeta({...meta, creativeInstruction: e.target.value})} placeholder="উদা: যেকোনো ৭টি প্রশ্নের উত্তর দাও" />
             </div>
             <div className="space-y-2">
               <label className="text-xs font-bold text-muted-foreground uppercase">সংক্ষিপ্ত নির্দেশিকা</label>
-              <Input value={meta.shortInstruction} onChange={e => setMeta({...meta, shortInstruction: e.target.value})} placeholder="উদা: সকল প্রশ্নের উত্তর দাও" />
+              <Input value={meta.shortInstruction || ''} onChange={e => setMeta({...meta, shortInstruction: e.target.value})} placeholder="উদা: সকল প্রশ্নের উত্তর দাও" />
             </div>
           </CardContent>
         </Card>
 
-        {/* Global Marks for Creative */}
         <Card className="shadow-sm border-primary/20">
           <CardHeader className="py-3 bg-primary/5 border-b">
             <CardTitle className="text-sm font-bold">সৃজনশীল মান বণ্টন</CardTitle>
@@ -354,7 +396,7 @@ function CreateQuestionContent() {
                 ) : (
                   <div className="flex gap-4">
                     <Input className="flex-1" value={q.content || ''} onChange={e => updateQuestion(idx, {content: e.target.value})} placeholder="সংক্ষিপ্ত প্রশ্ন লিখুন..." />
-                    <Input type="number" className="w-20" value={q.shortMarks} onChange={e => updateQuestion(idx, {shortMarks: Number(e.target.value)})} />
+                    <Input type="number" className="w-20" value={q.shortMarks || 2} onChange={e => updateQuestion(idx, {shortMarks: Number(e.target.value)})} />
                   </div>
                 )}
               </CardContent>
@@ -460,7 +502,7 @@ function CreateQuestionContent() {
 
 export default function CreateQuestionPage() {
   return (
-    <Suspense fallback={<div className="flex justify-center p-20"><Loader2 className="animate-spin" /></div>}>
+    <Suspense fallback={<div className="flex justify-center p-20"><Loader2 className="animate-spin text-primary" /></div>}>
       <CreateQuestionContent />
     </Suspense>
   );
