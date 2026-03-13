@@ -298,7 +298,7 @@ export default function SettingsPage() {
                       <label className="text-sm font-semibold">বইয়ের ডাউনলোড লিঙ্ক (URL)</label>
                       <Input 
                         placeholder="https://nctb.gov.bd/..." 
-                        value={pdfUrl ?? ''}
+                        value={pdfUrl || ''}
                         onChange={(e) => setPdfUrl(e.target.value)}
                         disabled={uploading}
                       />
@@ -312,7 +312,7 @@ export default function SettingsPage() {
                   </label>
                   <Input 
                     placeholder="https://example.com/cover.jpg" 
-                    value={coverImageUrl ?? ''}
+                    value={coverImageUrl || ''}
                     onChange={(e) => setCoverImageUrl(e.target.value)}
                     disabled={uploading}
                   />

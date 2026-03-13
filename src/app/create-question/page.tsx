@@ -34,6 +34,8 @@ function formatMath(text: string) {
     .replace(/_(\d+|[a-z]+)/g, '<sub class="math-sub">$1</sub>')
     // Square Root: sqrt(x)
     .replace(/sqrt\(([^)]+)\)/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>')
+    // Fraction: \frac{a}{b}
+    .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>')
     // Greek & Scientific Symbols
     .replace(/theta/g, 'θ')
     .replace(/pi/g, 'π')
@@ -148,13 +150,13 @@ function CreateQuestionContent() {
     if (!text) return parts;
     
     const markers = ['ক.', 'খ.', 'গ.', 'ঘ.'];
-    let stimulusEnd = text.length;
+    let positions = markers.map(m => text.indexOf(m));
     
-    const positions = markers.map(m => text.indexOf(m));
-    const firstMarker = positions.find(p => p !== -1);
+    // Find first available marker
+    const firstMarkerIndex = positions.findIndex(p => p !== -1);
     
-    if (firstMarker !== undefined) {
-      parts.stimulus = text.substring(0, firstMarker).trim();
+    if (firstMarkerIndex !== -1) {
+      parts.stimulus = text.substring(0, positions[firstMarkerIndex]).trim();
       
       for (let i = 0; i < markers.length; i++) {
         const start = positions[i];
@@ -275,15 +277,15 @@ function CreateQuestionContent() {
           <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="space-y-2">
               <label className="text-sm font-semibold">প্রতিষ্ঠানের নাম</label>
-              <Input value={meta.institution ?? ''} onChange={e => setMeta({...meta, institution: e.target.value})} placeholder="উদা: বীরগঞ্জ সরকারি উচ্চ বিদ্যালয়" />
+              <Input value={meta.institution || ''} onChange={e => setMeta({...meta, institution: e.target.value})} placeholder="উদা: বীরগঞ্জ সরকারি উচ্চ বিদ্যালয়" />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-semibold">পরীক্ষার নাম</label>
-              <Input value={meta.exam ?? ''} onChange={e => setMeta({...meta, exam: e.target.value})} placeholder="উদা: বার্ষিক পরীক্ষা" />
+              <Input value={meta.exam || ''} onChange={e => setMeta({...meta, exam: e.target.value})} placeholder="উদা: বার্ষিক পরীক্ষা" />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-semibold">শ্রেণি</label>
-              <Select onValueChange={v => setMeta({...meta, classId: v})} value={meta.classId ?? ''}>
+              <Select onValueChange={v => setMeta({...meta, classId: v})} value={meta.classId || ''}>
                 <SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
                 <SelectContent>
                   {CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}
@@ -292,7 +294,7 @@ function CreateQuestionContent() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-semibold">বিষয়</label>
-              <Select onValueChange={v => setMeta({...meta, subject: v})} value={meta.subject ?? ''} disabled={!meta.classId}>
+              <Select onValueChange={v => setMeta({...meta, subject: v})} value={meta.subject || ''} disabled={!meta.classId}>
                 <SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
                 <SelectContent>
                   {subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
@@ -301,11 +303,11 @@ function CreateQuestionContent() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-semibold">সময়</label>
-              <Input value={meta.time ?? ''} onChange={e => setMeta({...meta, time: e.target.value})} placeholder="উদা: ২ ঘণ্টা ৩০ মিনিট" />
+              <Input value={meta.time || ''} onChange={e => setMeta({...meta, time: e.target.value})} placeholder="উদা: ২ ঘণ্টা ৩০ মিনিট" />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-semibold">পূর্ণমান</label>
-              <Input value={meta.totalMarks ?? ''} onChange={e => setMeta({...meta, totalMarks: e.target.value})} placeholder="১০০" />
+              <Input value={meta.totalMarks || ''} onChange={e => setMeta({...meta, totalMarks: e.target.value})} placeholder="১০০" />
             </div>
           </CardContent>
         </Card>
@@ -336,11 +338,11 @@ function CreateQuestionContent() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-sm font-bold">সৃজনশীল নির্দেশনা</label>
-            <Input value={meta.creativeInstruction ?? ''} onChange={e => setMeta({...meta, creativeInstruction: e.target.value})} placeholder="যেকোনো ৭টি প্রশ্নের উত্তর দাও" />
+            <Input value={meta.creativeInstruction || ''} onChange={e => setMeta({...meta, creativeInstruction: e.target.value})} placeholder="যেকোনো ৭টি প্রশ্নের উত্তর দাও" />
           </div>
           <div className="space-y-2">
             <label className="text-sm font-bold">সংক্ষিপ্ত নির্দেশনা</label>
-            <Input value={meta.shortInstruction ?? ''} onChange={e => setMeta({...meta, shortInstruction: e.target.value})} placeholder="সকল প্রশ্নের উত্তর দাও" />
+            <Input value={meta.shortInstruction || ''} onChange={e => setMeta({...meta, shortInstruction: e.target.value})} placeholder="সকল প্রশ্নের উত্তর দাও" />
           </div>
         </div>
 
@@ -371,14 +373,14 @@ function CreateQuestionContent() {
                 </div>
                 <Textarea 
                   placeholder={q.type === 'creative' ? "উদ্দীপক ও প্রশ্ন একসাথে (ক. খ. গ. ঘ. সহ) লিখুন।" : "সংক্ষিপ্ত প্রশ্ন লিখুন..."} 
-                  value={q.content ?? ''} 
+                  value={q.content || ''} 
                   onChange={e => updateQuestion(idx, {content: e.target.value})}
                   className="min-h-[100px] text-sm leading-relaxed"
                 />
                 {q.type === 'short' && (
                   <div className="flex items-center gap-2">
                     <label className="text-xs font-bold">নম্বর:</label>
-                    <Input type="number" className="w-16 h-8 text-center" value={q.shortMarks ?? 2} onChange={e => updateQuestion(idx, {shortMarks: Number(e.target.value)})} />
+                    <Input type="number" className="w-16 h-8 text-center" value={q.shortMarks || 2} onChange={e => updateQuestion(idx, {shortMarks: Number(e.target.value)})} />
                   </div>
                 )}
               </CardContent>
@@ -409,7 +411,7 @@ function CreateQuestionContent() {
               margin: 0;
               padding: 0;
             }
-            .paper { width: 100%; text-align: justify; line-height: 1.1 !important; }
+            .paper { width: 100%; text-align: justify; }
             .header { text-align: center; margin-bottom: 15px; border-bottom: 2px solid black; padding-bottom: 8px; }
             .inst-name { font-size: 14pt; font-weight: 800; margin-bottom: 2px; text-transform: uppercase; }
             .exam-name { font-size: 10pt; font-weight: 700; margin-bottom: 2px; }
@@ -420,17 +422,21 @@ function CreateQuestionContent() {
             .instruction { font-style: italic; font-size: 8.5pt; margin-bottom: 8px; text-align: center; width: 100%; }
             
             .q-block { margin-bottom: 12px; page-break-inside: avoid; }
-            .stimulus { margin-bottom: 4px; white-space: pre-wrap; text-align: justify; font-size: 9pt; line-height: 1.1 !important; }
+            .stimulus { margin-bottom: 4px; white-space: pre-wrap; text-align: justify; font-size: 9pt; }
             
             .sub-qs { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
-            .sub-q { display: flex; justify-content: space-between; align-items: flex-start; line-height: 1.1 !important; }
+            .sub-q { display: flex; justify-content: space-between; align-items: flex-start; }
             .q-text-part { flex: 1; text-align: justify; }
             .mark { font-weight: bold; width: 30px; text-align: right; min-width: 30px; margin-left: 10px; }
             
+            /* Math styles */
             .math-sup { font-size: 0.75em; vertical-align: super; line-height: 0; position: relative; top: -0.2em; }
             .math-sub { font-size: 0.75em; vertical-align: sub; line-height: 0; position: relative; bottom: -0.1em; }
             .math-sqrt { display: inline-flex; align-items: flex-start; vertical-align: middle; }
             .math-sqrt-stem { border-top: 1px solid currentColor; margin-top: 1px; padding-top: 1px; display: inline-block; }
+            .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
+            .math-num { border-bottom: 1px solid currentColor; padding: 0 2px; line-height: 1; }
+            .math-den { padding: 0 2px; line-height: 1; }
             
             .no-print { display: none !important; }
           }
