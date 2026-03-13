@@ -22,10 +22,13 @@ type Question = {
   shortMarks?: number;
 };
 
-// প্রফেশনাল গাণিতিক সংকেত প্রসেসর
+// উন্নত গাণিতিক সংকেত প্রসেসর
 function formatMath(text: string) {
   if (!text) return '';
   return text
+    // Fractions: \frac{a}{b} or \frac(a)(b)
+    .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '<span class="math-frac"><sup>$1</sup>/<sub>$2</sub></span>')
+    .replace(/\\frac\(([^)]+)\)\(([^)]+)\)/g, '<span class="math-frac"><sup>$1</sup>/<sub>$2</sub></span>')
     // Power/Superscript: x^2 or x^{10}
     .replace(/\^\{([^}]+)\}/g, '<sup>$1</sup>')
     .replace(/\^(\d+|[a-z]+)/g, '<sup>$1</sup>')
@@ -33,7 +36,7 @@ function formatMath(text: string) {
     .replace(/_\{([^}]+)\}/g, '<sub>$1</sub>')
     .replace(/_(\d+|[a-z]+)/g, '<sub>$1</sub>')
     // Square Root: sqrt(x)
-    .replace(/sqrt\(([^)]+)\)/g, '<span class="sqrt">√<span class="sqrt-stem">$1</span></span>')
+    .replace(/sqrt\(([^)]+)\)/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>')
     // Greek & Scientific Symbols
     .replace(/theta/g, 'θ')
     .replace(/pi/g, 'π')
@@ -73,36 +76,22 @@ function CreateQuestionContent() {
 
   const [questions, setQuestions] = useState<Question[]>([]);
 
-  // ড্রাফট লোড করা (যদি নতুন প্রশ্ন হয়)
-  useEffect(() => {
-    if (!editId) {
-      const savedDraft = localStorage.getItem('question_draft');
-      if (savedDraft) {
-        try {
-          const { meta: dMeta, questions: dQs } = JSON.parse(savedDraft);
-          setMeta(prev => ({ ...prev, ...dMeta }));
-          setQuestions(dQs || []);
-        } catch (e) {}
-      }
-    }
-  }, [editId]);
-
-  // ড্রাফট সেভ করা
-  useEffect(() => {
-    if (!editId && (questions.length > 0 || meta.institution)) {
-      localStorage.setItem('question_draft', JSON.stringify({ meta, questions }));
-    }
-  }, [meta, questions, editId]);
-
   // ফায়ারবেস থেকে প্রশ্ন লোড করা
   useEffect(() => {
     async function loadQuestion() {
-      if (!editId || !db) return;
+      if (!editId || !db || !user) return;
       try {
         const docRef = doc(db, 'questions', editId);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
+          // নিরাপত্তা নিশ্চিত করা যাতে অন্য ইউজারের প্রশ্ন এডিট না হয়
+          if (data.userId !== user.uid) {
+            toast({ title: "অনুমতি নেই", variant: "destructive" });
+            router.push('/my-questions');
+            return;
+          }
+
           setMeta({
             institution: data.institution || '',
             exam: data.exam || '',
@@ -121,7 +110,6 @@ function CreateQuestionContent() {
           const reconstructed = data.questions.map((q: any) => {
             if (q.type === 'creative') {
               let content = q.stimulus || '';
-              // Avoid duplicate ক. খ. গ. ঘ.
               if (q.qA && !content.includes('ক.')) content += `\nক. ${q.qA}`;
               if (q.qB && !content.includes('খ.')) content += `\nখ. ${q.qB}`;
               if (q.qC && !content.includes('গ.')) content += `\nগ. ${q.qC}`;
@@ -136,8 +124,8 @@ function CreateQuestionContent() {
         setLoading(false);
       }
     }
-    loadQuestion();
-  }, [editId, db]);
+    if (user) loadQuestion();
+  }, [editId, db, user, router]);
 
   const subjects = useMemo(() => meta.classId ? getSubjectsForClass(meta.classId) : [], [meta.classId]);
 
@@ -229,7 +217,6 @@ function CreateQuestionContent() {
     setDoc(docRef, questionSetData, { merge: true })
       .then(() => {
         setSaving(false);
-        localStorage.removeItem('question_draft');
         toast({ title: "সফল!", description: "প্রশ্নপত্রটি ফায়ারবেসে স্থায়ীভাবে সেভ হয়েছে।" });
         if (!editId) {
           router.replace(`/create-question?id=${docId}`);
@@ -393,16 +380,14 @@ function CreateQuestionContent() {
           ))}
         </div>
 
-        {questions.length > 0 && (
-          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 flex gap-4 z-40 bg-background/90 backdrop-blur p-4 rounded-full border shadow-2xl">
-            <Button onClick={handleSaveToDb} disabled={saving} variant="outline" className="gap-2 px-8 border-primary text-primary rounded-full font-bold">
-              <Save className="w-4 h-4" /> {saving ? 'সেভ হচ্ছে...' : 'সেভ করুন'}
-            </Button>
-            <Button onClick={() => window.print()} size="lg" className="bg-primary hover:bg-primary/90 gap-2 px-10 shadow-lg font-bold rounded-full text-white">
-              <Printer className="w-4 h-4" /> প্রিন্ট / পিডিএফ
-            </Button>
-          </div>
-        )}
+        <div className="flex gap-4 pt-8">
+          <Button onClick={handleSaveToDb} disabled={saving} className="gap-2 px-8 font-bold">
+            <Save className="w-4 h-4" /> {saving ? 'সেভ হচ্ছে...' : 'ডাটাবেসে সেভ করুন'}
+          </Button>
+          <Button onClick={() => window.print()} variant="secondary" className="gap-2 px-10 shadow-lg font-bold">
+            <Printer className="w-4 h-4" /> প্রিন্ট / পিডিএফ
+          </Button>
+        </div>
       </div>
 
       <div className="print-only">
@@ -418,26 +403,30 @@ function CreateQuestionContent() {
               margin: 0;
               padding: 0;
             }
-            .paper { width: 100%; text-align: justify; }
+            .paper { width: 100%; text-align: justify; line-height: 1.1 !important; }
             .header { text-align: center; margin-bottom: 15px; border-bottom: 2px solid black; padding-bottom: 8px; }
-            .inst-name { font-size: 15pt; font-weight: 800; margin-bottom: 3px; text-transform: uppercase; }
-            .exam-name { font-size: 11pt; font-weight: 700; margin-bottom: 3px; }
+            .inst-name { font-size: 14pt; font-weight: 800; margin-bottom: 2px; text-transform: uppercase; }
+            .exam-name { font-size: 10pt; font-weight: 700; margin-bottom: 2px; }
             .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px; border-top: 1px solid #eee; padding-top: 3px; }
             
-            .section-label-container { text-align: center; width: 100%; margin-top: 20px; margin-bottom: 8px; }
-            .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1.5px solid black; display: inline-block; padding: 0 12px; }
-            .instruction { font-style: italic; font-size: 8.5pt; margin-bottom: 10px; text-align: center; width: 100%; }
+            .section-label-container { text-align: center; width: 100%; margin-top: 15px; margin-bottom: 5px; }
+            .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1.5px solid black; display: inline-block; padding: 0 10px; }
+            .instruction { font-style: italic; font-size: 8.5pt; margin-bottom: 8px; text-align: center; width: 100%; }
             
-            .q-block { margin-bottom: 15px; page-break-inside: avoid; }
-            .stimulus { margin-bottom: 6px; white-space: pre-wrap; text-align: justify; font-size: 9pt; }
-            .sub-q { display: flex; justify-content: space-between; margin-bottom: 2px; align-items: flex-start; }
-            .mark { font-weight: bold; width: 30px; text-align: right; min-width: 30px; }
+            .q-block { margin-bottom: 12px; page-break-inside: avoid; }
+            .stimulus { margin-bottom: 4px; white-space: pre-wrap; text-align: justify; font-size: 9pt; line-height: 1.1 !important; }
+            .sub-q { display: flex; justify-content: space-between; margin-bottom: 1px; align-items: flex-start; line-height: 1.1 !important; }
+            .mark { font-weight: bold; width: 25px; text-align: right; min-width: 25px; }
             
             sup, sub { line-height: 0; position: relative; vertical-align: baseline; font-size: 0.75em; }
             sup { top: -0.4em; }
             sub { bottom: -0.2em; }
-            .sqrt { position: relative; display: inline-block; vertical-align: middle; }
-            .sqrt-stem { border-top: 1px solid black; padding-top: 1px; margin-left: 1px; display: inline-block; }
+            
+            .math-frac { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; line-height: 1; font-size: 0.85em; margin: 0 2px; }
+            .math-frac sup { border-bottom: 1px solid black; padding: 0 2px; top: 0; position: static; }
+            .math-frac sub { padding: 0 2px; bottom: 0; position: static; }
+            .math-sqrt { position: relative; display: inline-block; vertical-align: middle; }
+            .math-sqrt-stem { border-top: 1px solid black; padding-top: 1px; margin-left: 1px; display: inline-block; }
             
             .no-print { display: none !important; }
           }
