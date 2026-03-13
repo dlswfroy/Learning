@@ -26,13 +26,16 @@ type Question = {
 function formatMath(text: string) {
   if (!text) return '';
   return text
+    // Fractions: \frac{num}{den}
+    .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>')
     // Power/Superscript: x^2 or x^{10}
     .replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>')
     .replace(/\^(\d+|[a-z]+)/g, '<sup class="math-sup">$1</sup>')
     // Subscript: H_2O
     .replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>')
     .replace(/_(\d+|[a-z]+)/g, '<sub class="math-sub">$1</sub>')
-    // Square Root: sqrt(x)
+    // Square Root: \sqrt{x} or sqrt(x)
+    .replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>')
     .replace(/sqrt\(([^)]+)\)/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>')
     // Greek & Scientific Symbols
     .replace(/theta/g, '&theta;')
@@ -72,6 +75,27 @@ function CreateQuestionContent() {
   });
 
   const [questions, setQuestions] = useState<Question[]>([]);
+
+  // ড্রাফট লোড করা (শুধুমাত্র নতুন প্রশ্নের ক্ষেত্রে)
+  useEffect(() => {
+    if (!editId) {
+      const draft = localStorage.getItem('question_draft');
+      if (draft) {
+        try {
+          const parsed = JSON.parse(draft);
+          setMeta(prev => ({ ...prev, ...parsed.meta }));
+          setQuestions(parsed.questions || []);
+        } catch (e) {}
+      }
+    }
+  }, [editId]);
+
+  // ড্রাফট সেভ করা
+  useEffect(() => {
+    if (!editId && questions.length > 0) {
+      localStorage.setItem('question_draft', JSON.stringify({ meta, questions }));
+    }
+  }, [meta, questions, editId]);
 
   // ফায়ারবেস থেকে ডাটা লোড করা
   useEffect(() => {
@@ -223,6 +247,7 @@ function CreateQuestionContent() {
     setDoc(docRef, questionSetData, { merge: true })
       .then(() => {
         setSaving(false);
+        localStorage.removeItem('question_draft');
         toast({ title: "সফল!", description: "প্রশ্নপত্রটি ফায়ারবেসে স্থায়ীভাবে সেভ হয়েছে।" });
         if (!editId) {
           router.replace(`/create-question?id=${docId}`);
@@ -428,8 +453,11 @@ function CreateQuestionContent() {
             .mark { font-weight: bold; width: 30px; text-align: right; min-width: 30px; margin-left: 10px; }
             
             /* Math styles */
-            .math-sup { font-size: 0.75em; vertical-align: super; line-height: 0; position: relative; top: -0.2em; }
-            .math-sub { font-size: 0.75em; vertical-align: sub; line-height: 0; position: relative; bottom: -0.1em; }
+            .math-sup { font-size: 0.7em; vertical-align: baseline; position: relative; top: -0.4em; }
+            .math-sub { font-size: 0.7em; vertical-align: baseline; position: relative; top: 0.2em; }
+            .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
+            .math-num { border-bottom: 0.5px solid currentColor; padding: 0 2px; }
+            .math-den { padding: 0 2px; }
             .math-sqrt { display: inline-flex; align-items: flex-start; vertical-align: middle; }
             .math-sqrt-stem { border-top: 1px solid currentColor; margin-top: 1px; padding-top: 1px; display: inline-block; }
             
