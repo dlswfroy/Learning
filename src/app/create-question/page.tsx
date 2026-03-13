@@ -26,12 +26,13 @@ type Question = {
 function formatMath(text: string) {
   if (!text) return '';
   return text
-    .replace(/\^(\d+|[a-z])/g, '<sup>$1</sup>')
-    .replace(/_(\d+|[a-z])/g, '<sub>$1</sub>')
+    .replace(/\^(\d+|[a-z]+)/g, '<sup>$1</sup>')
+    .replace(/_(\d+|[a-z]+)/g, '<sub>$1</sub>')
     .replace(/sqrt\(([^)]+)\)/g, '√$1')
     .replace(/sqrt/g, '√')
     .replace(/\+-/g, '±')
-    .replace(/degree/g, '°');
+    .replace(/degree/g, '°')
+    .replace(/\*/g, '×');
 }
 
 function CreateQuestionContent() {
@@ -70,7 +71,6 @@ function CreateQuestionContent() {
           const { meta: dMeta, questions: dQs } = JSON.parse(savedDraft);
           setMeta(prev => ({ ...prev, ...dMeta }));
           setQuestions(dQs || []);
-          toast({ title: "ড্রাফট রিকভার করা হয়েছে", description: "আপনার আগের কাজগুলো ফিরিয়ে আনা হয়েছে।" });
         } catch (e) {
           console.error("Failed to load draft", e);
         }
@@ -151,6 +151,7 @@ function CreateQuestionContent() {
 
   const parseCreative = (text: string) => {
     const parts = { stimulus: '', qA: '', qB: '', qC: '', qD: '' };
+    // Find markers and split
     const posA = text.indexOf('ক.');
     const posB = text.indexOf('খ.');
     const posC = text.indexOf('গ.');
@@ -167,18 +168,12 @@ function CreateQuestionContent() {
             parts.qD = text.substring(posD + 2).trim();
           } else {
             parts.qC = text.substring(posC + 2).trim();
-            parts.qD = '';
           }
         } else {
           parts.qB = text.substring(posB + 2).trim();
-          parts.qC = '';
-          parts.qD = '';
         }
       } else {
         parts.qA = text.substring(posA + 2).trim();
-        parts.qB = '';
-        parts.qC = '';
-        parts.qD = '';
       }
     } else {
       parts.stimulus = text;
@@ -271,7 +266,7 @@ function CreateQuestionContent() {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-primary">প্রশ্নপত্র নির্মাতা</h2>
-              <p className="text-sm text-muted-foreground">বোর্ড স্ট্যান্ডার্ড ফরম্যাটে প্রশ্ন তৈরি করুন</p>
+              <p className="text-sm text-muted-foreground">ম্যানুয়ালি প্রশ্ন তৈরি ও প্রিন্ট করুন</p>
             </div>
           </div>
           <Button variant="ghost" onClick={() => router.push('/my-questions')} className="gap-2">
@@ -280,9 +275,9 @@ function CreateQuestionContent() {
         </header>
 
         <Card className="shadow-md border-primary/10">
-          <CardHeader className="bg-primary/5 border-b">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-primary" /> পরীক্ষার তথ্য
+          <CardHeader className="bg-primary/5 border-b py-3">
+            <CardTitle className="text-base flex items-center gap-2 font-bold">
+              <BookOpen className="w-4 h-4 text-primary" /> পরীক্ষার সাধারণ তথ্য
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -294,7 +289,7 @@ function CreateQuestionContent() {
               <label className="text-sm font-semibold">পরীক্ষার নাম</label>
               <Input value={meta.exam || ''} onChange={e => setMeta({...meta, exam: e.target.value})} placeholder="উদা: বার্ষিক পরীক্ষা" />
             </div>
-            <div className="space-y-2 lg:col-span-1">
+            <div className="space-y-2">
               <label className="text-sm font-semibold">শ্রেণি</label>
               <Select onValueChange={v => setMeta({...meta, classId: v})} value={meta.classId || ''}>
                 <SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
@@ -303,7 +298,7 @@ function CreateQuestionContent() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2 lg:col-span-1">
+            <div className="space-y-2">
               <label className="text-sm font-semibold">বিষয়</label>
               <Select onValueChange={v => setMeta({...meta, subject: v})} value={meta.subject || ''} disabled={!meta.classId}>
                 <SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
@@ -323,33 +318,15 @@ function CreateQuestionContent() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm border-accent/20">
-          <CardHeader className="py-3 bg-accent/5 border-b">
-            <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <ListChecks className="w-4 h-4 text-accent" /> উত্তর প্রদানের নির্দেশনা
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-muted-foreground uppercase">সৃজনশীল নির্দেশিকা</label>
-              <Input value={meta.creativeInstruction || ''} onChange={e => setMeta({...meta, creativeInstruction: e.target.value})} placeholder="উদা: যেকোনো ৭টি প্রশ্নের উত্তর দাও" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-muted-foreground uppercase">সংক্ষিপ্ত নির্দেশিকা</label>
-              <Input value={meta.shortInstruction || ''} onChange={e => setMeta({...meta, shortInstruction: e.target.value})} placeholder="উদা: সকল প্রশ্নের উত্তর দাও" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-sm border-primary/20">
-          <CardHeader className="py-3 bg-primary/5 border-b">
-            <CardTitle className="text-sm font-bold">সৃজনশীল মান বণ্টন</CardTitle>
+        <Card className="shadow-sm border-primary/20 bg-primary/5">
+          <CardHeader className="py-2 border-b">
+            <CardTitle className="text-xs font-bold uppercase tracking-wider text-primary">সৃজনশীল প্রশ্নের মান বণ্টন (একবারই প্রযোজ্য)</CardTitle>
           </CardHeader>
           <CardContent className="pt-4 flex gap-4">
             {['ক', 'খ', 'গ', 'ঘ'].map((key, i) => (
               <div key={key} className="flex-1 space-y-1">
-                <label className="text-xs font-bold">{key}.</label>
-                <Input type="number" value={i === 0 ? meta.marksA : i === 1 ? meta.marksB : i === 2 ? meta.marksC : meta.marksD} 
+                <label className="text-xs font-bold">{key}. নম্বর</label>
+                <Input type="number" className="h-8 text-center font-bold" value={i === 0 ? meta.marksA : i === 1 ? meta.marksB : i === 2 ? meta.marksC : meta.marksD} 
                   onChange={e => {
                     const v = Number(e.target.value);
                     if (i === 0) setMeta({...meta, marksA: v});
@@ -362,6 +339,21 @@ function CreateQuestionContent() {
             ))}
           </CardContent>
         </Card>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card className="border-accent/20">
+            <CardHeader className="py-2 bg-accent/5 border-b"><CardTitle className="text-xs font-bold">সৃজনশীল নির্দেশিকা</CardTitle></CardHeader>
+            <CardContent className="pt-3">
+              <Input value={meta.creativeInstruction || ''} onChange={e => setMeta({...meta, creativeInstruction: e.target.value})} placeholder="উদা: যেকোনো ৭টি প্রশ্নের উত্তর দাও" />
+            </CardContent>
+          </Card>
+          <Card className="border-accent/20">
+            <CardHeader className="py-2 bg-accent/5 border-b"><CardTitle className="text-xs font-bold">সংক্ষিপ্ত নির্দেশিকা</CardTitle></CardHeader>
+            <CardContent className="pt-3">
+              <Input value={meta.shortInstruction || ''} onChange={e => setMeta({...meta, shortInstruction: e.target.value})} placeholder="উদা: সকল প্রশ্নের উত্তর দাও" />
+            </CardContent>
+          </Card>
+        </div>
 
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -377,12 +369,12 @@ function CreateQuestionContent() {
           </div>
 
           {questions.map((q, idx) => (
-            <Card key={idx} className="relative group border-l-4 border-l-primary">
-              <Button variant="ghost" size="icon" className="absolute top-2 right-2 text-destructive" onClick={() => handleRemoveQuestion(idx)}>
+            <Card key={idx} className="relative group border-l-4 border-l-primary shadow-sm hover:shadow-md transition-shadow">
+              <Button variant="ghost" size="icon" className="absolute top-2 right-2 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveQuestion(idx)}>
                 <Trash2 className="w-4 h-4" />
               </Button>
               <CardContent className="pt-6 space-y-4">
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-1">
                   <span className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded uppercase">
                     {q.type === 'creative' ? 'সৃজনশীল' : 'সংক্ষিপ্ত'}
                   </span>
@@ -390,15 +382,18 @@ function CreateQuestionContent() {
                 </div>
                 {q.type === 'creative' ? (
                   <Textarea 
-                    placeholder="উদ্দীপক ও প্রশ্ন একসাথে (ক. খ. গ. ঘ. সহ) লিখুন। যেমন: উদ্দীপক... ক. প্রশ্ন খ. প্রশ্ন..." 
+                    placeholder="উদ্দীপক ও প্রশ্ন একসাথে (ক. খ. গ. ঘ. সহ) লিখুন। উদ্দীপক... ক. প্রশ্ন খ. প্রশ্ন..." 
                     value={q.content || ''} 
                     onChange={e => updateQuestion(idx, {content: e.target.value})}
-                    className="min-h-[120px]"
+                    className="min-h-[140px] text-sm leading-relaxed"
                   />
                 ) : (
                   <div className="flex gap-4">
-                    <Input className="flex-1" value={q.content || ''} onChange={e => updateQuestion(idx, {content: e.target.value})} placeholder="সংক্ষিপ্ত প্রশ্ন লিখুন..." />
-                    <Input type="number" className="w-20" value={q.shortMarks || 2} onChange={e => updateQuestion(idx, {shortMarks: Number(e.target.value)})} />
+                    <Input className="flex-1 text-sm" value={q.content || ''} onChange={e => updateQuestion(idx, {content: e.target.value})} placeholder="সংক্ষিপ্ত প্রশ্ন লিখুন..." />
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-bold">মান:</label>
+                      <Input type="number" className="w-16 h-8 text-center" value={q.shortMarks || 2} onChange={e => updateQuestion(idx, {shortMarks: Number(e.target.value)})} />
+                    </div>
                   </div>
                 )}
               </CardContent>
@@ -407,8 +402,8 @@ function CreateQuestionContent() {
         </div>
 
         {questions.length > 0 && (
-          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 flex gap-4 z-40 bg-background/90 backdrop-blur p-4 rounded-full border shadow-2xl">
-            <Button onClick={handleSaveToDb} disabled={saving} variant="outline" className="gap-2 px-8 border-primary text-primary rounded-full">
+          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 flex gap-4 z-40 bg-background/90 backdrop-blur p-4 rounded-full border shadow-2xl no-print">
+            <Button onClick={handleSaveToDb} disabled={saving} variant="outline" className="gap-2 px-8 border-primary text-primary rounded-full font-bold">
               <Save className="w-4 h-4" /> {saving ? 'সেভ হচ্ছে...' : 'সেভ করুন'}
             </Button>
             <Button onClick={handlePrint} size="lg" className="bg-primary hover:bg-primary/90 gap-2 px-10 shadow-lg font-bold rounded-full">
@@ -422,20 +417,22 @@ function CreateQuestionContent() {
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
             @page { size: A4; margin: 0.5in; }
-            body { background: white !important; font-family: 'Inter', sans-serif; font-size: 9pt; color: black; line-height: 1.1; }
-            .paper { width: 100%; text-align: justify; }
-            .header { text-align: center; margin-bottom: 10px; border-bottom: 2px solid black; padding-bottom: 5px; }
-            .inst-name { font-size: 14pt; font-weight: bold; }
-            .exam-name { font-size: 11pt; font-weight: bold; }
-            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px; }
-            .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1px solid black; display: inline-block; margin-top: 15px; margin-bottom: 5px; }
-            .instruction { font-style: italic; font-size: 8.5pt; margin-bottom: 10px; }
-            .q-block { margin-bottom: 15px; page-break-inside: avoid; }
-            .stimulus { margin-bottom: 5px; white-space: pre-wrap; line-height: 1.2; }
-            .sub-q { display: flex; justify-content: space-between; margin-bottom: 2px; }
-            .mark { font-weight: bold; width: 30px; text-align: right; }
+            * { -webkit-print-color-adjust: exact !important; color-adjust: exact !important; }
+            body, html { background: white !important; font-family: 'Inter', sans-serif; font-size: 9pt; color: black !important; line-height: 1.0; }
+            .paper { width: 100%; text-align: justify; background: white !important; }
+            .header { text-align: center; margin-bottom: 8px; border-bottom: 1.5px solid black; padding-bottom: 4px; }
+            .inst-name { font-size: 14pt; font-weight: 800; margin-bottom: 2px; }
+            .exam-name { font-size: 11pt; font-weight: 700; margin-bottom: 2px; }
+            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 4px; font-size: 9.5pt; }
+            .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1px solid black; display: inline-block; margin-top: 12px; margin-bottom: 4px; }
+            .instruction { font-style: italic; font-size: 8.5pt; margin-bottom: 8px; }
+            .q-block { margin-bottom: 12px; page-break-inside: avoid; }
+            .stimulus { margin-bottom: 4px; white-space: pre-wrap; line-height: 1.1; }
+            .sub-q { display: flex; justify-content: space-between; margin-bottom: 1px; }
+            .mark { font-weight: bold; width: 25px; text-align: right; }
             sup { vertical-align: super; font-size: 0.7em; }
             sub { vertical-align: sub; font-size: 0.7em; }
+            .no-print { display: none !important; visibility: hidden !important; opacity: 0 !important; height: 0 !important; pointer-events: none !important; }
           }
         `}} />
         
@@ -461,22 +458,30 @@ function CreateQuestionContent() {
                     <div className="font-bold mb-1">{idx + 1}. নিচের উদ্দীপকটি পড়ো এবং প্রশ্নগুলোর উত্তর দাও:</div>
                     <div className="stimulus" dangerouslySetInnerHTML={{ __html: formatMath(parsed.stimulus) }} />
                     <div className="space-y-0.5">
-                      <div className="sub-q">
-                        <span dangerouslySetInnerHTML={{ __html: 'ক. ' + formatMath(parsed.qA) }} />
-                        <span className="mark">{meta.marksA}</span>
-                      </div>
-                      <div className="sub-q">
-                        <span dangerouslySetInnerHTML={{ __html: 'খ. ' + formatMath(parsed.qB) }} />
-                        <span className="mark">{meta.marksB}</span>
-                      </div>
-                      <div className="sub-q">
-                        <span dangerouslySetInnerHTML={{ __html: 'গ. ' + formatMath(parsed.qC) }} />
-                        <span className="mark">{meta.marksC}</span>
-                      </div>
-                      <div className="sub-q">
-                        <span dangerouslySetInnerHTML={{ __html: 'ঘ. ' + formatMath(parsed.qD) }} />
-                        <span className="mark">{meta.marksD}</span>
-                      </div>
+                      {parsed.qA && (
+                        <div className="sub-q">
+                          <span dangerouslySetInnerHTML={{ __html: 'ক. ' + formatMath(parsed.qA) }} />
+                          <span className="mark">{meta.marksA}</span>
+                        </div>
+                      )}
+                      {parsed.qB && (
+                        <div className="sub-q">
+                          <span dangerouslySetInnerHTML={{ __html: 'খ. ' + formatMath(parsed.qB) }} />
+                          <span className="mark">{meta.marksB}</span>
+                        </div>
+                      )}
+                      {parsed.qC && (
+                        <div className="sub-q">
+                          <span dangerouslySetInnerHTML={{ __html: 'গ. ' + formatMath(parsed.qC) }} />
+                          <span className="mark">{meta.marksC}</span>
+                        </div>
+                      )}
+                      {parsed.qD && (
+                        <div className="sub-q">
+                          <span dangerouslySetInnerHTML={{ __html: 'ঘ. ' + formatMath(parsed.qD) }} />
+                          <span className="mark">{meta.marksD}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -490,7 +495,7 @@ function CreateQuestionContent() {
               <div className="instruction">{meta.shortInstruction}</div>
               {shortQuestions.map((q, idx) => (
                 <div key={idx} className="q-block flex justify-between">
-                  <span dangerouslySetInnerHTML={{ __html: `${idx + creativeQuestions.length + 1}. ${formatMath(q.content)}` }} />
+                  <span dangerouslySetInnerHTML={{ __html: `${idx + 1}. ${formatMath(q.content)}` }} />
                   <span className="mark">{q.shortMarks}</span>
                 </div>
               ))}
