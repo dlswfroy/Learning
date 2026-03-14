@@ -138,53 +138,92 @@ export default function SettingsPage() {
 
   const saveToFirestore = (url: string, fileName: string) => {
     const bookData = {
-      classId: classId || '', subject: subject || '', fileName: fileName || '',
-      pdfUrl: url || '', coverImageUrl: coverImageUrl || '',
-      uploadedAt: serverTimestamp(), userId: user?.uid || '',
+      classId: classId || '',
+      subject: subject || '',
+      fileName: fileName || '',
+      pdfUrl: url || '',
+      coverImageUrl: coverImageUrl || '',
+      uploadedAt: serverTimestamp(),
+      userId: user?.uid || '',
     };
     addDoc(collection(db!, 'books'), bookData)
       .then(() => {
-        setUploading(false); setFile(null); setPdfUrl(''); setCoverImageUrl(''); setClassId(''); setSubject(''); setProgress(0);
+        setUploading(false);
+        setFile(null);
+        setPdfUrl('');
+        setCoverImageUrl('');
+        setClassId('');
+        setSubject('');
+        setProgress(0);
         toast({ title: "সফল", description: "বইটি সফলভাবে যুক্ত করা হয়েছে।" });
       })
       .catch(async () => {
         setUploading(false);
         errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: 'books', operation: 'create', requestResourceData: bookData
+          path: 'books',
+          operation: 'create',
+          requestResourceData: bookData
         }));
       });
   };
 
   const removeBook = (bookId: string) => {
-    if (!isAdmin || !db) { toast({ title: "অনুমতি নেই", variant: "destructive" }); return; }
+    if (!isAdmin || !db) {
+      toast({ title: "অনুমতি নেই", variant: "destructive" });
+      return;
+    }
     if (!confirm("আপনি কি নিশ্চিতভাবে এই বইটি মুছে ফেলতে চান?")) return;
     deleteDoc(doc(db, 'books', bookId))
-      .then(() => { toast({ title: "সফল", description: "বইটি মুছে ফেলা হয়েছে।" }); })
+      .then(() => {
+        toast({ title: "সফল", description: "বইটি মুছে ফেলা হয়েছে।" });
+      })
       .catch(async () => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: `books/${bookId}`, operation: 'delete' }));
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: `books/${bookId}`,
+          operation: 'delete'
+        }));
       });
   };
 
-  if (userLoading || (user && adminChecking)) return <div className="flex flex-col items-center justify-center min-h-[50vh]"><Loader2 className="w-10 h-10 animate-spin text-primary" /></div>;
+  if (userLoading || (user && adminChecking)) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh]">
+        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   if (!user) return null;
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-fade-in pb-10">
       <header className="flex items-center gap-4 border-b pb-4">
-        <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-sm"><Settings className="w-7 h-7" /></div>
+        <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-sm">
+          <Settings className="w-7 h-7" />
+        </div>
         <h2 className="text-2xl font-bold">সেটিং</h2>
       </header>
 
       {!isAdmin ? (
-        <Card className="border-destructive/30 bg-destructive/5"><CardContent className="pt-6 flex flex-col items-center text-center space-y-4"><ShieldAlert className="w-10 h-10 text-destructive" /><h3 className="font-bold text-destructive">এডমিন অ্যাক্সেস নেই</h3></CardContent></Card>
+        <Card className="border-destructive/30 bg-destructive/5">
+          <CardContent className="pt-6 flex flex-col items-center text-center space-y-4">
+            <ShieldAlert className="w-10 h-10 text-destructive" />
+            <h3 className="font-bold text-destructive text-lg">এডমিন অ্যাক্সেস নেই</h3>
+            <p className="text-sm text-muted-foreground">শুধুমাত্র এডমিনগণ বই যোগ বা পরিবর্তন করতে পারেন।</p>
+          </CardContent>
+        </Card>
       ) : (
         <section className="space-y-4">
           <Card className="border-2 border-primary/10">
             <CardHeader className="pb-2">
               <Tabs defaultValue="file" onValueChange={(v) => setUploadMethod(v as 'file' | 'link')} className="w-full">
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="file" className="gap-2"><Upload className="w-4 h-4" /> ফাইল আপলোড</TabsTrigger>
-                  <TabsTrigger value="link" className="gap-2"><LinkIcon className="w-4 h-4" /> লিঙ্ক যোগ</TabsTrigger>
+                  <TabsTrigger value="file" className="gap-2">
+                    <Upload className="w-4 h-4" /> ফাইল আপলোড
+                  </TabsTrigger>
+                  <TabsTrigger value="link" className="gap-2">
+                    <LinkIcon className="w-4 h-4" /> লিঙ্ক যোগ
+                  </TabsTrigger>
                 </TabsList>
               </Tabs>
             </CardHeader>
@@ -193,36 +232,79 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">শ্রেণি</label>
                   <Select key={`sel-cls-${classId}`} onValueChange={setClassId} value={classId || ''}>
-                    <SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
-                    <SelectContent>{CLASSES.map((c) => <SelectItem key={`opt-${c.id}`} value={c.id}>{c.label} শ্রেণি</SelectItem>)}</SelectContent>
+                    <SelectTrigger>
+                      <SelectValue placeholder="নির্বাচন করুন" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CLASSES.map((c) => (
+                        <SelectItem key={`opt-${c.id}`} value={c.id}>{c.label} শ্রেণি</SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">বিষয়</label>
                   <Select key={`sel-sub-${subject}`} onValueChange={setSubject} value={subject || ''} disabled={!classId}>
-                    <SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
-                    <SelectContent>{subjectsList.map((s) => <SelectItem key={`opt-${s}`} value={s}>{s}</SelectItem>)}</SelectContent>
+                    <SelectTrigger>
+                      <SelectValue placeholder="নির্বাচন করুন" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {subjectsList.map((s) => (
+                        <SelectItem key={`opt-${s}`} value={s}>{s}</SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                 </div>
               </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">{uploadMethod === 'file' ? 'PDF ফাইল' : 'ডাউনলোড লিঙ্ক'}</label>
                   {uploadMethod === 'file' ? (
-                    <Input key="f-inp" type="file" accept=".pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} disabled={uploading} />
+                    <Input 
+                      key="f-inp"
+                      type="file" 
+                      accept=".pdf" 
+                      onChange={(e) => setFile(e.target.files?.[0] || null)}
+                      disabled={uploading}
+                    />
                   ) : (
-                    <Input key="u-inp" placeholder="https://..." value={pdfUrl || ''} onChange={(e) => setPdfUrl(e.target.value)} disabled={uploading} />
+                    <Input 
+                      key="u-inp"
+                      placeholder="https://..." 
+                      value={pdfUrl || ''} 
+                      onChange={(e) => setPdfUrl(e.target.value)}
+                      disabled={uploading}
+                    />
                   )}
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">কভার ইমেজ (ঐচ্ছিক)</label>
-                  <Input key="c-inp" placeholder="https://..." value={coverImageUrl || ''} onChange={(e) => setCoverImageUrl(e.target.value)} disabled={uploading} />
+                  <Input 
+                    key="c-inp"
+                    placeholder="https://..." 
+                    value={coverImageUrl || ''} 
+                    onChange={(e) => setCoverImageUrl(e.target.value)}
+                    disabled={uploading}
+                  />
                 </div>
               </div>
             </CardContent>
-            {uploading && uploadMethod === 'file' && <div className="px-6 pb-4 space-y-2"><Progress value={progress} className="h-2" /></div>}
+            {uploading && uploadMethod === 'file' && (
+              <div className="px-6 pb-4 space-y-2">
+                <div className="flex justify-between text-xs font-medium">
+                  <span>আপলোড হচ্ছে...</span>
+                  <span>{Math.round(progress)}%</span>
+                </div>
+                <Progress value={progress} className="h-2" />
+              </div>
+            )}
             <CardFooter className="flex justify-end border-t bg-muted/20 py-4">
-              <Button onClick={handleSaveBook} disabled={uploading || (uploadMethod === 'file' ? !file : !pdfUrl) || !classId || !subject} className="bg-accent text-white">
+              <Button 
+                onClick={handleSaveBook} 
+                disabled={uploading || (uploadMethod === 'file' ? !file : !pdfUrl) || !classId || !subject}
+                className="bg-accent text-white hover:bg-accent/90 gap-2 px-8"
+              >
                 {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
                 {uploadMethod === 'link' ? 'সেভ করুন' : 'আপলোড করুন'}
               </Button>
@@ -232,24 +314,68 @@ export default function SettingsPage() {
       )}
 
       <section className="space-y-6">
-        <div className="flex justify-between items-center"><h3 className="text-lg font-bold">বর্তমানে থাকা বইসমূহ</h3></div>
-        {loadingBooks ? <div className="p-12 text-center"><Loader2 className="w-10 h-10 animate-spin text-primary mx-auto" /></div> : (
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h3 className="text-lg font-bold">বর্তমানে থাকা বইসমূহ</h3>
+          <div className="flex items-center gap-2 bg-secondary/30 p-1.5 rounded-lg border">
+            <Filter className="w-4 h-4 text-muted-foreground ml-2" />
+            <Select value={viewClassId} onValueChange={setViewClassId}>
+              <SelectTrigger className="w-[150px] h-8 text-xs bg-white">
+                <SelectValue placeholder="সব শ্রেণি" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">সব শ্রেণি</SelectItem>
+                {CLASSES.map((c) => (
+                  <SelectItem key={`filter-opt-${c.id}`} value={c.id}>{c.label} শ্রেণি</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {loadingBooks ? (
+          <div className="p-12 text-center">
+            <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto" />
+          </div>
+        ) : filteredBooks.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filteredBooks.map((book) => (
-              <Card key={book.id} className="p-4 flex items-center justify-between">
+              <Card key={book.id} className="p-4 flex items-center justify-between hover:border-primary/40 transition-colors group">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-16 rounded border bg-primary/10 flex items-center justify-center">
-                    {book.coverImageUrl ? <img src={book.coverImageUrl} className="w-full h-full object-cover" /> : <FileText className="w-6 h-6 text-primary" />}
+                  <div className="w-12 h-16 rounded border bg-primary/10 flex items-center justify-center overflow-hidden shrink-0">
+                    {book.coverImageUrl ? (
+                      <img src={book.coverImageUrl} alt="Cover" className="w-full h-full object-cover" />
+                    ) : (
+                      <FileText className="w-6 h-6 text-primary" />
+                    )}
                   </div>
                   <div>
                     <h4 className="font-bold text-sm">{book.subject}</h4>
-                    <p className="text-[10px] text-muted-foreground">{CLASSES.find(c => c.id === book.classId)?.label} শ্রেণি</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {CLASSES.find(c => c.id === book.classId)?.label || 'অজানা'} শ্রেণি
+                    </p>
+                    <p className="text-[10px] text-primary hover:underline truncate max-w-[150px]">
+                      {book.fileName}
+                    </p>
                   </div>
                 </div>
-                {isAdmin && <Button variant="ghost" size="icon" className="text-destructive" onClick={() => removeBook(book.id)}><Trash2 className="w-4 h-4" /></Button>}
+                {isAdmin && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => removeBook(book.id)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
               </Card>
             ))}
           </div>
+        ) : (
+          <Card className="p-12 text-center border-dashed">
+            <FileText className="w-12 h-12 text-muted-foreground/20 mx-auto mb-4" />
+            <p className="text-muted-foreground">কোনো বই পাওয়া যায়নি।</p>
+          </Card>
         )}
       </section>
     </div>

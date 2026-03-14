@@ -73,7 +73,7 @@ function formatMath(text: string) {
   formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
   formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
   formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
-  formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$2</span></span>');
+  formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>');
   
   // Clean up remaining backslashes
   formatted = formatted.replace(/\\/g, '');
@@ -139,7 +139,7 @@ function CreateQuestionContent() {
               return { id, type: 'mcq', content: `${q.mcqQuestion || ''}\nক. ${q.optA || ''}\nখ. ${q.optB || ''}\nগ. ${q.optC || ''}\nঘ. ${q.optD || ''}` };
             }
             if (q.type === 'creative') {
-              return { id, type: 'creative', content: `${q.stimulus || ''}\nক. ${q.qA || ''}\nখ. ${q.qB || ''}\nগ. ${q.optC || ''}\nঘ. ${q.optD || ''}` };
+              return { id, type: 'creative', content: `${q.stimulus || ''}\nক. ${q.qA || ''}\nখ. ${q.qB || ''}\nগ. ${q.qC || ''}\nঘ. ${q.qD || ''}` };
             }
             return { id, type: 'short', content: q.shortText || '' };
           });
@@ -373,7 +373,7 @@ function CreateQuestionContent() {
             
             .mcq-row { 
               display: grid; 
-              grid-template-columns: 1fr 1fr 1fr 1fr; 
+              grid-template-columns: 1fr 1fr; 
               gap: 4px 15px; 
               margin-top: 3px; 
               padding-left: 20px; 
@@ -381,7 +381,7 @@ function CreateQuestionContent() {
             .mcq-opt { display: flex; gap: 4px; align-items: flex-start; }
             
             @media (max-width: 600px) {
-              .mcq-row { grid-template-columns: 1fr 1fr; }
+              .mcq-row { grid-template-columns: 1fr; }
             }
 
             .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }

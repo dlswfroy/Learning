@@ -65,8 +65,8 @@ export default function MyQuestionsPage() {
   const sortedQuestions = useMemo(() => {
     if (!rawQuestions) return [];
     return [...rawQuestions].sort((a, b) => {
-      const dateA = a.updatedAt?.toDate?.() || a.createdAt?.toDate?.() || new Date(0);
-      const dateB = b.updatedAt?.toDate?.() || b.createdAt?.toDate?.() || new Date(0);
+      const dateA = (a.updatedAt as any)?.toDate?.() || (a.createdAt as any)?.toDate?.() || new Date(0);
+      const dateB = (b.updatedAt as any)?.toDate?.() || (b.createdAt as any)?.toDate?.() || new Date(0);
       return dateB.getTime() - dateA.getTime();
     });
   }, [rawQuestions]);
