@@ -23,21 +23,18 @@ export default function SettingsPage() {
   const storage = useStorage();
   const { user, loading: userLoading } = useUser();
   
-  // States for uploading - all initialized to empty strings to avoid uncontrolled input errors
   const [classId, setClassId] = useState('');
   const [subject, setSubject] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [pdfUrl, setPdfUrl] = useState('');
   const [coverImageUrl, setCoverImageUrl] = useState('');
   
-  // UI States
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminChecking, setAdminChecking] = useState(true);
   const [uploadMethod, setUploadMethod] = useState<'file' | 'link'>('file');
 
-  // Filter state
   const [viewClassId, setViewClassId] = useState<string>('all');
 
   useEffect(() => {
@@ -55,7 +52,6 @@ export default function SettingsPage() {
         if (adminDoc.exists()) {
           setIsAdmin(adminDoc.data()?.adminUid === user.uid);
         } else {
-          // If no admin doc exists, first user becomes admin
           await setDoc(adminDocRef, { adminUid: user.uid });
           setIsAdmin(true);
         }

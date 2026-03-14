@@ -31,11 +31,6 @@ type Question = {
   id: string;
   type: 'creative' | 'short';
   content: string; 
-  marksA?: number;
-  marksB?: number;
-  marksC?: number;
-  marksD?: number;
-  shortMarks?: number;
 };
 
 function toBengaliNumber(n: number | string | undefined | null): string {
@@ -49,7 +44,6 @@ function formatMath(text: string) {
   
   let formatted = text;
   
-  // LaTeX-style formatting for common board exam patterns
   formatted = formatted.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, 
     '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
   
@@ -96,6 +90,11 @@ function CreateQuestionContent() {
     totalMarks: '১০০',
     creativeInstruction: 'যেকোনো ৭টি প্রশ্নের উত্তর দাও',
     shortInstruction: 'সকল প্রশ্নের উত্তর দাও',
+    marksA: 1,
+    marksB: 2,
+    marksC: 3,
+    marksD: 4,
+    shortMarks: 2
   });
 
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -141,6 +140,11 @@ function CreateQuestionContent() {
             totalMarks: data.totalMarks || '',
             creativeInstruction: data.creativeInstruction || '',
             shortInstruction: data.shortInstruction || '',
+            marksA: data.marksA || 1,
+            marksB: data.marksB || 2,
+            marksC: data.marksC || 3,
+            marksD: data.marksD || 4,
+            shortMarks: data.shortMarks || 2
           });
           
           const reconstructed = data.questions.map((q: any) => {
@@ -156,17 +160,12 @@ function CreateQuestionContent() {
                 id,
                 type: 'creative', 
                 content: content + (parts.length > 0 ? '\n' + parts.join('\n') : ''),
-                marksA: q.marksA || 1,
-                marksB: q.marksB || 2,
-                marksC: q.marksC || 3,
-                marksD: q.marksD || 4,
               };
             }
             return { 
               id,
               type: 'short', 
               content: q.shortText || '', 
-              shortMarks: q.shortMarks || 2 
             };
           });
           setQuestions(reconstructed);
@@ -185,7 +184,6 @@ function CreateQuestionContent() {
       id: Math.random().toString(36).substr(2, 9),
       type,
       content: '',
-      ...(type === 'creative' ? { marksA: 1, marksB: 2, marksC: 3, marksD: 4 } : { shortMarks: 2 })
     };
     setQuestions(prev => [...prev, newQ]);
   };
@@ -246,16 +244,11 @@ function CreateQuestionContent() {
           qB: parsed.qB,
           qC: parsed.qC,
           qD: parsed.qD,
-          marksA: q.marksA || 1, 
-          marksB: q.marksB || 2, 
-          marksC: q.marksC || 3, 
-          marksD: q.marksD || 4
         };
       }
       return {
         type: 'short',
         shortText: q.content,
-        shortMarks: q.shortMarks || 2
       };
     });
 
@@ -269,6 +262,11 @@ function CreateQuestionContent() {
       totalMarks: meta.totalMarks || '',
       creativeInstruction: meta.creativeInstruction || '',
       shortInstruction: meta.shortInstruction || '',
+      marksA: meta.marksA,
+      marksB: meta.marksB,
+      marksC: meta.marksC,
+      marksD: meta.marksD,
+      shortMarks: meta.shortMarks,
       questions: formattedQuestions,
       userId: user.uid,
       updatedAt: serverTimestamp(),
@@ -324,43 +322,76 @@ function CreateQuestionContent() {
         <Card className="shadow-md">
           <CardHeader className="bg-primary/5 border-b py-3">
             <CardTitle className="text-base flex items-center gap-2 font-bold">
-              <BookOpen className="w-4 h-4 text-primary" /> পরীক্ষার তথ্য
+              <BookOpen className="w-4 h-4 text-primary" /> পরীক্ষার তথ্য ও মান বণ্টন
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="space-y-2">
-              <label className="text-sm font-semibold">প্রতিষ্ঠানের নাম</label>
-              <Input value={meta.institution || ''} onChange={e => setMeta(prev => ({...prev, institution: e.target.value}))} placeholder="উদা: বীরগঞ্জ সরকারি উচ্চ বিদ্যালয়" />
+          <CardContent className="pt-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold">প্রতিষ্ঠানের নাম</label>
+                <Input value={meta.institution || ''} onChange={e => setMeta(prev => ({...prev, institution: e.target.value}))} placeholder="উদা: বীরগঞ্জ সরকারি উচ্চ বিদ্যালয়" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold">পরীক্ষার নাম</label>
+                <Input value={meta.exam || ''} onChange={e => setMeta(prev => ({...prev, exam: e.target.value}))} placeholder="উদা: বার্ষিক পরীক্ষা" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold">শ্রেণি</label>
+                <Select onValueChange={v => setMeta(prev => ({...prev, classId: v}))} value={meta.classId || ''}>
+                  <SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
+                  <SelectContent>
+                    {CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold">বিষয়</label>
+                <Select onValueChange={v => setMeta(prev => ({...prev, subject: v}))} value={meta.subject || ''} disabled={!meta.classId}>
+                  <SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
+                  <SelectContent>
+                    {subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold">সময়</label>
+                <Input value={meta.time || ''} onChange={e => setMeta(prev => ({...prev, time: e.target.value}))} placeholder="উদা: ২ ঘণ্টা ৩০ মিনিট" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold">পূর্ণমান</label>
+                <Input value={meta.totalMarks || ''} onChange={e => setMeta(prev => ({...prev, totalMarks: e.target.value}))} placeholder="১০০" />
+              </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-semibold">পরীক্ষার নাম</label>
-              <Input value={meta.exam || ''} onChange={e => setMeta(prev => ({...prev, exam: e.target.value}))} placeholder="উদা: বার্ষিক পরীক্ষা" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-semibold">শ্রেণি</label>
-              <Select onValueChange={v => setMeta(prev => ({...prev, classId: v}))} value={meta.classId || ''}>
-                <SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
-                <SelectContent>
-                  {CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-semibold">বিষয়</label>
-              <Select onValueChange={v => setMeta(prev => ({...prev, subject: v}))} value={meta.subject || ''} disabled={!meta.classId}>
-                <SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
-                <SelectContent>
-                  {subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-semibold">সময়</label>
-              <Input value={meta.time || ''} onChange={e => setMeta(prev => ({...prev, time: e.target.value}))} placeholder="উদা: ২ ঘণ্টা ৩০ মিনিট" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-semibold">পূর্ণমান</label>
-              <Input value={meta.totalMarks || ''} onChange={e => setMeta(prev => ({...prev, totalMarks: e.target.value}))} placeholder="১০০" />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t pt-6">
+              <div className="space-y-4">
+                <h4 className="text-sm font-bold text-primary">সৃজনশীল মান (ক-ঘ)</h4>
+                <div className="grid grid-cols-4 gap-2">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold">ক</label>
+                    <Input type="number" value={meta.marksA} onChange={e => setMeta(prev => ({...prev, marksA: parseInt(e.target.value) || 0}))} className="h-8 text-center" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold">খ</label>
+                    <Input type="number" value={meta.marksB} onChange={e => setMeta(prev => ({...prev, marksB: parseInt(e.target.value) || 0}))} className="h-8 text-center" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold">গ</label>
+                    <Input type="number" value={meta.marksC} onChange={e => setMeta(prev => ({...prev, marksC: parseInt(e.target.value) || 0}))} className="h-8 text-center" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold">ঘ</label>
+                    <Input type="number" value={meta.marksD} onChange={e => setMeta(prev => ({...prev, marksD: parseInt(e.target.value) || 0}))} className="h-8 text-center" />
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <h4 className="text-sm font-bold text-accent">সংক্ষিপ্ত মান</h4>
+                <div className="space-y-1 max-w-[100px]">
+                  <label className="text-[10px] font-bold">নম্বর</label>
+                  <Input type="number" value={meta.shortMarks} onChange={e => setMeta(prev => ({...prev, shortMarks: parseInt(e.target.value) || 0}))} className="h-8 text-center" />
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -417,29 +448,11 @@ function CreateQuestionContent() {
                 </AlertDialog>
               </div>
               <CardContent className="pt-6 space-y-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded">
-                      {q.type === 'creative' ? 'সৃজনশীল' : 'সংক্ষিপ্ত'}
-                    </span>
-                    <span className="text-sm font-bold">প্রশ্ন নং: {isEnglishSubject ? (idx + 1) : toBengaliNumber(idx + 1)}</span>
-                  </div>
-                  
-                  {/* Individual Question Marks Input */}
-                  <div className="flex items-center gap-3">
-                    {q.type === 'creative' ? (
-                      <div className="flex gap-2 text-[10px] font-bold">
-                        <div className="flex items-center gap-1">ক: <Input className="w-8 h-6 p-1 text-center" type="number" value={q.marksA || 1} onChange={e => updateQuestion(q.id, {marksA: parseInt(e.target.value) || 0})} /></div>
-                        <div className="flex items-center gap-1">খ: <Input className="w-8 h-6 p-1 text-center" type="number" value={q.marksB || 2} onChange={e => updateQuestion(q.id, {marksB: parseInt(e.target.value) || 0})} /></div>
-                        <div className="flex items-center gap-1">গ: <Input className="w-8 h-6 p-1 text-center" type="number" value={q.marksC || 3} onChange={e => updateQuestion(q.id, {marksC: parseInt(e.target.value) || 0})} /></div>
-                        <div className="flex items-center gap-1">ঘ: <Input className="w-8 h-6 p-1 text-center" type="number" value={q.marksD || 4} onChange={e => updateQuestion(q.id, {marksD: parseInt(e.target.value) || 0})} /></div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-xs font-bold">
-                        নম্বর: <Input className="w-12 h-7 p-1 text-center" type="number" value={q.shortMarks || 2} onChange={e => updateQuestion(q.id, {shortMarks: parseInt(e.target.value) || 0})} />
-                      </div>
-                    )}
-                  </div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded">
+                    {q.type === 'creative' ? 'সৃজনশীল' : 'সংক্ষিপ্ত'}
+                  </span>
+                  <span className="text-sm font-bold">প্রশ্ন নং: {isEnglishSubject ? (idx + 1) : toBengaliNumber(idx + 1)}</span>
                 </div>
                 
                 <Textarea 
@@ -493,9 +506,9 @@ function CreateQuestionContent() {
             .stimulus { margin-bottom: 1px; white-space: pre-wrap; text-align: justify; display: block; line-height: 1.1; }
             
             .sub-qs { display: flex; flex-direction: column; gap: 0px; margin-top: 0px; }
-            .sub-q { display: flex; justify-content: space-between; align-items: flex-start; line-height: 1.1; width: 100%; margin-bottom: 0px; }
+            .sub-q { display: flex !important; justify-content: space-between !important; align-items: flex-start !important; line-height: 1.1; width: 100%; margin-bottom: 0px; }
             .q-text-part { flex: 1; text-align: justify; padding-right: 15px; }
-            .mark { font-weight: bold; width: 30px; text-align: right; min-width: 30px; margin-left: 5px; }
+            .mark { font-weight: bold; width: 40px; text-align: right !important; min-width: 40px; margin-left: 5px; display: inline-block; }
             
             .math-sup { font-size: 0.75em; vertical-align: baseline; position: relative; top: -0.4em; }
             .math-sub { font-size: 0.75em; vertical-align: baseline; position: relative; top: 0.2em; }
@@ -537,25 +550,25 @@ function CreateQuestionContent() {
                       {parsed.qA && (
                         <div className="sub-q">
                           <span className="q-text-part" dangerouslySetInnerHTML={{ __html: 'ক. ' + formatMath(parsed.qA) }} />
-                          <span className="mark">{isEnglishSubject ? (q.marksA || 1) : toBengaliNumber(q.marksA || 1)}</span>
+                          <span className="mark">{isEnglishSubject ? meta.marksA : toBengaliNumber(meta.marksA)}</span>
                         </div>
                       )}
                       {parsed.qB && (
                         <div className="sub-q">
                           <span className="q-text-part" dangerouslySetInnerHTML={{ __html: 'খ. ' + formatMath(parsed.qB) }} />
-                          <span className="mark">{isEnglishSubject ? (q.marksB || 2) : toBengaliNumber(q.marksB || 2)}</span>
+                          <span className="mark">{isEnglishSubject ? meta.marksB : toBengaliNumber(meta.marksB)}</span>
                         </div>
                       )}
                       {parsed.qC && (
                         <div className="sub-q">
                           <span className="q-text-part" dangerouslySetInnerHTML={{ __html: 'গ. ' + formatMath(parsed.qC) }} />
-                          <span className="mark">{isEnglishSubject ? (q.marksC || 3) : toBengaliNumber(q.marksC || 3)}</span>
+                          <span className="mark">{isEnglishSubject ? meta.marksC : toBengaliNumber(meta.marksC)}</span>
                         </div>
                       )}
                       {parsed.qD && (
                         <div className="sub-q">
                           <span className="q-text-part" dangerouslySetInnerHTML={{ __html: 'ঘ. ' + formatMath(parsed.qD) }} />
-                          <span className="mark">{isEnglishSubject ? (q.marksD || 4) : toBengaliNumber(q.marksD || 4)}</span>
+                          <span className="mark">{isEnglishSubject ? meta.marksD : toBengaliNumber(meta.marksD)}</span>
                         </div>
                       )}
                     </div>
@@ -575,9 +588,9 @@ function CreateQuestionContent() {
                 const globalIdx = creativeQuestions.length + idx;
                 const qNum = isEnglishSubject ? (globalIdx + 1) : toBengaliNumber(globalIdx + 1);
                 return (
-                  <div key={q.id} className="q-block flex justify-between items-start">
-                    <span className="flex-1 text-justify" dangerouslySetInnerHTML={{ __html: `${qNum}. ${formatMath(q.content)}` }} />
-                    <span className="mark">{isEnglishSubject ? (q.shortMarks || 2) : toBengaliNumber(q.shortMarks || 2)}</span>
+                  <div key={q.id} className="q-block sub-q">
+                    <span className="q-text-part" dangerouslySetInnerHTML={{ __html: `${qNum}. ${formatMath(q.content)}` }} />
+                    <span className="mark">{isEnglishSubject ? meta.shortMarks : toBengaliNumber(meta.shortMarks)}</span>
                   </div>
                 );
               })}
