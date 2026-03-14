@@ -270,14 +270,14 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">{uploadMethod === 'file' ? 'PDF ফাইল' : 'ডাউনলোড লিঙ্ক (URL)'}</label>
                   {uploadMethod === 'file' ? (
-                    <Input type="file" accept=".pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} disabled={uploading} />
+                    <Input key="file-input" type="file" accept=".pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} disabled={uploading} />
                   ) : (
-                    <Input placeholder="https://..." value={pdfUrl || ''} onChange={(e) => setPdfUrl(e.target.value)} disabled={uploading} />
+                    <Input key="link-input" placeholder="https://..." value={pdfUrl || ''} onChange={(e) => setPdfUrl(e.target.value)} disabled={uploading} />
                   )}
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold flex items-center gap-1"><ImageIcon className="w-3 h-3" /> কভার ইমেজ লিঙ্ক (ঐচ্ছিক)</label>
-                  <Input placeholder="https://..." value={coverImageUrl || ''} onChange={(e) => setCoverImageUrl(e.target.value)} disabled={uploading} />
+                  <Input key="cover-input" placeholder="https://..." value={coverImageUrl || ''} onChange={(e) => setCoverImageUrl(e.target.value)} disabled={uploading} />
                 </div>
               </div>
             </CardContent>

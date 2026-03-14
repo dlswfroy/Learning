@@ -5,9 +5,16 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboard, PlusCircle, Settings, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useUser } from '@/firebase';
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { user, loading } = useUser();
+
+  // If user is not logged in or loading, don't show the bottom nav
+  if (loading || !user || pathname === '/auth') {
+    return null;
+  }
 
   const navItems = [
     { label: 'হোম', icon: LayoutDashboard, href: '/' },
