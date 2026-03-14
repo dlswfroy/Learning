@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, Upload, FileText, CheckCircle, Trash2, Loader2, AlertCircle, ShieldAlert, LogIn, Link as LinkIcon, Globe, Image as ImageIcon } from 'lucide-react';
+import { Settings, Upload, FileText, CheckCircle, Trash2, Loader2, AlertCircle, ShieldAlert, LogIn, Link as LinkIcon, Globe, Image as ImageIcon, GraduationCap } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useStorage, useUser } from '@/firebase';
 import { collection, addDoc, deleteDoc, doc, serverTimestamp, getDoc, setDoc } from 'firebase/firestore';
@@ -350,11 +350,12 @@ export default function SettingsPage() {
         </section>
       )}
 
-      <section className="space-y-4">
+      <section className="space-y-6">
         <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
           <FileText className="w-5 h-5 text-muted-foreground" />
           বর্তমানে থাকা বইসমূহ
         </h3>
+        
         {loadingBooks ? (
           <div className="flex flex-col items-center justify-center p-12 bg-secondary/10 rounded-lg">
             <Loader2 className="w-10 h-10 animate-spin text-primary mb-2" />
@@ -366,35 +367,51 @@ export default function SettingsPage() {
             <p className="text-muted-foreground">কোনো বই এখনো যোগ করা হয়নি।</p>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 gap-3">
-            {uploadedBooks.map((book) => (
-              <Card key={book.id} className="p-4 flex items-center justify-between hover:border-primary/30 transition-all group">
-                <div className="flex items-center gap-4 overflow-hidden">
-                  <div className="w-12 h-16 rounded-md bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors shrink-0 overflow-hidden border">
-                    {book.coverImageUrl ? (
-                      <img src={book.coverImageUrl} alt="Cover" className="w-full h-full object-cover" />
-                    ) : (
-                      <FileText className="w-6 h-6" />
-                    )}
-                  </div>
-                  <div className="overflow-hidden">
-                    <h4 className="font-bold text-sm truncate">{book.subject} - {CLASSES.find(c => c.id === book.classId)?.label} শ্রেণি</h4>
+          <div className="space-y-8">
+            {CLASSES.map((cls) => {
+              const classBooks = uploadedBooks.filter(b => b.classId === cls.id);
+              if (classBooks.length === 0) return null;
+
+              return (
+                <div key={cls.id} className="space-y-4">
+                  <h4 className="font-bold text-primary flex items-center gap-2 border-b border-primary/20 pb-2">
+                    <GraduationCap className="w-5 h-5" />
+                    {cls.label} শ্রেণি
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {classBooks.map((book) => (
+                      <Card key={book.id} className="p-4 flex items-center justify-between hover:border-primary/30 transition-all group">
+                        <div className="flex items-center gap-4 overflow-hidden">
+                          <div className="w-12 h-16 rounded-md bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors shrink-0 overflow-hidden border">
+                            {book.coverImageUrl ? (
+                              <img src={book.coverImageUrl} alt="Cover" className="w-full h-full object-cover" />
+                            ) : (
+                              <FileText className="w-6 h-6" />
+                            )}
+                          </div>
+                          <div className="overflow-hidden">
+                            <h4 className="font-bold text-sm truncate">{book.subject}</h4>
+                            <p className="text-[10px] text-muted-foreground truncate">{book.fileName}</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          {isAdmin && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-destructive hover:bg-destructive/10" 
+                              onClick={() => removeBook(book.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </Card>
+                    ))}
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  {isAdmin && (
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="text-destructive hover:bg-destructive/10" 
-                      onClick={() => removeBook(book.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-              </Card>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
