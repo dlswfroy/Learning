@@ -33,22 +33,7 @@ function formatMath(text: string) {
   if (!text) return '';
   let formatted = text;
   
-  // Handle fractions \frac{num}{den}
-  formatted = formatted.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
-  
-  // Handle superscripts x^{y} or x^y
-  formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
-  formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
-  
-  // Handle subscripts x_{y} or x_y
-  formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
-  formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
-  
-  // Handle roots \sqrt[n]{x} or \sqrt{x}
-  formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
-  formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$2</span></span>');
-  
-  // Common symbols
+  // Clean backslashes before common symbols
   const symbolMap: Record<string, string> = {
     '\\\\log': 'log',
     '\\\\triangle': '△',
@@ -73,6 +58,21 @@ function formatMath(text: string) {
   Object.entries(symbolMap).forEach(([key, val]) => {
     formatted = formatted.replace(new RegExp(key, 'g'), val);
   });
+
+  // Handle fractions \frac{num}{den}
+  formatted = formatted.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
+  
+  // Handle superscripts x^{y} or x^y
+  formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
+  formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
+  
+  // Handle subscripts x_{y} or x_y
+  formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
+  formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
+  
+  // Handle roots \sqrt[n]{x} or \sqrt{x}
+  formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
+  formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$2</span></span>');
 
   return formatted;
 }
@@ -182,7 +182,6 @@ function CreateQuestionContent() {
     const parts = { main: '', k: '', kh: '', g: '', gh: '' };
     if (!text) return parts;
     
-    // NCTB standard markers with variants
     const markers = ['ক', 'খ', 'গ', 'ঘ'];
     let firstMarkerPos = -1;
     
@@ -210,10 +209,8 @@ function CreateQuestionContent() {
         const startIdx = findMarkerPos(m);
         if (startIdx === -1) return '';
         
-        // Find how many chars to skip for the marker itself
-        let skip = 2; // Default for "ক." or "ক)"
-        if (text.substring(startIdx, startIdx + 3).includes(' ')) skip = 3; // For "ক ." or "ক )"
-        
+        let skip = 2;
+        if (text.substring(startIdx, startIdx + 3).includes(' ')) skip = 3;
         const start = startIdx + skip;
         
         let end = text.length;
@@ -361,13 +358,13 @@ function CreateQuestionContent() {
             .section { margin-top: 15px; }
             .section-label { font-size: 11pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 25px; margin: 10px auto; }
             .instruction { font-style: italic; font-size: 10pt; text-align: center; margin-bottom: 12px; display: block; }
-            .q-block { margin-bottom: 15px; page-break-inside: avoid; clear: both; display: block; }
-            .stimulus { margin-bottom: 6px; white-space: pre-wrap; display: block; }
-            .sub-q { display: flex; justify-content: space-between; line-height: 1.5; width: 100%; margin-bottom: 3px; }
+            .q-block { margin-bottom: 10px; page-break-inside: avoid; clear: both; display: block; }
+            .stimulus { margin-bottom: 4px; white-space: pre-wrap; display: block; }
+            .sub-q { display: flex; justify-content: space-between; line-height: 1.5; width: 100%; margin-bottom: 2px; }
             .q-text-part { flex: 1; padding-right: 20px; }
             .mark { font-weight: bold; width: 45px; text-align: right; }
-            .mcq-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 5px; padding-left: 15px; }
-            .mcq-opt { display: flex; gap: 5px; align-items: flex-start; }
+            .mcq-row { display: flex; flex-wrap: wrap; column-gap: 25px; row-gap: 4px; margin-top: 4px; padding-left: 15px; }
+            .mcq-opt { display: flex; gap: 4px; align-items: flex-start; white-space: nowrap; }
             .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.9em; margin: 0 2px; }
             .math-num { border-bottom: 0.5pt solid black; padding: 0 2px; }
             .math-den { padding: 0 2px; }
@@ -432,7 +429,7 @@ function CreateQuestionContent() {
                 return (
                   <div key={q.id} className="q-block">
                     <div className="font-bold mb-1" dangerouslySetInnerHTML={{ __html: `${qNum}. ${formatMath(p.main)}` }} />
-                    <div className="mcq-grid">
+                    <div className="mcq-row">
                       {['ক', 'খ', 'গ', 'ঘ'].map((l, i) => {
                         const opt = (p as any)[i === 0 ? 'k' : i === 1 ? 'kh' : i === 2 ? 'g' : 'gh'];
                         return opt && (

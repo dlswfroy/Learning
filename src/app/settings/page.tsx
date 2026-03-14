@@ -80,8 +80,8 @@ export default function SettingsPage() {
   const uploadedBooks = useMemo(() => {
     if (!rawBooks) return [];
     return [...rawBooks].sort((a, b) => {
-      const dateA = a.uploadedAt?.toDate?.() || new Date(0);
-      const dateB = b.uploadedAt?.toDate?.() || new Date(0);
+      const dateA = (a.uploadedAt as any)?.toDate?.() || new Date(0);
+      const dateB = (b.uploadedAt as any)?.toDate?.() || new Date(0);
       return dateB.getTime() - dateA.getTime();
     });
   }, [rawBooks]);
