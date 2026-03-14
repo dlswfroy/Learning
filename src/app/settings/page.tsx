@@ -23,6 +23,7 @@ export default function SettingsPage() {
   const storage = useStorage();
   const { user, loading: userLoading } = useUser();
   
+  // Initialize states with empty strings to prevent uncontrolled to controlled input errors
   const [classId, setClassId] = useState<string>('');
   const [subject, setSubject] = useState<string>('');
   const [file, setFile] = useState<File | null>(null);
@@ -52,6 +53,7 @@ export default function SettingsPage() {
         if (adminDoc.exists()) {
           setIsAdmin(adminDoc.data()?.adminUid === user.uid);
         } else {
+          // If no admin doc, the first user to access this page becomes admin
           await setDoc(adminDocRef, { adminUid: user.uid });
           setIsAdmin(true);
         }
@@ -352,4 +354,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-

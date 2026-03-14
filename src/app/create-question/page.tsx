@@ -44,17 +44,22 @@ function formatMath(text: string) {
   
   let formatted = text;
   
+  // Backslash fractions
   formatted = formatted.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, 
     '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
   
+  // Powers and superscripts
   formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
   
+  // Subscripts
   formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
   formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
   
+  // Roots
   formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>');
   
+  // Symbols
   formatted = formatted
     .replace(/\\triangle/g, '△')
     .replace(/\\angle/g, '∠')
