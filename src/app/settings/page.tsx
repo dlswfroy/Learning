@@ -91,7 +91,7 @@ export default function SettingsPage() {
     return uploadedBooks.filter(b => b.classId === viewClassId);
   }, [uploadedBooks, viewClassId]);
 
-  const subjects = classId ? getSubjectsForClass(classId) : [];
+  const subjectsList = useMemo(() => classId ? getSubjectsForClass(classId) : [], [classId]);
 
   const handleSaveBook = async () => {
     if (!isAdmin) {
@@ -258,7 +258,7 @@ export default function SettingsPage() {
                   <Select onValueChange={(v) => setSubject(v || '')} value={subject || ''} disabled={!classId}>
                     <SelectTrigger className="bg-background"><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
                     <SelectContent>
-                      {subjects.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                      {subjectsList.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
