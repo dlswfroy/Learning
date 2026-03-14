@@ -23,7 +23,7 @@ type Question = {
   shortMarks?: number;
 };
 
-// ইংরেজী সংখ্যাকে বাংলা সংখ্যায় রূপান্তর
+// ইংরেজী সংখ্যাকে বাংলা সংখ্যায় রূপান্তর (ইংরেজী বিষয় বাদে)
 function toBengaliNumber(n: number | string): string {
   const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
   return n.toString().replace(/\d/g, (digit) => bengaliDigits[parseInt(digit)]);
@@ -44,7 +44,7 @@ function formatMath(text: string) {
   formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
   
   // 3. Handle Subscript: H_2O or H_{2}
-  formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$2</sub>');
+  formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
   formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
   
   // 4. Handle Square Root: \sqrt{x}
@@ -279,6 +279,7 @@ function CreateQuestionContent() {
       });
   };
 
+  const isEnglishSubject = meta.subject?.toLowerCase().includes('english') || meta.subject?.toLowerCase().includes('ইংরেজি');
   const creativeQuestions = questions.filter(q => q.type === 'creative');
   const shortQuestions = questions.filter(q => q.type === 'short');
 
@@ -415,7 +416,7 @@ function CreateQuestionContent() {
           @media print {
             @page { 
               size: A4; 
-              margin: 0.5in 0.5in 0.3in 0.5in; /* Top: 0.5, Right: 0.5, Bottom: 0.3, Left: 0.5 */
+              margin: 0.5in 0.5in 0.3in 0.5in; 
             }
             body { 
               font-family: 'Inter', sans-serif; 
@@ -427,31 +428,31 @@ function CreateQuestionContent() {
               padding: 0;
             }
             .paper { width: 100%; text-align: justify; }
-            .header { text-align: center; margin-bottom: 15px; border-bottom: 1.5pt solid black; padding-bottom: 10px; }
-            .inst-name { font-size: 18pt; font-weight: 800; margin-bottom: 2px; }
-            .exam-name { font-size: 11pt; font-weight: 700; margin-bottom: 2px; }
-            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px; font-size: 10pt; }
+            .header { text-align: center; margin-bottom: 10px; border-bottom: 1.5pt solid black; padding-bottom: 8px; }
+            .inst-name { font-size: 16pt; font-weight: 800; margin-bottom: 1px; }
+            .exam-name { font-size: 10pt; font-weight: 700; margin-bottom: 1px; }
+            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 4px; font-size: 10pt; }
             
-            .section-header-container { text-align: center; width: 100%; margin-top: 10px; margin-bottom: 5px; }
-            .section-label { font-size: 11pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 25px; text-transform: uppercase; }
-            .instruction { font-style: italic; font-size: 10pt; margin-bottom: 8px; text-align: center; display: block; width: 100%; }
+            .section-header-container { text-align: center; width: 100%; margin-top: 5px; margin-bottom: 2px; }
+            .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 15px; text-transform: uppercase; }
+            .instruction { font-style: italic; font-size: 9pt; margin-bottom: 5px; text-align: center; display: block; width: 100%; }
             
-            .q-block { margin-bottom: 8px; page-break-inside: avoid; clear: both; width: 100%; position: relative; }
-            .stimulus { margin-bottom: 4px; white-space: pre-wrap; text-align: justify; display: block; }
+            .q-block { margin-bottom: 5px; page-break-inside: avoid; clear: both; width: 100%; position: relative; }
+            .stimulus { margin-bottom: 2px; white-space: pre-wrap; text-align: justify; display: block; line-height: 1.1; }
             
-            .sub-qs { display: flex; flex-direction: column; gap: 3px; margin-top: 3px; }
+            .sub-qs { display: flex; flex-direction: column; gap: 1px; margin-top: 1px; }
             .sub-q { display: flex; justify-content: space-between; align-items: flex-start; line-height: 1.1; width: 100%; }
             .q-text-part { flex: 1; text-align: justify; padding-right: 15px; }
-            .mark { font-weight: bold; width: 35px; text-align: right; min-width: 35px; margin-left: 10px; }
+            .mark { font-weight: bold; width: 30px; text-align: right; min-width: 30px; margin-left: 5px; }
             
             /* Professional Math Rendering */
-            .math-sup { font-size: 0.75em; vertical-align: super; line-height: 0; position: relative; top: -0.1em; }
-            .math-sub { font-size: 0.75em; vertical-align: sub; line-height: 0; position: relative; bottom: -0.1em; }
-            .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.9em; margin: 0 0.2em; line-height: 1; }
-            .math-num { display: block; border-bottom: 0.5pt solid black; padding: 0 0.2em; }
-            .math-den { display: block; padding: 0 0.2em; }
+            .math-sup { font-size: 0.75em; vertical-align: baseline; position: relative; top: -0.4em; }
+            .math-sub { font-size: 0.75em; vertical-align: baseline; position: relative; top: 0.2em; }
+            .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 0.15em; line-height: 1; }
+            .math-num { display: block; border-bottom: 0.5pt solid black; padding: 0 0.1em; }
+            .math-den { display: block; padding: 0 0.1em; }
             .math-sqrt { display: inline-flex; align-items: flex-start; vertical-align: middle; position: relative; }
-            .math-sqrt-stem { border-top: 0.5pt solid black; margin-top: 0.5pt; padding-top: 1.5pt; display: inline-block; line-height: 1; }
+            .math-sqrt-stem { border-top: 0.5pt solid black; margin-top: 0.5pt; padding-top: 1pt; display: inline-block; line-height: 1; }
             
             .no-print { display: none !important; }
           }
@@ -476,33 +477,34 @@ function CreateQuestionContent() {
               <div className="instruction">{meta.creativeInstruction}</div>
               {creativeQuestions.map((q, idx) => {
                 const parsed = parseCreative(q.content);
+                const qNum = isEnglishSubject ? (idx + 1) : toBengaliNumber(idx + 1);
                 return (
                   <div key={q.id} className="q-block">
-                    <div className="font-bold mb-1">{toBengaliNumber(idx + 1)}. নিচের উদ্দীপকটি পড়ো এবং প্রশ্নগুলোর উত্তর দাও:</div>
+                    <div className="font-bold mb-0.5">{qNum}. নিচের উদ্দীপকটি পড়ো এবং প্রশ্নগুলোর উত্তর দাও:</div>
                     <div className="stimulus" dangerouslySetInnerHTML={{ __html: formatMath(parsed.stimulus) }} />
                     <div className="sub-qs">
                       {parsed.qA && (
                         <div className="sub-q">
                           <span className="q-text-part" dangerouslySetInnerHTML={{ __html: 'ক. ' + formatMath(parsed.qA) }} />
-                          <span className="mark">{toBengaliNumber(meta.marksA)}</span>
+                          <span className="mark">{isEnglishSubject ? meta.marksA : toBengaliNumber(meta.marksA)}</span>
                         </div>
                       )}
                       {parsed.qB && (
                         <div className="sub-q">
                           <span className="q-text-part" dangerouslySetInnerHTML={{ __html: 'খ. ' + formatMath(parsed.qB) }} />
-                          <span className="mark">{toBengaliNumber(meta.marksB)}</span>
+                          <span className="mark">{isEnglishSubject ? meta.marksB : toBengaliNumber(meta.marksB)}</span>
                         </div>
                       )}
                       {parsed.qC && (
                         <div className="sub-q">
                           <span className="q-text-part" dangerouslySetInnerHTML={{ __html: 'গ. ' + formatMath(parsed.qC) }} />
-                          <span className="mark">{toBengaliNumber(meta.marksC)}</span>
+                          <span className="mark">{isEnglishSubject ? meta.marksC : toBengaliNumber(meta.marksC)}</span>
                         </div>
                       )}
                       {parsed.qD && (
                         <div className="sub-q">
                           <span className="q-text-part" dangerouslySetInnerHTML={{ __html: 'ঘ. ' + formatMath(parsed.qD) }} />
-                          <span className="mark">{toBengaliNumber(meta.marksD)}</span>
+                          <span className="mark">{isEnglishSubject ? meta.marksD : toBengaliNumber(meta.marksD)}</span>
                         </div>
                       )}
                     </div>
@@ -518,12 +520,15 @@ function CreateQuestionContent() {
                 <div className="section-label">সংক্ষিপ্ত প্রশ্ন</div>
               </div>
               <div className="instruction">{meta.shortInstruction}</div>
-              {shortQuestions.map((q, idx) => (
-                <div key={q.id} className="q-block flex justify-between items-start">
-                  <span className="flex-1 text-justify" dangerouslySetInnerHTML={{ __html: `${toBengaliNumber(idx + 1)}. ${formatMath(q.content)}` }} />
-                  <span className="mark">{toBengaliNumber(q.shortMarks || 2)}</span>
-                </div>
-              ))}
+              {shortQuestions.map((q, idx) => {
+                const qNum = isEnglishSubject ? (idx + 1) : toBengaliNumber(idx + 1);
+                return (
+                  <div key={q.id} className="q-block flex justify-between items-start">
+                    <span className="flex-1 text-justify" dangerouslySetInnerHTML={{ __html: `${qNum}. ${formatMath(q.content)}` }} />
+                    <span className="mark">{isEnglishSubject ? (q.shortMarks || 2) : toBengaliNumber(q.shortMarks || 2)}</span>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
