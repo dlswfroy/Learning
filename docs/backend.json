@@ -28,6 +28,7 @@
         "subject": { "type": "string" },
         "time": { "type": "string" },
         "totalMarks": { "type": "string" },
+        "isMcq": { "type": "boolean" },
         "marksA": { "type": "number" },
         "marksB": { "type": "number" },
         "marksC": { "type": "number" },
@@ -39,18 +40,19 @@
           "items": {
             "type": "object",
             "properties": {
-              "type": { "type": "string", "enum": ["creative", "short"] },
+              "type": { "type": "string", "enum": ["creative", "short", "mcq"] },
               "stimulus": { "type": "string" },
               "qA": { "type": "string" },
               "qB": { "type": "string" },
               "qC": { "type": "string" },
               "qD": { "type": "string" },
-              "marksA": { "type": "number" },
-              "marksB": { "type": "number" },
-              "marksC": { "type": "number" },
-              "marksD": { "type": "number" },
               "shortText": { "type": "string" },
-              "shortMarks": { "type": "number" }
+              "mcqQuestion": { "type": "string" },
+              "optA": { "type": "string" },
+              "optB": { "type": "string" },
+              "optC": { "type": "string" },
+              "optD": { "type": "string" },
+              "correctOpt": { "type": "string" }
             }
           }
         },
