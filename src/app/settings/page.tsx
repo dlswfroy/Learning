@@ -249,7 +249,7 @@ export default function SettingsPage() {
                   <Select onValueChange={(v) => setClassId(v || '')} value={classId || ''}>
                     <SelectTrigger className="bg-background"><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
                     <SelectContent>
-                      {CLASSES.map((c) => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}
+                      {CLASSES.map((c) => <SelectItem key={`cls-${c.id}`} value={c.id}>{c.label} শ্রেণি</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -258,7 +258,7 @@ export default function SettingsPage() {
                   <Select onValueChange={(v) => setSubject(v || '')} value={subject || ''} disabled={!classId}>
                     <SelectTrigger className="bg-background"><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
                     <SelectContent>
-                      {subjectsList.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                      {subjectsList.map((s) => <SelectItem key={`sub-${s}`} value={s}>{s}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -268,14 +268,14 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">{uploadMethod === 'file' ? 'PDF ফাইল' : 'ডাউনলোড লিঙ্ক (URL)'}</label>
                   {uploadMethod === 'file' ? (
-                    <Input key="file-input-field" type="file" accept=".pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} disabled={uploading} />
+                    <Input key="file-input" type="file" accept=".pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} disabled={uploading} />
                   ) : (
-                    <Input key="pdf-url-field" placeholder="https://..." value={pdfUrl || ''} onChange={(e) => setPdfUrl(e.target.value)} disabled={uploading} />
+                    <Input key="url-input" placeholder="https://..." value={pdfUrl || ''} onChange={(e) => setPdfUrl(e.target.value)} disabled={uploading} />
                   )}
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold flex items-center gap-1"><ImageIcon className="w-3 h-3" /> কভার ইমেজ লিঙ্ক (ঐচ্ছিক)</label>
-                  <Input key="cover-url-field" placeholder="https://..." value={coverImageUrl || ''} onChange={(e) => setCoverImageUrl(e.target.value)} disabled={uploading} />
+                  <Input key="cover-input" placeholder="https://..." value={coverImageUrl || ''} onChange={(e) => setCoverImageUrl(e.target.value)} disabled={uploading} />
                 </div>
               </div>
             </CardContent>
@@ -310,7 +310,7 @@ export default function SettingsPage() {
               <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="শ্রেণি ফিল্টার" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">সকল শ্রেণি</SelectItem>
-                {CLASSES.map((c) => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}
+                {CLASSES.map((c) => <SelectItem key={`filter-${c.id}`} value={c.id}>{c.label} শ্রেণি</SelectItem>)}
               </SelectContent>
             </Select>
           </div>

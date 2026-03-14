@@ -33,7 +33,7 @@ function formatMath(text: string) {
   if (!text) return '';
   let formatted = text;
   
-  // Clean backslashes before common symbols
+  // Advanced character replacements for professional symbols
   const symbolMap: Record<string, string> = {
     '\\\\log': 'log',
     '\\\\triangle': '△',
@@ -52,7 +52,14 @@ function formatMath(text: string) {
     '\\\\infty': '∞',
     '\\\\approx': '≈',
     '\\\\sum': '∑',
-    '\\\\prod': '∏'
+    '\\\\prod': '∏',
+    '\\\\alpha': 'α',
+    '\\\\beta': 'β',
+    '\\\\gamma': 'γ',
+    '\\\\delta': 'δ',
+    '\\\\sigma': 'σ',
+    '\\\\phi': 'φ',
+    '\\\\omega': 'ω'
   };
 
   Object.entries(symbolMap).forEach(([key, val]) => {
@@ -73,6 +80,9 @@ function formatMath(text: string) {
   // Handle roots \sqrt[n]{x} or \sqrt{x}
   formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
   formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$2</span></span>');
+
+  // Remove any remaining single backslashes that might cause issues
+  formatted = formatted.replace(/\\/g, '');
 
   return formatted;
 }
@@ -186,7 +196,12 @@ function CreateQuestionContent() {
     let firstMarkerPos = -1;
     
     const findMarkerPos = (m: string, fromIndex: number = 0) => {
-      const patterns = [m + '.', m + ')', m + ' .', m + ' )'];
+      const patterns = [
+        m + '.', m + ')', 
+        m + ' .', m + ' )', 
+        m + '.\n', m + ')\n',
+        '\n' + m + '.', '\n' + m + ')'
+      ];
       let minIdx = -1;
       for (const p of patterns) {
         const idx = text.indexOf(p, fromIndex);
@@ -209,17 +224,19 @@ function CreateQuestionContent() {
         const startIdx = findMarkerPos(m);
         if (startIdx === -1) return '';
         
-        let skip = 2;
-        if (text.substring(startIdx, startIdx + 3).includes(' ')) skip = 3;
-        const start = startIdx + skip;
+        // Find the end of the marker (e.g., "ক.")
+        let markerEnd = startIdx;
+        while (markerEnd < text.length && (text[markerEnd] === ' ' || text[markerEnd] === '\n' || markers.includes(text[markerEnd]) || ['.', ')'].includes(text[markerEnd]))) {
+          markerEnd++;
+        }
         
         let end = text.length;
         for (const otherM of markers) {
           if (otherM === m) continue;
-          const e = findMarkerPos(otherM, start);
+          const e = findMarkerPos(otherM, markerEnd);
           if (e !== -1 && e < end) end = e;
         }
-        return text.substring(start, end).trim();
+        return text.substring(markerEnd, end).trim();
       };
 
       parts.k = extract('ক');
@@ -286,14 +303,14 @@ function CreateQuestionContent() {
               <div className="space-y-2">
                 <h4 className="text-sm font-bold text-primary">সৃজনশীল মান (ক-ঘ)</h4>
                 <div className="flex gap-2">
-                  <Input key="marksA" type="number" value={meta.marksA || 0} onChange={e => setMeta(prev => ({...prev, marksA: parseInt(e.target.value) || 0}))} className="h-8 text-center" />
-                  <Input key="marksB" type="number" value={meta.marksB || 0} onChange={e => setMeta(prev => ({...prev, marksB: parseInt(e.target.value) || 0}))} className="h-8 text-center" />
-                  <Input key="marksC" type="number" value={meta.marksC || 0} onChange={e => setMeta(prev => ({...prev, marksC: parseInt(e.target.value) || 0}))} className="h-8 text-center" />
-                  <Input key="marksD" type="number" value={meta.marksD || 0} onChange={e => setMeta(prev => ({...prev, marksD: parseInt(e.target.value) || 0}))} className="h-8 text-center" />
+                  <Input key="marksA" type="number" value={meta.marksA ?? 1} onChange={e => setMeta(prev => ({...prev, marksA: parseInt(e.target.value) || 0}))} className="h-8 text-center" />
+                  <Input key="marksB" type="number" value={meta.marksB ?? 2} onChange={e => setMeta(prev => ({...prev, marksB: parseInt(e.target.value) || 0}))} className="h-8 text-center" />
+                  <Input key="marksC" type="number" value={meta.marksC ?? 3} onChange={e => setMeta(prev => ({...prev, marksC: parseInt(e.target.value) || 0}))} className="h-8 text-center" />
+                  <Input key="marksD" type="number" value={meta.marksD ?? 4} onChange={e => setMeta(prev => ({...prev, marksD: parseInt(e.target.value) || 0}))} className="h-8 text-center" />
                 </div>
               </div>
-              <div className="space-y-2"><h4 className="text-sm font-bold text-accent">সংক্ষিপ্ত মান</h4><Input key="shortMarks" type="number" value={meta.shortMarks || 0} onChange={e => setMeta(prev => ({...prev, shortMarks: parseInt(e.target.value) || 0}))} className="h-8 text-center w-20" /></div>
-              <div className="space-y-2"><h4 className="text-sm font-bold text-orange-500">MCQ মান</h4><Input key="mcqMarks" type="number" value={meta.mcqMarks || 0} onChange={e => setMeta(prev => ({...prev, mcqMarks: parseInt(e.target.value) || 0}))} className="h-8 text-center w-20" /></div>
+              <div className="space-y-2"><h4 className="text-sm font-bold text-accent">সংক্ষিপ্ত মান</h4><Input key="shortMarks" type="number" value={meta.shortMarks ?? 2} onChange={e => setMeta(prev => ({...prev, shortMarks: parseInt(e.target.value) || 0}))} className="h-8 text-center w-20" /></div>
+              <div className="space-y-2"><h4 className="text-sm font-bold text-orange-500">MCQ মান</h4><Input key="mcqMarks" type="number" value={meta.mcqMarks ?? 1} onChange={e => setMeta(prev => ({...prev, mcqMarks: parseInt(e.target.value) || 0}))} className="h-8 text-center w-20" /></div>
             </div>
           </CardContent>
         </Card>
@@ -350,28 +367,38 @@ function CreateQuestionContent() {
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
             @page { size: A4; margin: 0.5in; }
-            body { font-family: 'Inter', sans-serif; font-size: 11pt; color: black !important; line-height: 1.4 !important; background: white !important; margin: 0; padding: 0; }
+            body { font-family: 'Inter', sans-serif; font-size: 11pt; color: black !important; line-height: 1.3 !important; background: white !important; margin: 0; padding: 0; }
             .paper { width: 100%; text-align: justify; }
-            .header { text-align: center; margin-bottom: 12px; border-bottom: 1.5pt solid black; padding-bottom: 10px; }
-            .inst-name { font-size: 18pt; font-weight: 800; }
-            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 6px; }
-            .section { margin-top: 15px; }
-            .section-label { font-size: 11pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 25px; margin: 10px auto; }
-            .instruction { font-style: italic; font-size: 10pt; text-align: center; margin-bottom: 12px; display: block; }
-            .q-block { margin-bottom: 10px; page-break-inside: avoid; clear: both; display: block; }
-            .stimulus { margin-bottom: 4px; white-space: pre-wrap; display: block; }
-            .sub-q { display: flex; justify-content: space-between; line-height: 1.5; width: 100%; margin-bottom: 2px; }
-            .q-text-part { flex: 1; padding-right: 20px; }
-            .mark { font-weight: bold; width: 45px; text-align: right; }
-            .mcq-row { display: flex; flex-wrap: wrap; column-gap: 25px; row-gap: 4px; margin-top: 4px; padding-left: 15px; }
-            .mcq-opt { display: flex; gap: 4px; align-items: flex-start; white-space: nowrap; }
-            .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.9em; margin: 0 2px; }
-            .math-num { border-bottom: 0.5pt solid black; padding: 0 2px; }
-            .math-den { padding: 0 2px; }
+            .header { text-align: center; margin-bottom: 8px; border-bottom: 1pt solid black; padding-bottom: 6px; }
+            .inst-name { font-size: 16pt; font-weight: 800; }
+            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 4px; font-size: 10pt; }
+            .section { margin-top: 10px; }
+            .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 15px; margin: 5px auto; text-transform: uppercase; }
+            .instruction { font-style: italic; font-size: 9.5pt; text-align: center; margin-bottom: 8px; display: block; }
+            .q-block { margin-bottom: 8px; page-break-inside: avoid; clear: both; display: block; }
+            .stimulus { margin-bottom: 3px; white-space: pre-wrap; display: block; text-align: justify; }
+            .sub-q { display: flex; justify-content: space-between; width: 100%; margin-bottom: 1px; }
+            .q-text-part { flex: 1; padding-right: 15px; }
+            .mark { font-weight: bold; width: 35px; text-align: right; }
+            
+            /* MCQ Layout: Intelligent wrapping */
+            .mcq-row { 
+              display: grid; 
+              grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
+              gap: 4px 10px; 
+              margin-top: 3px; 
+              padding-left: 15px; 
+            }
+            .mcq-opt { display: flex; gap: 4px; align-items: flex-start; }
+            
+            /* Math Symbols */
+            .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
+            .math-num { border-bottom: 0.5pt solid black; padding: 0 1px; }
+            .math-den { padding: 0 1px; }
             .math-sqrt { display: inline-flex; align-items: center; }
             .math-sqrt-stem { border-top: 0.5pt solid black; padding-top: 1px; }
-            .math-sup { font-size: 0.75em; vertical-align: super; }
-            .math-sub { font-size: 0.75em; vertical-align: sub; }
+            .math-sup { font-size: 0.7em; vertical-align: super; }
+            .math-sub { font-size: 0.7em; vertical-align: sub; }
             .no-print { display: none !important; }
           }
         `}} />
@@ -428,7 +455,7 @@ function CreateQuestionContent() {
                 const qNum = isEnglish ? (idx + 1) : toBengaliNumber(idx + 1);
                 return (
                   <div key={q.id} className="q-block">
-                    <div className="font-bold mb-1" dangerouslySetInnerHTML={{ __html: `${qNum}. ${formatMath(p.main)}` }} />
+                    <div className="font-bold mb-0.5" dangerouslySetInnerHTML={{ __html: `${qNum}. ${formatMath(p.main)}` }} />
                     <div className="mcq-row">
                       {['ক', 'খ', 'গ', 'ঘ'].map((l, i) => {
                         const opt = (p as any)[i === 0 ? 'k' : i === 1 ? 'kh' : i === 2 ? 'g' : 'gh'];
