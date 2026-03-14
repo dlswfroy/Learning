@@ -12,6 +12,7 @@ export function BottomNav() {
   const { user, loading } = useUser();
 
   // If user is not logged in or loading, don't show the bottom nav
+  // Also hide on auth page
   if (loading || !user || pathname === '/auth') {
     return null;
   }

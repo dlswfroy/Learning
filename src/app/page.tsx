@@ -1,10 +1,35 @@
 
+"use client";
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useUser } from '@/firebase';
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { GraduationCap, ArrowRight, BookMarked, BrainCircuit } from 'lucide-react';
+import { GraduationCap, ArrowRight, BookMarked, BrainCircuit, Loader2 } from 'lucide-react';
 import { CLASSES } from '@/lib/constants';
 
 export default function Home() {
+  const { user, loading } = useUser();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/auth');
+    }
+  }, [user, loading, router]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center p-20 min-h-[50vh]">
+        <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground font-medium">অ্যাক্সেস চেক করা হচ্ছে...</p>
+      </div>
+    );
+  }
+
+  if (!user) return null;
+
   return (
     <div className="space-y-8 animate-fade-in">
       <header className="text-center space-y-4">

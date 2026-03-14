@@ -17,7 +17,6 @@ import { collection, addDoc, deleteDoc, doc, serverTimestamp, getDoc, setDoc } f
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import Link from 'next/link';
 
 export default function SettingsPage() {
   const db = useFirestore();
@@ -60,6 +59,7 @@ export default function SettingsPage() {
         if (adminDoc.exists()) {
           setIsAdmin(adminDoc.data()?.adminUid === user.uid);
         } else {
+          // If no admin exists, first user becomes admin
           await setDoc(adminDocRef, { adminUid: user.uid });
           setIsAdmin(true);
         }
@@ -102,7 +102,7 @@ export default function SettingsPage() {
     }
 
     if (!classId || !subject || !db) {
-      toast({ title: "তথ্য অসম্পূর্ণ", description: "শ্রেণি এবং বিষয় নির্বাচন করুন।", variant: "destructive" });
+      toast({ title: "정보 অসম্পূর্ণ", description: "শ্রেণি এবং বিষয় নির্বাচন করুন।", variant: "destructive" });
       return;
     }
 
