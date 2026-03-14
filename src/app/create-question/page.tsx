@@ -181,44 +181,54 @@ function CreateQuestionContent() {
   const parseText = (text: string) => {
     const parts = { main: '', k: '', kh: '', g: '', gh: '' };
     if (!text) return parts;
-    const markers = ['ক.', 'খ.', 'গ.', 'ঘ.', 'ক)', 'খ)', 'গ)', 'ঘ)'];
     
-    let earliestPos = -1;
-    let markerUsed = '';
+    // NCTB standard markers with variants
+    const markers = ['ক', 'খ', 'গ', 'ঘ'];
+    let firstMarkerPos = -1;
     
-    markers.forEach(m => {
-      const pos = text.indexOf(m);
-      if (pos !== -1 && (earliestPos === -1 || pos < earliestPos)) {
-        earliestPos = pos;
-        markerUsed = m.substring(0, 1);
+    const findMarkerPos = (m: string, fromIndex: number = 0) => {
+      const patterns = [m + '.', m + ')', m + ' .', m + ' )'];
+      let minIdx = -1;
+      for (const p of patterns) {
+        const idx = text.indexOf(p, fromIndex);
+        if (idx !== -1 && (minIdx === -1 || idx < minIdx)) minIdx = idx;
       }
-    });
+      return minIdx;
+    };
 
-    if (earliestPos !== -1) {
-      parts.main = text.substring(0, earliestPos).trim();
-      const actualMarkers = [`${markerUsed}.`, `${markerUsed})`]; // Try to find which type of period or paren is used
+    for (const m of markers) {
+      const pos = findMarkerPos(m);
+      if (pos !== -1 && (firstMarkerPos === -1 || pos < firstMarkerPos)) {
+        firstMarkerPos = pos;
+      }
+    }
+
+    if (firstMarkerPos !== -1) {
+      parts.main = text.substring(0, firstMarkerPos).trim();
       
-      const findContent = (m: string) => {
-        const start = text.indexOf(`${m}.`) !== -1 ? text.indexOf(`${m}.`) + 2 : text.indexOf(`${m})`) !== -1 ? text.indexOf(`${m})`) + 2 : -1;
-        if (start === -1 + 2) return '';
+      const extract = (m: string) => {
+        const startIdx = findMarkerPos(m);
+        if (startIdx === -1) return '';
         
-        // Find next marker
-        let nextStart = text.length;
-        const remainingMarkers = ['ক', 'খ', 'গ', 'ঘ'].filter(x => x !== m);
-        remainingMarkers.forEach(rm => {
-          const p1 = text.indexOf(`${rm}.`, start);
-          const p2 = text.indexOf(`${rm})`, start);
-          if (p1 !== -1 && p1 < nextStart) nextStart = p1;
-          if (p2 !== -1 && p2 < nextStart) nextStart = p2;
-        });
+        // Find how many chars to skip for the marker itself
+        let skip = 2; // Default for "ক." or "ক)"
+        if (text.substring(startIdx, startIdx + 3).includes(' ')) skip = 3; // For "ক ." or "ক )"
         
-        return text.substring(start, nextStart).trim();
+        const start = startIdx + skip;
+        
+        let end = text.length;
+        for (const otherM of markers) {
+          if (otherM === m) continue;
+          const e = findMarkerPos(otherM, start);
+          if (e !== -1 && e < end) end = e;
+        }
+        return text.substring(start, end).trim();
       };
 
-      parts.k = findContent('ক');
-      parts.kh = findContent('খ');
-      parts.g = findContent('গ');
-      parts.gh = findContent('ঘ');
+      parts.k = extract('ক');
+      parts.kh = extract('খ');
+      parts.g = extract('গ');
+      parts.gh = extract('ঘ');
     } else {
       parts.main = text.trim();
     }
@@ -351,13 +361,13 @@ function CreateQuestionContent() {
             .section { margin-top: 15px; }
             .section-label { font-size: 11pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 25px; margin: 10px auto; }
             .instruction { font-style: italic; font-size: 10pt; text-align: center; margin-bottom: 12px; display: block; }
-            .q-block { margin-bottom: 15px; page-break-inside: avoid; clear: both; }
+            .q-block { margin-bottom: 15px; page-break-inside: avoid; clear: both; display: block; }
             .stimulus { margin-bottom: 6px; white-space: pre-wrap; display: block; }
             .sub-q { display: flex; justify-content: space-between; line-height: 1.5; width: 100%; margin-bottom: 3px; }
             .q-text-part { flex: 1; padding-right: 20px; }
             .mark { font-weight: bold; width: 45px; text-align: right; }
-            .mcq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; padding-left: 20px; }
-            .mcq-opt { display: flex; gap: 6px; align-items: baseline; }
+            .mcq-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 5px; padding-left: 15px; }
+            .mcq-opt { display: flex; gap: 5px; align-items: flex-start; }
             .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.9em; margin: 0 2px; }
             .math-num { border-bottom: 0.5pt solid black; padding: 0 2px; }
             .math-den { padding: 0 2px; }
