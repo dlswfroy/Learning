@@ -16,17 +16,6 @@ import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/fires
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { generatePracticeQuestions } from '@/ai/flows/generate-practice-questions';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 
 type Question = {
   id: string;
@@ -43,17 +32,48 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 function formatMath(text: string) {
   if (!text) return '';
   let formatted = text;
+  
+  // Handle fractions \frac{num}{den}
   formatted = formatted.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
+  
+  // Handle superscripts x^{y} or x^y
   formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
+  
+  // Handle subscripts x_{y} or x_y
   formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
   formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
-  formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>');
-  formatted = formatted
-    .replace(/\\triangle/g, '△').replace(/\\angle/g, '∠').replace(/\\circ/g, '°')
-    .replace(/\\theta/g, 'θ').replace(/\\pi/g, 'π').replace(/\\pm/g, '±')
-    .replace(/\\times/g, '×').replace(/\\neq/g, '≠').replace(/\\leq/g, '≤')
-    .replace(/\\geq/g, '≥').replace(/\\degree/g, '°');
+  
+  // Handle roots \sqrt[n]{x} or \sqrt{x}
+  formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
+  formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$2</span></span>');
+  
+  // Common symbols
+  const symbolMap: Record<string, string> = {
+    '\\\\log': 'log',
+    '\\\\triangle': '△',
+    '\\\\angle': '∠',
+    '\\\\circ': '°',
+    '\\\\theta': 'θ',
+    '\\\\pi': 'π',
+    '\\\\pm': '±',
+    '\\\\times': '×',
+    '\\\\neq': '≠',
+    '\\\\ne': '≠',
+    '\\\\leq': '≤',
+    '\\\\geq': '≥',
+    '\\\\degree': '°',
+    '\\\\cdot': '·',
+    '\\\\infty': '∞',
+    '\\\\approx': '≈',
+    '\\\\sum': '∑',
+    '\\\\prod': '∏'
+  };
+
+  Object.entries(symbolMap).forEach(([key, val]) => {
+    formatted = formatted.replace(new RegExp(key, 'g'), val);
+  });
+
   return formatted;
 }
 
@@ -161,19 +181,47 @@ function CreateQuestionContent() {
   const parseText = (text: string) => {
     const parts = { main: '', k: '', kh: '', g: '', gh: '' };
     if (!text) return parts;
-    const markers = ['ক.', 'খ.', 'গ.', 'ঘ.'];
-    let positions = markers.map(m => text.indexOf(m));
-    const firstMarkerIndex = positions.findIndex(p => p !== -1);
-    if (firstMarkerIndex !== -1) {
-      parts.main = text.substring(0, positions[firstMarkerIndex]).trim();
-      for (let i = 0; i < markers.length; i++) {
-        const start = positions[i]; if (start === -1) continue;
-        let end = text.length;
-        for (let j = i + 1; j < markers.length; j++) { if (positions[j] !== -1) { end = positions[j]; break; } }
-        const content = text.substring(start + markers[i].length, end).trim();
-        if (i === 0) parts.k = content; else if (i === 1) parts.kh = content; else if (i === 2) parts.g = content; else if (i === 3) parts.gh = content;
+    const markers = ['ক.', 'খ.', 'গ.', 'ঘ.', 'ক)', 'খ)', 'গ)', 'ঘ)'];
+    
+    let earliestPos = -1;
+    let markerUsed = '';
+    
+    markers.forEach(m => {
+      const pos = text.indexOf(m);
+      if (pos !== -1 && (earliestPos === -1 || pos < earliestPos)) {
+        earliestPos = pos;
+        markerUsed = m.substring(0, 1);
       }
-    } else { parts.main = text.trim(); }
+    });
+
+    if (earliestPos !== -1) {
+      parts.main = text.substring(0, earliestPos).trim();
+      const actualMarkers = [`${markerUsed}.`, `${markerUsed})`]; // Try to find which type of period or paren is used
+      
+      const findContent = (m: string) => {
+        const start = text.indexOf(`${m}.`) !== -1 ? text.indexOf(`${m}.`) + 2 : text.indexOf(`${m})`) !== -1 ? text.indexOf(`${m})`) + 2 : -1;
+        if (start === -1 + 2) return '';
+        
+        // Find next marker
+        let nextStart = text.length;
+        const remainingMarkers = ['ক', 'খ', 'গ', 'ঘ'].filter(x => x !== m);
+        remainingMarkers.forEach(rm => {
+          const p1 = text.indexOf(`${rm}.`, start);
+          const p2 = text.indexOf(`${rm})`, start);
+          if (p1 !== -1 && p1 < nextStart) nextStart = p1;
+          if (p2 !== -1 && p2 < nextStart) nextStart = p2;
+        });
+        
+        return text.substring(start, nextStart).trim();
+      };
+
+      parts.k = findContent('ক');
+      parts.kh = findContent('খ');
+      parts.g = findContent('গ');
+      parts.gh = findContent('ঘ');
+    } else {
+      parts.main = text.trim();
+    }
     return parts;
   };
 
@@ -253,30 +301,29 @@ function CreateQuestionContent() {
           <div className="flex items-center justify-between border-b pb-2">
             <h3 className="text-lg font-bold">প্রশ্নসমূহ ({questions.length})</h3>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" onClick={() => handleAddQuestion('creative')} className="border-primary text-primary"><Plus className="w-3 h-3" /> সৃজনশীল</Button>
-              <Button variant="outline" size="sm" onClick={() => handleAddQuestion('short')} className="border-accent text-accent"><Plus className="w-3 h-3" /> সংক্ষিপ্ত</Button>
-              <Button variant="outline" size="sm" onClick={() => handleAddQuestion('mcq')} className="border-orange-500 text-orange-500"><Plus className="w-3 h-3" /> MCQ</Button>
+              <Button variant="outline" size="sm" onClick={() => handleAddQuestion('creative')} className="border-primary text-primary"><Plus className="w-3 h-3" /> লিখিত</Button>
+              <Button variant="outline" size="sm" onClick={() => handleAddQuestion('mcq')} className="border-orange-500 text-orange-500"><Plus className="w-3 h-3" /> বহুনির্বাচনি</Button>
               <div className="h-6 w-px bg-border mx-1" />
-              <Button size="sm" onClick={() => handleAiGenerate('creative')} disabled={generating} className="bg-primary text-white"><BrainCircuit className="w-3 h-3" /> AI সৃজনশীল</Button>
+              <Button size="sm" onClick={() => handleAiGenerate('creative')} disabled={generating} className="bg-primary text-white"><BrainCircuit className="w-3 h-3" /> AI লিখিত</Button>
               <Button size="sm" onClick={() => handleAiGenerate('mcq')} disabled={generating} className="bg-orange-500 text-white"><BrainCircuit className="w-3 h-3" /> AI MCQ</Button>
             </div>
           </div>
 
           {questions.map((q, idx) => (
-            <Card key={q.id} className={`relative border-l-4 group ${q.type === 'mcq' ? 'border-l-orange-500' : q.type === 'creative' ? 'border-l-primary' : 'border-l-accent'}`}>
+            <Card key={q.id} className={`relative border-l-4 group ${q.type === 'mcq' ? 'border-l-orange-500' : 'border-l-primary'}`}>
               <div className="absolute top-2 right-2 no-print">
                 <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => setQuestions(prev => prev.filter(item => item.id !== q.id))}><Trash2 className="w-4 h-4" /></Button>
               </div>
               <CardContent className="pt-6 space-y-4">
                 <div className="flex items-center gap-2">
-                  <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${q.type === 'mcq' ? 'bg-orange-100 text-orange-600' : q.type === 'creative' ? 'bg-primary/10 text-primary' : 'bg-accent/10 text-accent'}`}>
-                    {q.type === 'mcq' ? 'বহুনির্বাচনি' : q.type === 'creative' ? 'সৃজনশীল' : 'সংক্ষিপ্ত'}
+                  <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${q.type === 'mcq' ? 'bg-orange-100 text-orange-600' : 'bg-primary/10 text-primary'}`}>
+                    {q.type === 'mcq' ? 'বহুনির্বাচনি' : 'লিখিত'}
                   </span>
                   <span className="text-sm font-bold">প্রশ্ন নং: {isEnglish ? (idx + 1) : toBengaliNumber(idx + 1)}</span>
                 </div>
                 <Textarea 
                   key={`q-text-${q.id}`}
-                  placeholder={q.type === 'creative' ? "উদ্দীপক ও প্রশ্ন একসাথে (ক. খ. গ. ঘ. সহ) লিখুন।" : q.type === 'mcq' ? "প্রশ্ন ও অপশনগুলো একসাথে (ক. খ. গ. ঘ. সহ) লিখুন।" : "সংক্ষিপ্ত প্রশ্ন লিখুন..."} 
+                  placeholder={q.type === 'mcq' ? "প্রশ্ন ও অপশনগুলো একসাথে (ক. খ. গ. ঘ. সহ) লিখুন।" : "উদ্দীপক ও প্রশ্ন একসাথে (ক. খ. গ. ঘ. সহ) লিখুন।"} 
                   value={q.content || ''} 
                   onChange={e => setQuestions(prev => prev.map(item => item.id === q.id ? {...item, content: e.target.value} : item))} 
                   className="min-h-[120px] text-sm" 
@@ -287,7 +334,7 @@ function CreateQuestionContent() {
         </div>
 
         <div className="flex gap-4 pt-8">
-          <Button onClick={handleSaveToDb} disabled={saving} className="gap-2 px-8 font-bold"><Save className="w-4 h-4" /> {saving ? 'সেভ হচ্ছে...' : 'সেভ করুন'}</Button>
+          <Button onClick={handleSaveToDb} disabled={saving} className="gap-2 px-8 font-bold"><Save className="w-4 h-4" /> সেভ করুন</Button>
           <Button onClick={() => window.print()} variant="secondary" className="gap-2 px-10 shadow-lg font-bold"><Printer className="w-4 h-4" /> প্রিন্ট / পিডিএফ</Button>
         </div>
       </div>
@@ -296,21 +343,28 @@ function CreateQuestionContent() {
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
             @page { size: A4; margin: 0.5in; }
-            body { font-family: 'Inter', sans-serif; font-size: 11pt; color: black !important; line-height: 1.2 !important; background: white !important; margin: 0; padding: 0; }
+            body { font-family: 'Inter', sans-serif; font-size: 11pt; color: black !important; line-height: 1.4 !important; background: white !important; margin: 0; padding: 0; }
             .paper { width: 100%; text-align: justify; }
-            .header { text-align: center; margin-bottom: 10px; border-bottom: 1.5pt solid black; padding-bottom: 8px; }
+            .header { text-align: center; margin-bottom: 12px; border-bottom: 1.5pt solid black; padding-bottom: 10px; }
             .inst-name { font-size: 18pt; font-weight: 800; }
-            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 4px; }
+            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 6px; }
             .section { margin-top: 15px; }
-            .section-label { font-size: 11pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 20px; margin: 8px auto; }
-            .instruction { font-style: italic; font-size: 10pt; text-align: center; margin-bottom: 10px; display: block; }
-            .q-block { margin-bottom: 12px; page-break-inside: avoid; clear: both; }
-            .stimulus { margin-bottom: 4px; white-space: pre-wrap; display: block; }
-            .sub-q { display: flex; justify-content: space-between; line-height: 1.4; width: 100%; margin-bottom: 2px; }
+            .section-label { font-size: 11pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 25px; margin: 10px auto; }
+            .instruction { font-style: italic; font-size: 10pt; text-align: center; margin-bottom: 12px; display: block; }
+            .q-block { margin-bottom: 15px; page-break-inside: avoid; clear: both; }
+            .stimulus { margin-bottom: 6px; white-space: pre-wrap; display: block; }
+            .sub-q { display: flex; justify-content: space-between; line-height: 1.5; width: 100%; margin-bottom: 3px; }
             .q-text-part { flex: 1; padding-right: 20px; }
             .mark { font-weight: bold; width: 45px; text-align: right; }
-            .mcq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 4px; padding-left: 20px; }
-            .mcq-opt { display: flex; gap: 6px; }
+            .mcq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; padding-left: 20px; }
+            .mcq-opt { display: flex; gap: 6px; align-items: baseline; }
+            .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.9em; margin: 0 2px; }
+            .math-num { border-bottom: 0.5pt solid black; padding: 0 2px; }
+            .math-den { padding: 0 2px; }
+            .math-sqrt { display: inline-flex; align-items: center; }
+            .math-sqrt-stem { border-top: 0.5pt solid black; padding-top: 1px; }
+            .math-sup { font-size: 0.75em; vertical-align: super; }
+            .math-sub { font-size: 0.75em; vertical-align: sub; }
             .no-print { display: none !important; }
           }
         `}} />
@@ -322,45 +376,38 @@ function CreateQuestionContent() {
             <div className="meta-info"><div>সময়: {meta.time}</div><div>পূর্ণমান: {meta.totalMarks}</div></div>
           </div>
 
-          {questions.some(q => q.type === 'creative') && (
+          {questions.some(q => q.type === 'creative' || q.type === 'short') && (
             <div className="section">
-              <div className="text-center"><div className="section-label">সৃজনশীল প্রশ্ন</div></div>
+              <div className="text-center"><div className="section-label">লিখিত প্রশ্ন</div></div>
               <div className="instruction">{meta.creativeInstruction}</div>
-              {questions.filter(q => q.type === 'creative').map((q, idx) => {
-                const p = parseText(q.content || '');
+              {questions.filter(q => q.type === 'creative' || q.type === 'short').map((q, idx) => {
                 const qNum = isEnglish ? (idx + 1) : toBengaliNumber(idx + 1);
-                return (
-                  <div key={q.id} className="q-block">
-                    <div className="font-bold mb-1">{qNum}. উদ্দীপকটি পড়ো এবং প্রশ্নগুলোর উত্তর দাও:</div>
-                    <div className="stimulus" dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} />
-                    {['ক', 'খ', 'গ', 'ঘ'].map((l, i) => {
-                      const text = (p as any)[i === 0 ? 'k' : i === 1 ? 'kh' : i === 2 ? 'g' : 'gh'];
-                      const mark = i === 0 ? meta.marksA : i === 1 ? meta.marksB : i === 2 ? meta.marksC : meta.marksD;
-                      return text && (
-                        <div key={l} className="sub-q">
-                          <span className="q-text-part" dangerouslySetInnerHTML={{ __html: `${l}. ${formatMath(text)}` }} />
-                          <span className="mark">{isEnglish ? mark : toBengaliNumber(mark)}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {questions.some(q => q.type === 'short') && (
-            <div className="section">
-              <div className="text-center"><div className="section-label">সংক্ষিপ্ত প্রশ্ন</div></div>
-              <div className="instruction">{meta.shortInstruction}</div>
-              {questions.filter(q => q.type === 'short').map((q, idx) => {
-                const qNum = isEnglish ? (idx + 1) : toBengaliNumber(idx + 1);
-                return (
-                  <div key={q.id} className="q-block sub-q">
-                    <span className="q-text-part" dangerouslySetInnerHTML={{ __html: `${qNum}. ${formatMath(q.content || '')}` }} />
-                    <span className="mark">{isEnglish ? meta.shortMarks : toBengaliNumber(meta.shortMarks)}</span>
-                  </div>
-                );
+                if (q.type === 'creative') {
+                  const p = parseText(q.content || '');
+                  return (
+                    <div key={q.id} className="q-block">
+                      <div className="font-bold mb-1">{qNum}. উদ্দীপকটি পড়ো এবং প্রশ্নগুলোর উত্তর দাও:</div>
+                      <div className="stimulus" dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} />
+                      {['ক', 'খ', 'গ', 'ঘ'].map((l, i) => {
+                        const text = (p as any)[i === 0 ? 'k' : i === 1 ? 'kh' : i === 2 ? 'g' : 'gh'];
+                        const mark = i === 0 ? meta.marksA : i === 1 ? meta.marksB : i === 2 ? meta.marksC : meta.marksD;
+                        return text && (
+                          <div key={l} className="sub-q">
+                            <span className="q-text-part" dangerouslySetInnerHTML={{ __html: `${l}. ${formatMath(text)}` }} />
+                            <span className="mark">{isEnglish ? mark : toBengaliNumber(mark)}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                } else {
+                  return (
+                    <div key={q.id} className="q-block sub-q">
+                      <span className="q-text-part" dangerouslySetInnerHTML={{ __html: `${qNum}. ${formatMath(q.content || '')}` }} />
+                      <span className="mark">{isEnglish ? meta.shortMarks : toBengaliNumber(meta.shortMarks)}</span>
+                    </div>
+                  );
+                }
               })}
             </div>
           )}
@@ -374,10 +421,7 @@ function CreateQuestionContent() {
                 const qNum = isEnglish ? (idx + 1) : toBengaliNumber(idx + 1);
                 return (
                   <div key={q.id} className="q-block">
-                    <div className="sub-q">
-                      <span className="q-text-part" dangerouslySetInnerHTML={{ __html: `${qNum}. ${formatMath(p.main)}` }} />
-                      <span className="mark">{isEnglish ? meta.mcqMarks : toBengaliNumber(meta.mcqMarks)}</span>
-                    </div>
+                    <div className="font-bold mb-1" dangerouslySetInnerHTML={{ __html: `${qNum}. ${formatMath(p.main)}` }} />
                     <div className="mcq-grid">
                       {['ক', 'খ', 'গ', 'ঘ'].map((l, i) => {
                         const opt = (p as any)[i === 0 ? 'k' : i === 1 ? 'kh' : i === 2 ? 'g' : 'gh'];
