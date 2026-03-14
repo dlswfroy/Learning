@@ -34,7 +34,8 @@ type Question = {
   shortMarks?: number;
 };
 
-function toBengaliNumber(n: number | string): string {
+function toBengaliNumber(n: number | string | undefined | null): string {
+  if (n === undefined || n === null || n === '') return '';
   const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
   return n.toString().replace(/\d/g, (digit) => bengaliDigits[parseInt(digit)]);
 }
@@ -44,7 +45,7 @@ function formatMath(text: string) {
   
   let formatted = text;
   
-  // Backslash formatting for common LaTeX-like codes
+  // LaTeX-style formatting for common board exam patterns
   formatted = formatted.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, 
     '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
   
@@ -147,6 +148,7 @@ function CreateQuestionContent() {
           });
           
           const reconstructed = data.questions.map((q: any) => {
+            const id = Math.random().toString(36).substr(2, 9);
             if (q.type === 'creative') {
               let content = q.stimulus || '';
               const parts = [];
@@ -155,13 +157,13 @@ function CreateQuestionContent() {
               if (q.qC) parts.push(`গ. ${q.qC}`);
               if (q.qD) parts.push(`ঘ. ${q.qD}`);
               return { 
-                id: Math.random().toString(36).substr(2, 9),
+                id,
                 type: 'creative', 
                 content: content + (parts.length > 0 ? '\n' + parts.join('\n') : '') 
               };
             }
             return { 
-              id: Math.random().toString(36).substr(2, 9),
+              id,
               type: 'short', 
               content: q.shortText || '', 
               shortMarks: q.shortMarks || 2 
@@ -185,15 +187,15 @@ function CreateQuestionContent() {
       content: '',
       ...(type === 'short' ? { shortMarks: 2 } : {})
     };
-    setQuestions([...questions, newQ]);
+    setQuestions(prev => [...prev, newQ]);
   };
 
   const handleRemoveQuestion = (id: string) => {
-    setQuestions(questions.filter(q => q.id !== id));
+    setQuestions(prev => prev.filter(q => q.id !== id));
   };
 
   const updateQuestion = (id: string, data: Partial<Question>) => {
-    setQuestions(questions.map(q => q.id === id ? { ...q, ...data } : q));
+    setQuestions(prev => prev.map(q => q.id === id ? { ...q, ...data } : q));
   };
 
   const parseCreative = (text: string) => {
@@ -332,15 +334,15 @@ function CreateQuestionContent() {
           <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="space-y-2">
               <label className="text-sm font-semibold">প্রতিষ্ঠানের নাম</label>
-              <Input value={meta.institution || ''} onChange={e => setMeta({...meta, institution: e.target.value})} placeholder="উদা: বীরগঞ্জ সরকারি উচ্চ বিদ্যালয়" />
+              <Input value={meta.institution || ''} onChange={e => setMeta(prev => ({...prev, institution: e.target.value}))} placeholder="উদা: বীরগঞ্জ সরকারি উচ্চ বিদ্যালয়" />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-semibold">পরীক্ষার নাম</label>
-              <Input value={meta.exam || ''} onChange={e => setMeta({...meta, exam: e.target.value})} placeholder="উদা: বার্ষিক পরীক্ষা" />
+              <Input value={meta.exam || ''} onChange={e => setMeta(prev => ({...prev, exam: e.target.value}))} placeholder="উদা: বার্ষিক পরীক্ষা" />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-semibold">শ্রেণি</label>
-              <Select onValueChange={v => setMeta({...meta, classId: v})} value={meta.classId || ''}>
+              <Select onValueChange={v => setMeta(prev => ({...prev, classId: v}))} value={meta.classId || ''}>
                 <SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
                 <SelectContent>
                   {CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}
@@ -349,7 +351,7 @@ function CreateQuestionContent() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-semibold">বিষয়</label>
-              <Select onValueChange={v => setMeta({...meta, subject: v})} value={meta.subject || ''} disabled={!meta.classId}>
+              <Select onValueChange={v => setMeta(prev => ({...prev, subject: v}))} value={meta.subject || ''} disabled={!meta.classId}>
                 <SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
                 <SelectContent>
                   {subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
@@ -358,11 +360,11 @@ function CreateQuestionContent() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-semibold">সময়</label>
-              <Input value={meta.time || ''} onChange={e => setMeta({...meta, time: e.target.value})} placeholder="উদা: ২ ঘণ্টা ৩০ মিনিট" />
+              <Input value={meta.time || ''} onChange={e => setMeta(prev => ({...prev, time: e.target.value}))} placeholder="উদা: ২ ঘণ্টা ৩০ মিনিট" />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-semibold">পূর্ণমান</label>
-              <Input value={meta.totalMarks || ''} onChange={e => setMeta({...meta, totalMarks: e.target.value})} placeholder="১০০" />
+              <Input value={meta.totalMarks || ''} onChange={e => setMeta(prev => ({...prev, totalMarks: e.target.value}))} placeholder="১০০" />
             </div>
           </CardContent>
         </Card>
@@ -370,11 +372,11 @@ function CreateQuestionContent() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-sm font-bold">সৃজনশীল নির্দেশনা</label>
-            <Input value={meta.creativeInstruction || ''} onChange={e => setMeta({...meta, creativeInstruction: e.target.value})} placeholder="যেকোনো ৭টি প্রশ্নের উত্তর দাও" />
+            <Input value={meta.creativeInstruction || ''} onChange={e => setMeta(prev => ({...prev, creativeInstruction: e.target.value}))} placeholder="যেকোনো ৭টি প্রশ্নের উত্তর দাও" />
           </div>
           <div className="space-y-2">
             <label className="text-sm font-bold">সংক্ষিপ্ত নির্দেশনা</label>
-            <Input value={meta.shortInstruction || ''} onChange={e => setMeta({...meta, shortInstruction: e.target.value})} placeholder="সকল প্রশ্নের উত্তর দাও" />
+            <Input value={meta.shortInstruction || ''} onChange={e => setMeta(prev => ({...prev, shortInstruction: e.target.value}))} placeholder="সকল প্রশ্নের উত্তর দাও" />
           </div>
         </div>
 
@@ -451,7 +453,7 @@ function CreateQuestionContent() {
           @media print {
             @page { 
               size: A4; 
-              margin: 0.5in 0.5in 0.5in 0.5in; 
+              margin: 0.5in; 
             }
             body { 
               font-family: 'Inter', sans-serif; 
@@ -476,7 +478,7 @@ function CreateQuestionContent() {
             .stimulus { margin-bottom: 1px; white-space: pre-wrap; text-align: justify; display: block; line-height: 1.1; }
             
             .sub-qs { display: flex; flex-direction: column; gap: 0px; margin-top: 0px; }
-            .sub-q { display: flex; justify-content: space-between; align-items: flex-start; line-height: 1.1; width: 100%; }
+            .sub-q { display: flex; justify-content: space-between; align-items: flex-start; line-height: 1.1; width: 100%; margin-bottom: 0px; }
             .q-text-part { flex: 1; text-align: justify; padding-right: 15px; }
             .mark { font-weight: bold; width: 30px; text-align: right; min-width: 30px; margin-left: 5px; }
             

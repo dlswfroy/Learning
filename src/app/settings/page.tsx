@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, Upload, FileText, CheckCircle, Trash2, Loader2, AlertCircle, ShieldAlert, LogIn, Link as LinkIcon, Globe, Image as ImageIcon, GraduationCap, Filter } from 'lucide-react';
+import { Settings, Upload, FileText, CheckCircle, Trash2, Loader2, AlertCircle, ShieldAlert, LogIn, Link as LinkIcon, Globe, Image as ImageIcon, Filter } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useStorage, useUser } from '@/firebase';
 import { collection, addDoc, deleteDoc, doc, serverTimestamp, getDoc, setDoc } from 'firebase/firestore';
@@ -239,23 +239,16 @@ export default function SettingsPage() {
         </Card>
       ) : (
         <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-primary flex items-center gap-2">
-              <Upload className="w-5 h-5" />
-              নতুন বই যোগ করুন
-            </h3>
-          </div>
+          <h3 className="text-lg font-bold text-primary flex items-center gap-2">
+            <Upload className="w-5 h-5" /> নতুন বই যোগ করুন
+          </h3>
 
           <Card className="border-2 border-primary/10">
             <CardHeader className="pb-2">
               <Tabs defaultValue="file" onValueChange={(v) => setUploadMethod(v as 'file' | 'link')} className="w-full">
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="file" className="gap-2">
-                    <Upload className="w-4 h-4" /> ফাইল আপলোড
-                  </TabsTrigger>
-                  <TabsTrigger value="link" className="gap-2">
-                    <LinkIcon className="w-4 h-4" /> লিঙ্ক/URL যোগ
-                  </TabsTrigger>
+                  <TabsTrigger value="file" className="gap-2"><Upload className="w-4 h-4" /> ফাইল আপলোড</TabsTrigger>
+                  <TabsTrigger value="link" className="gap-2"><LinkIcon className="w-4 h-4" /> লিঙ্ক যোগ</TabsTrigger>
                 </TabsList>
               </Tabs>
             </CardHeader>
@@ -264,27 +257,18 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">শ্রেণি</label>
                   <Select onValueChange={(v) => setClassId(v || '')} value={classId || ''}>
-                    <SelectTrigger className="bg-background">
-                      <SelectValue placeholder="নির্বাচন করুন" />
-                    </SelectTrigger>
+                    <SelectTrigger className="bg-background"><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
                     <SelectContent>
-                      {CLASSES.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>
-                      ))}
+                      {CLASSES.map((c) => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
-
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">বিষয়</label>
                   <Select onValueChange={(v) => setSubject(v || '')} value={subject || ''} disabled={!classId}>
-                    <SelectTrigger className="bg-background">
-                      <SelectValue placeholder="নির্বাচন করুন" />
-                    </SelectTrigger>
+                    <SelectTrigger className="bg-background"><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
                     <SelectContent>
-                      {subjects.map((s) => (
-                        <SelectItem key={s} value={s}>{s}</SelectItem>
-                      ))}
+                      {subjects.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -292,40 +276,16 @@ export default function SettingsPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
+                  <label className="text-sm font-semibold">{uploadMethod === 'file' ? 'PDF ফাইল' : 'ডাউনলোড লিঙ্ক (URL)'}</label>
                   {uploadMethod === 'file' ? (
-                    <>
-                      <label className="text-sm font-semibold">PDF ফাইল</label>
-                      <Input 
-                        type="file" 
-                        accept=".pdf" 
-                        onChange={(e) => setFile(e.target.files?.[0] || null)}
-                        className="cursor-pointer"
-                        disabled={uploading}
-                      />
-                    </>
+                    <Input type="file" accept=".pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} disabled={uploading} />
                   ) : (
-                    <>
-                      <label className="text-sm font-semibold">বইয়ের ডাউনলোড লিঙ্ক (URL)</label>
-                      <Input 
-                        placeholder="https://example.com/..." 
-                        value={pdfUrl || ''}
-                        onChange={(e) => setPdfUrl(e.target.value)}
-                        disabled={uploading}
-                      />
-                    </>
+                    <Input placeholder="https://..." value={pdfUrl || ''} onChange={(e) => setPdfUrl(e.target.value)} disabled={uploading} />
                   )}
                 </div>
-
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold flex items-center gap-1">
-                    <ImageIcon className="w-3 h-3" /> কভার ইমেজ লিঙ্ক (ঐচ্ছিক)
-                  </label>
-                  <Input 
-                    placeholder="https://example.com/cover.jpg" 
-                    value={coverImageUrl || ''}
-                    onChange={(e) => setCoverImageUrl(e.target.value)}
-                    disabled={uploading}
-                  />
+                  <label className="text-sm font-semibold flex items-center gap-1"><ImageIcon className="w-3 h-3" /> কভার ইমেজ লিঙ্ক (ঐচ্ছিক)</label>
+                  <Input placeholder="https://..." value={coverImageUrl || ''} onChange={(e) => setCoverImageUrl(e.target.value)} disabled={uploading} />
                 </div>
               </div>
             </CardContent>
@@ -333,9 +293,7 @@ export default function SettingsPage() {
             {uploading && uploadMethod === 'file' && (
               <div className="px-6 pb-4 space-y-2">
                 <div className="flex justify-between text-xs font-medium">
-                  <span className="text-primary flex items-center gap-1">
-                    <Loader2 className="w-3 h-3 animate-spin" /> {progress < 100 ? 'আপলোড হচ্ছে...' : 'প্রসেসিং...'}
-                  </span>
+                  <span className="text-primary flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> {progress < 100 ? 'আপলোড হচ্ছে...' : 'প্রসেসিং...'}</span>
                   <span className="text-primary">{Math.round(progress)}%</span>
                 </div>
                 <Progress value={progress} className="h-2" />
@@ -343,17 +301,10 @@ export default function SettingsPage() {
             )}
 
             <CardFooter className="flex justify-between border-t bg-muted/20 py-4">
-              <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                <Globe className="w-3 h-3" />
-                সরাসরি লিঙ্ক দিলে আপলোড সময় লাগবে না।
-              </div>
-              <Button 
-                onClick={handleSaveBook} 
-                disabled={uploading || (uploadMethod === 'file' ? !file : !pdfUrl) || !classId || !subject} 
-                className="gap-2 bg-accent text-white hover:bg-accent/90"
-              >
+              <div className="text-[10px] text-muted-foreground flex items-center gap-1"><Globe className="w-3 h-3" /> সরাসরি লিঙ্ক দিলে আপলোড সময় লাগবে না।</div>
+              <Button onClick={handleSaveBook} disabled={uploading || (uploadMethod === 'file' ? !file : !pdfUrl) || !classId || !subject} className="gap-2 bg-accent text-white hover:bg-accent/90">
                 {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                {uploadMethod === 'link' ? 'তাৎক্ষণিক সেভ করুন' : 'বই সেভ করুন'}
+                {uploadMethod === 'link' ? 'সেভ করুন' : 'আপলোড করুন'}
               </Button>
             </CardFooter>
           </Card>
@@ -362,71 +313,40 @@ export default function SettingsPage() {
 
       <section className="space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-            <FileText className="w-5 h-5 text-muted-foreground" />
-            বর্তমানে থাকা বইসমূহ
-          </h3>
-          
+          <h3 className="text-lg font-bold flex items-center gap-2"><FileText className="w-5 h-5" /> বর্তমানে থাকা বইসমূহ</h3>
           <div className="flex items-center gap-2 min-w-[200px]">
-            <Filter className="w-4 h-4 text-muted-foreground" />
+            <Filter className="w-4 h-4" />
             <Select onValueChange={(v) => setViewClassId(v || 'all')} value={viewClassId || 'all'}>
-              <SelectTrigger className="h-9 text-xs">
-                <SelectValue placeholder="শ্রেণি নির্বাচন" />
-              </SelectTrigger>
+              <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="শ্রেণি ফিল্টার" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">সকল শ্রেণি</SelectItem>
-                {CLASSES.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>
-                ))}
+                {CLASSES.map((c) => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
         </div>
         
         {loadingBooks ? (
-          <div className="flex flex-col items-center justify-center p-12 bg-secondary/10 rounded-lg">
-            <Loader2 className="w-10 h-10 animate-spin text-primary mb-2" />
-            <p className="text-sm text-muted-foreground">তালিকা লোড হচ্ছে...</p>
-          </div>
+          <div className="p-12 text-center bg-secondary/10 rounded-lg"><Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-2" /><p className="text-sm">লোড হচ্ছে...</p></div>
         ) : filteredBooks.length === 0 ? (
-          <Card className="p-12 text-center border-dashed border-2">
-            <AlertCircle className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
-            <p className="text-muted-foreground">এই ক্যাটাগরিতে কোনো বই পাওয়া যায়নি।</p>
-          </Card>
+          <Card className="p-12 text-center border-dashed border-2"><p className="text-muted-foreground">কোনো বই পাওয়া যায়নি।</p></Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filteredBooks.map((book) => (
-              <Card key={book.id} className="p-4 flex items-center justify-between hover:border-primary/30 transition-all group shadow-sm bg-card">
+              <Card key={book.id} className="p-4 flex items-center justify-between hover:border-primary/30 transition-all bg-card shadow-sm">
                 <div className="flex items-center gap-4 overflow-hidden">
-                  <div className="w-12 h-16 rounded-md bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors shrink-0 overflow-hidden border">
-                    {book.coverImageUrl ? (
-                      <img src={book.coverImageUrl} alt="Cover" className="w-full h-full object-cover" />
-                    ) : (
-                      <FileText className="w-6 h-6" />
-                    )}
+                  <div className="w-12 h-16 rounded border bg-primary/10 overflow-hidden shrink-0 flex items-center justify-center">
+                    {book.coverImageUrl ? <img src={book.coverImageUrl} className="w-full h-full object-cover" /> : <FileText className="w-6 h-6 text-primary" />}
                   </div>
                   <div className="overflow-hidden">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                        {CLASSES.find(c => c.id === book.classId)?.label || 'N/A'}
-                      </span>
+                      <span className="text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full">{CLASSES.find(c => c.id === book.classId)?.label || 'N/A'}</span>
                       <h4 className="font-bold text-sm truncate">{book.subject}</h4>
                     </div>
                     <p className="text-[10px] text-muted-foreground truncate">{book.fileName}</p>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  {isAdmin && (
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="text-destructive hover:bg-destructive/10" 
-                      onClick={() => removeBook(book.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
+                {isAdmin && <Button variant="ghost" size="icon" className="text-destructive" onClick={() => removeBook(book.id)}><Trash2 className="w-4 h-4" /></Button>}
               </Card>
             ))}
           </div>
