@@ -33,7 +33,6 @@ function formatMath(text: string) {
   if (!text) return '';
   let formatted = text;
   
-  // Advanced character replacements for professional symbols
   const symbolMap: Record<string, string> = {
     '\\\\log': 'log',
     '\\\\triangle': '△',
@@ -66,22 +65,13 @@ function formatMath(text: string) {
     formatted = formatted.replace(new RegExp(key, 'g'), val);
   });
 
-  // Handle fractions \frac{num}{den}
   formatted = formatted.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
-  
-  // Handle superscripts x^{y} or x^y
   formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
-  
-  // Handle subscripts x_{y} or x_y
   formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
   formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
-  
-  // Handle roots \sqrt[n]{x} or \sqrt{x}
   formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
   formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$2</span></span>');
-
-  // Remove any remaining single backslashes that might cause issues
   formatted = formatted.replace(/\\/g, '');
 
   return formatted;
@@ -197,10 +187,8 @@ function CreateQuestionContent() {
     
     const findMarkerPos = (m: string, fromIndex: number = 0) => {
       const patterns = [
-        m + '.', m + ')', 
-        m + ' .', m + ' )', 
-        m + '.\n', m + ')\n',
-        '\n' + m + '.', '\n' + m + ')'
+        m + '.', m + ')', m + ' .', m + ' )', 
+        m + '.\n', m + ')\n', '\n' + m + '.', '\n' + m + ')'
       ];
       let minIdx = -1;
       for (const p of patterns) {
@@ -219,17 +207,13 @@ function CreateQuestionContent() {
 
     if (firstMarkerPos !== -1) {
       parts.main = text.substring(0, firstMarkerPos).trim();
-      
       const extract = (m: string) => {
         const startIdx = findMarkerPos(m);
         if (startIdx === -1) return '';
-        
-        // Find the end of the marker (e.g., "ক.")
         let markerEnd = startIdx;
         while (markerEnd < text.length && (text[markerEnd] === ' ' || text[markerEnd] === '\n' || markers.includes(text[markerEnd]) || ['.', ')'].includes(text[markerEnd]))) {
           markerEnd++;
         }
-        
         let end = text.length;
         for (const otherM of markers) {
           if (otherM === m) continue;
@@ -238,7 +222,6 @@ function CreateQuestionContent() {
         }
         return text.substring(markerEnd, end).trim();
       };
-
       parts.k = extract('ক');
       parts.kh = extract('খ');
       parts.g = extract('গ');
@@ -381,17 +364,21 @@ function CreateQuestionContent() {
             .q-text-part { flex: 1; padding-right: 15px; }
             .mark { font-weight: bold; width: 35px; text-align: right; }
             
-            /* MCQ Layout: Intelligent wrapping */
+            /* MCQ Layout: Precise vertical alignment */
             .mcq-row { 
               display: grid; 
-              grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
-              gap: 4px 10px; 
+              grid-template-columns: 1fr 1fr 1fr 1fr; 
+              gap: 4px 15px; 
               margin-top: 3px; 
-              padding-left: 15px; 
+              padding-left: 20px; 
             }
             .mcq-opt { display: flex; gap: 4px; align-items: flex-start; }
             
-            /* Math Symbols */
+            /* Responsive columns for long options */
+            @media (max-width: 600px) {
+              .mcq-row { grid-template-columns: 1fr 1fr; }
+            }
+
             .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
             .math-num { border-bottom: 0.5pt solid black; padding: 0 1px; }
             .math-den { padding: 0 1px; }
