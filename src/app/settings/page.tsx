@@ -197,7 +197,6 @@ export default function SettingsPage() {
         </div>
         <div>
           <h2 className="text-2xl font-bold">সেটিং</h2>
-          <p className="text-sm text-muted-foreground">বই ম্যানেজমেন্ট এবং নতুন কন্টেন্ট যোগ করুন</p>
         </div>
       </header>
 
@@ -233,7 +232,6 @@ export default function SettingsPage() {
               <Upload className="w-5 h-5" />
               নতুন বই যোগ করুন
             </h3>
-            <span className="text-[10px] px-2 py-1 bg-green-100 text-green-700 rounded-full font-bold">Admin Active</span>
           </div>
 
           <Card className="border-2 border-primary/10">

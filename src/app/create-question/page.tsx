@@ -34,34 +34,27 @@ type Question = {
   shortMarks?: number;
 };
 
-// ইংরেজী সংখ্যাকে বাংলা সংখ্যায় রূপান্তর
 function toBengaliNumber(n: number | string): string {
   const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
   return n.toString().replace(/\d/g, (digit) => bengaliDigits[parseInt(digit)]);
 }
 
-// প্রফেশনাল গাণিতিক ও জ্যামিতিক সংকেত প্রসেসর (LaTeX Style Support)
 function formatMath(text: string) {
   if (!text) return '';
   
   let formatted = text;
   
-  // 1. Handle Fractions: \frac{num}{den}
   formatted = formatted.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, 
     '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
   
-  // 2. Handle Power: x^2 or x^{10}
   formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
   
-  // 3. Handle Subscript: H_2O
   formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
   formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
   
-  // 4. Handle Square Root: \sqrt{x}
   formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>');
   
-  // 5. Common LaTeX Symbols
   formatted = formatted
     .replace(/\\triangle/g, '△')
     .replace(/\\angle/g, '∠')
@@ -311,7 +304,6 @@ function CreateQuestionContent() {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-primary">প্রশ্নপত্র নির্মাতা</h2>
-              <p className="text-sm text-muted-foreground">বোর্ড স্ট্যান্ডার্ড প্রশ্ন তৈরি করুন</p>
             </div>
           </div>
           <Button variant="ghost" onClick={() => router.push('/my-questions')} className="gap-2">
@@ -419,7 +411,7 @@ function CreateQuestionContent() {
                   <span className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded">
                     {q.type === 'creative' ? 'সৃজনশীল' : 'সংক্ষিপ্ত'}
                   </span>
-                  <span className="text-sm font-bold">প্রশ্ন নং: {idx + 1}</span>
+                  <span className="text-sm font-bold">প্রশ্ন নং: {isEnglishSubject ? (idx + 1) : toBengaliNumber(idx + 1)}</span>
                 </div>
                 <Textarea 
                   placeholder={q.type === 'creative' ? "উদ্দীপক ও প্রশ্ন একসাথে (ক. খ. গ. ঘ. সহ) লিখুন।" : "সংক্ষিপ্ত প্রশ্ন লিখুন..."} 
