@@ -31,7 +31,9 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 
 function formatMath(text: string) {
   if (!text) return '';
-  let formatted = text;
+  
+  // Clean up double parentheses added by AI
+  let formatted = text.replace(/\(\((.*?)\)\)/g, '$1');
   
   const symbolMap: Record<string, string> = {
     '\\\\log': 'log',
@@ -73,9 +75,8 @@ function formatMath(text: string) {
   formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
   formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$2</span></span>');
   
-  // Clean up backslashes and unnecessary AI-generated double parentheses
+  // Clean up remaining backslashes
   formatted = formatted.replace(/\\/g, '');
-  formatted = formatted.replace(/\(\((.*?)\)\)/g, '$1');
 
   return formatted;
 }
@@ -138,7 +139,7 @@ function CreateQuestionContent() {
               return { id, type: 'mcq', content: `${q.mcqQuestion || ''}\nক. ${q.optA || ''}\nখ. ${q.optB || ''}\nগ. ${q.optC || ''}\nঘ. ${q.optD || ''}` };
             }
             if (q.type === 'creative') {
-              return { id, type: 'creative', content: `${q.stimulus || ''}\nক. ${q.qA || ''}\nখ. ${q.qB || ''}\nগ. ${q.qC || ''}\nঘ. ${q.qD || ''}` };
+              return { id, type: 'creative', content: `${q.stimulus || ''}\nক. ${q.qA || ''}\nখ. ${q.qB || ''}\nগ. ${q.optC || ''}\nঘ. ${q.optD || ''}` };
             }
             return { id, type: 'short', content: q.shortText || '' };
           });
