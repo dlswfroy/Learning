@@ -37,8 +37,8 @@ export default function SettingsPage() {
   const [adminChecking, setAdminChecking] = useState(true);
   const [uploadMethod, setUploadMethod] = useState<'file' | 'link'>('file');
 
-  // New state for viewing/filtering books
-  const [viewClassId, setViewClassId] = useState<string>('');
+  // Filter state
+  const [viewClassId, setViewClassId] = useState<string>('all');
 
   useEffect(() => {
     async function checkAdmin() {
@@ -83,9 +83,8 @@ export default function SettingsPage() {
     });
   }, [rawBooks]);
 
-  // Filtered books based on selection
   const filteredBooks = useMemo(() => {
-    if (!viewClassId) return uploadedBooks;
+    if (!viewClassId || viewClassId === 'all') return uploadedBooks;
     return uploadedBooks.filter(b => b.classId === viewClassId);
   }, [uploadedBooks, viewClassId]);
 
@@ -146,10 +145,10 @@ export default function SettingsPage() {
 
   const saveToFirestore = (url: string, fileName: string) => {
     const bookData = {
-      classId: classId,
-      subject: subject,
-      fileName: fileName,
-      pdfUrl: url,
+      classId: classId || '',
+      subject: subject || '',
+      fileName: fileName || '',
+      pdfUrl: url || '',
       coverImageUrl: coverImageUrl || '',
       uploadedAt: serverTimestamp(),
       userId: user?.uid || '',
@@ -161,6 +160,8 @@ export default function SettingsPage() {
         setFile(null);
         setPdfUrl('');
         setCoverImageUrl('');
+        setClassId('');
+        setSubject('');
         setProgress(0);
         toast({ title: "সফল", description: "বইটি সফলভাবে যুক্ত করা হয়েছে।" });
       })
@@ -368,7 +369,7 @@ export default function SettingsPage() {
           
           <div className="flex items-center gap-2 min-w-[200px]">
             <Filter className="w-4 h-4 text-muted-foreground" />
-            <Select onValueChange={(v) => setViewClassId(v === 'all' ? '' : v)} value={viewClassId || 'all'}>
+            <Select onValueChange={(v) => setViewClassId(v || 'all')} value={viewClassId || 'all'}>
               <SelectTrigger className="h-9 text-xs">
                 <SelectValue placeholder="শ্রেণি নির্বাচন" />
               </SelectTrigger>

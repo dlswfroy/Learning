@@ -44,6 +44,7 @@ function formatMath(text: string) {
   
   let formatted = text;
   
+  // Backslash formatting for common LaTeX-like codes
   formatted = formatted.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, 
     '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
   
@@ -258,7 +259,18 @@ function CreateQuestionContent() {
 
     const docId = editId || doc(collection(db!, 'questions')).id;
     const questionSetData = {
-      ...meta,
+      institution: meta.institution || '',
+      exam: meta.exam || '',
+      classId: meta.classId || '',
+      subject: meta.subject || '',
+      time: meta.time || '',
+      totalMarks: meta.totalMarks || '',
+      marksA: meta.marksA || 1,
+      marksB: meta.marksB || 2,
+      marksC: meta.marksC || 3,
+      marksD: meta.marksD || 4,
+      creativeInstruction: meta.creativeInstruction || '',
+      shortInstruction: meta.shortInstruction || '',
       questions: formattedQuestions,
       userId: user.uid,
       updatedAt: serverTimestamp(),
@@ -458,10 +470,10 @@ function CreateQuestionContent() {
             
             .section-header-container { text-align: center; width: 100%; margin-top: 5px; margin-bottom: 2px; }
             .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 15px; }
-            .instruction { font-style: italic; font-size: 9pt; margin-bottom: 4px; text-align: center; display: block; width: 100%; }
+            .instruction { font-style: italic; font-size: 9pt; margin-bottom: 2px; text-align: center; display: block; width: 100%; }
             
-            .q-block { margin-bottom: 0px; page-break-inside: avoid; clear: both; width: 100%; position: relative; }
-            .stimulus { margin-bottom: 2px; white-space: pre-wrap; text-align: justify; display: block; line-height: 1.1; }
+            .q-block { margin-bottom: 0px; page-break-inside: avoid; clear: both; width: 100%; position: relative; padding-top: 2px; }
+            .stimulus { margin-bottom: 1px; white-space: pre-wrap; text-align: justify; display: block; line-height: 1.1; }
             
             .sub-qs { display: flex; flex-direction: column; gap: 0px; margin-top: 0px; }
             .sub-q { display: flex; justify-content: space-between; align-items: flex-start; line-height: 1.1; width: 100%; }
@@ -543,7 +555,8 @@ function CreateQuestionContent() {
               </div>
               <div className="instruction">{meta.shortInstruction}</div>
               {shortQuestions.map((q, idx) => {
-                const qNum = isEnglishSubject ? (idx + 1) : toBengaliNumber(idx + 1);
+                const globalIdx = creativeQuestions.length + idx;
+                const qNum = isEnglishSubject ? (globalIdx + 1) : toBengaliNumber(globalIdx + 1);
                 return (
                   <div key={q.id} className="q-block flex justify-between items-start">
                     <span className="flex-1 text-justify" dangerouslySetInnerHTML={{ __html: `${qNum}. ${formatMath(q.content)}` }} />
