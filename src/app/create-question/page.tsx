@@ -32,7 +32,7 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 function formatMath(text: string) {
   if (!text) return '';
   
-  // Aggressively clean redundant formatting added by AI
+  // Clean redundant formatting and brackets added by AI
   let formatted = text.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
   
   const symbolMap: Record<string, string> = {
@@ -185,7 +185,7 @@ function CreateQuestionContent() {
     const parts = { main: '', k: '', kh: '', g: '', gh: '' };
     if (!text) return parts;
     
-    // Aggressively clean brackets first
+    // Clean brackets added by AI
     const cleanText = text.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
     
     const markers = ['ক', 'খ', 'গ', 'ঘ'];
@@ -370,7 +370,7 @@ function CreateQuestionContent() {
             .q-text-part { flex: 1; padding-right: 15px; }
             .mark { font-weight: bold; width: 35px; text-align: right; }
             
-            /* 4-column grid for perfect alignment of ক under ক, খ under খ across questions */
+            /* 4-column grid for perfect alignment of ক, খ, গ, ঘ across questions in one line */
             .mcq-row { 
               display: grid; 
               grid-template-columns: repeat(4, 1fr); 
