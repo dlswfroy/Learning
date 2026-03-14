@@ -23,11 +23,11 @@ export default function SettingsPage() {
   const storage = useStorage();
   const { user, loading: userLoading } = useUser();
   
-  const [classId, setClassId] = useState('');
-  const [subject, setSubject] = useState('');
+  const [classId, setClassId] = useState<string>('');
+  const [subject, setSubject] = useState<string>('');
   const [file, setFile] = useState<File | null>(null);
-  const [pdfUrl, setPdfUrl] = useState('');
-  const [coverImageUrl, setCoverImageUrl] = useState('');
+  const [pdfUrl, setPdfUrl] = useState<string>('');
+  const [coverImageUrl, setCoverImageUrl] = useState<string>('');
   
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -352,3 +352,4 @@ export default function SettingsPage() {
     </div>
   );
 }
+

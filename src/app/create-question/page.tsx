@@ -481,7 +481,7 @@ function CreateQuestionContent() {
           @media print {
             @page { 
               size: A4; 
-              margin: 0.5in; 
+              margin: 0in; 
             }
             body { 
               font-family: 'Inter', sans-serif; 
@@ -492,7 +492,14 @@ function CreateQuestionContent() {
               margin: 0;
               padding: 0;
             }
-            .paper { width: 100%; text-align: justify; }
+            .paper { 
+              width: 100%; 
+              padding-top: 0.5in; 
+              padding-bottom: 0.5in; 
+              padding-left: 0.5in; 
+              padding-right: 0.5in;
+              text-align: justify; 
+            }
             .header { text-align: center; margin-bottom: 8px; border-bottom: 1.5pt solid black; padding-bottom: 6px; }
             .inst-name { font-size: 16pt; font-weight: 800; margin-bottom: 0px; }
             .exam-name { font-size: 10pt; font-weight: 700; margin-bottom: 0px; }
