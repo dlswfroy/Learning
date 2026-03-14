@@ -19,7 +19,7 @@ export default function Home() {
     }
   }, [user, loading, router]);
 
-  if (loading) {
+  if (loading || !user) {
     return (
       <div className="flex flex-col items-center justify-center p-20 min-h-[50vh]">
         <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
@@ -27,8 +27,6 @@ export default function Home() {
       </div>
     );
   }
-
-  if (!user) return null;
 
   return (
     <div className="space-y-8 animate-fade-in">
