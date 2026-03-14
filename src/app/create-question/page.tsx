@@ -32,8 +32,8 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 function formatMath(text: string) {
   if (!text) return '';
   
-  // Clean up redundant double parentheses added by AI
-  let formatted = text.replace(/\(\((.*?)\)\)/g, '$1');
+  // Clean up redundant double parentheses and extra markers added by AI
+  let formatted = text.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
   
   const symbolMap: Record<string, string> = {
     '\\\\log': 'log',
@@ -185,7 +185,8 @@ function CreateQuestionContent() {
     const parts = { main: '', k: '', kh: '', g: '', gh: '' };
     if (!text) return parts;
     
-    const cleanText = text.replace(/\(\((.*?)\)\)/g, '$1').trim();
+    // Clean redundant formatting before parsing
+    const cleanText = text.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
     
     const markers = ['ক', 'খ', 'গ', 'ঘ'];
     let firstMarkerPos = -1;
@@ -369,6 +370,7 @@ function CreateQuestionContent() {
             .q-text-part { flex: 1; padding-right: 15px; }
             .mark { font-weight: bold; width: 35px; text-align: right; }
             
+            /* Two column grid for perfectly aligned options (ক under ক, খ under খ) */
             .mcq-row { 
               display: grid; 
               grid-template-columns: 1fr 1fr; 
@@ -378,10 +380,6 @@ function CreateQuestionContent() {
             }
             .mcq-opt { display: flex; gap: 4px; align-items: flex-start; }
             
-            @media (max-width: 600px) {
-              .mcq-row { grid-template-columns: 1fr; }
-            }
-
             .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
             .math-num { border-bottom: 0.5pt solid black; padding: 0 1px; }
             .math-den { padding: 0 1px; }
