@@ -44,22 +44,17 @@ function formatMath(text: string) {
   
   let formatted = text;
   
-  // Backslash fractions
   formatted = formatted.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, 
     '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
   
-  // Powers and superscripts
   formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
   
-  // Subscripts
   formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
   formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
   
-  // Roots
   formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>');
   
-  // Symbols
   formatted = formatted
     .replace(/\\triangle/g, '△')
     .replace(/\\angle/g, '∠')
@@ -103,6 +98,12 @@ function CreateQuestionContent() {
   });
 
   const [questions, setQuestions] = useState<Question[]>([]);
+
+  useEffect(() => {
+    if (!userLoading && !user) {
+      router.push('/auth');
+    }
+  }, [user, userLoading, router]);
 
   useEffect(() => {
     if (!editId) {
@@ -302,7 +303,7 @@ function CreateQuestionContent() {
     return (
       <div className="flex flex-col items-center justify-center p-20 min-h-[50vh]">
         <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground font-medium">প্রশ্নপত্র লোড হচ্ছে...</p>
+        <p className="text-muted-foreground font-medium">অ্যাক্সেস চেক করা হচ্ছে...</p>
       </div>
     );
   }

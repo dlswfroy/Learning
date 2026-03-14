@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useFirestore, useUser, useCollection } from '@/firebase';
 import { collection, query, where, deleteDoc, doc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -29,6 +29,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { CLASSES } from '@/lib/constants';
@@ -36,10 +37,16 @@ import { toast } from '@/hooks/use-toast';
 
 export default function MyQuestionsPage() {
   const db = useFirestore();
-  const { user } = useUser();
+  const { user, loading: userLoading } = useUser();
+  const router = useRouter();
   const [deleting, setDeleting] = useState<string | null>(null);
 
-  // কুয়েরি সহজ রাখা হয়েছে যাতে ইনডেক্সিং এরর না আসে
+  useEffect(() => {
+    if (!userLoading && !user) {
+      router.push('/auth');
+    }
+  }, [user, userLoading, router]);
+
   const questionsQuery = useMemo(() => {
     if (!db || !user) return null;
     return query(
@@ -48,9 +55,8 @@ export default function MyQuestionsPage() {
     );
   }, [db, user]);
 
-  const { data: rawQuestions, loading } = useCollection(questionsQuery);
+  const { data: rawQuestions, loading: questionsLoading } = useCollection(questionsQuery);
 
-  // ক্লায়েন্ট সাইডে সর্টিং করা হয়েছে
   const questions = useMemo(() => {
     if (!rawQuestions) return [];
     return [...rawQuestions].sort((a, b) => {
@@ -72,18 +78,16 @@ export default function MyQuestionsPage() {
     }
   };
 
-  if (!user) {
+  if (userLoading || questionsLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-8">
-        <FileText className="w-16 h-16 text-muted-foreground/30 mb-4" />
-        <h3 className="text-xl font-bold">লগইন করুন</h3>
-        <p className="text-muted-foreground mb-6">আপনার তৈরি করা প্রশ্নসমূহ দেখতে লগইন করুন।</p>
-        <Link href="/auth">
-          <Button>লগইন পেজে যান</Button>
-        </Link>
+      <div className="flex flex-col items-center justify-center p-20 min-h-[50vh]">
+        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground font-medium">অ্যাক্সেস চেক করা হচ্ছে...</p>
       </div>
     );
   }
+
+  if (!user) return null;
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-fade-in pb-10">
@@ -104,12 +108,7 @@ export default function MyQuestionsPage() {
         </Link>
       </header>
 
-      {loading ? (
-        <div className="flex flex-col items-center justify-center p-20">
-          <Loader2 className="w-10 h-10 animate-spin text-primary" />
-          <p className="mt-4 text-muted-foreground font-medium">লোড হচ্ছে...</p>
-        </div>
-      ) : questions.length > 0 ? (
+      {questions.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {questions.map((q) => (
             <Card key={q.id} className="hover:border-primary/40 transition-all group shadow-sm">

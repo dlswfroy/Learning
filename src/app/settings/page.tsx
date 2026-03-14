@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { CLASSES, getSubjectsForClass } from '@/lib/constants';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,8 +23,8 @@ export default function SettingsPage() {
   const db = useFirestore();
   const storage = useStorage();
   const { user, loading: userLoading } = useUser();
+  const router = useRouter();
   
-  // Initialize states with empty strings to prevent uncontrolled to controlled input errors
   const [classId, setClassId] = useState<string>('');
   const [subject, setSubject] = useState<string>('');
   const [file, setFile] = useState<File | null>(null);
@@ -37,6 +38,12 @@ export default function SettingsPage() {
   const [uploadMethod, setUploadMethod] = useState<'file' | 'link'>('file');
 
   const [viewClassId, setViewClassId] = useState<string>('all');
+
+  useEffect(() => {
+    if (!userLoading && !user) {
+      router.push('/auth');
+    }
+  }, [user, userLoading, router]);
 
   useEffect(() => {
     async function checkAdmin() {
@@ -53,7 +60,6 @@ export default function SettingsPage() {
         if (adminDoc.exists()) {
           setIsAdmin(adminDoc.data()?.adminUid === user.uid);
         } else {
-          // If no admin doc, the first user to access this page becomes admin
           await setDoc(adminDocRef, { adminUid: user.uid });
           setIsAdmin(true);
         }
@@ -63,7 +69,7 @@ export default function SettingsPage() {
         setAdminChecking(false);
       }
     }
-    checkAdmin();
+    if (user) checkAdmin();
   }, [user, db]);
 
   const booksQuery = useMemo(() => {
@@ -191,7 +197,7 @@ export default function SettingsPage() {
       });
   };
 
-  if (userLoading || adminChecking) {
+  if (userLoading || (user && adminChecking)) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh]">
         <Loader2 className="w-10 h-10 animate-spin text-primary mb-2" />
@@ -199,6 +205,8 @@ export default function SettingsPage() {
       </div>
     );
   }
+
+  if (!user) return null;
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-fade-in pb-10">
@@ -211,22 +219,7 @@ export default function SettingsPage() {
         </div>
       </header>
 
-      {!user ? (
-        <Card className="border-accent/30 bg-accent/5">
-          <CardContent className="pt-6 flex flex-col items-center text-center space-y-4">
-            <AlertCircle className="w-10 h-10 text-accent" />
-            <div className="space-y-1">
-              <h3 className="font-bold">লগইন প্রয়োজন</h3>
-              <p className="text-sm text-muted-foreground">বই ম্যানেজ করতে অনুগ্রহ করে প্রথমে লগইন করুন।</p>
-            </div>
-            <Link href="/auth">
-              <Button className="bg-accent hover:bg-accent/90 gap-2">
-                <LogIn className="w-4 h-4" /> লগইন পেজে যান
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-      ) : !isAdmin ? (
+      {!isAdmin ? (
         <Card className="border-destructive/30 bg-destructive/5">
           <CardContent className="pt-6 flex flex-col items-center text-center space-y-4">
             <ShieldAlert className="w-10 h-10 text-destructive" />
