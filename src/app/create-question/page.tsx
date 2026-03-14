@@ -9,12 +9,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, Plus, Trash2, BookOpen, Save, FileText, ArrowLeft, Loader2 } from 'lucide-react';
+import { Printer, Plus, Trash2, BookOpen, Save, FileText, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useUser } from '@/firebase';
 import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type Question = {
   id: string;
@@ -23,7 +34,7 @@ type Question = {
   shortMarks?: number;
 };
 
-// ইংরেজী সংখ্যাকে বাংলা সংখ্যায় রূপান্তর (ইংরেজী বিষয় বাদে)
+// ইংরেজী সংখ্যাকে বাংলা সংখ্যায় রূপান্তর
 function toBengaliNumber(n: number | string): string {
   const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
   return n.toString().replace(/\d/g, (digit) => bengaliDigits[parseInt(digit)]);
@@ -39,11 +50,11 @@ function formatMath(text: string) {
   formatted = formatted.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, 
     '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
   
-  // 2. Handle Power: x^2 or x^{10} or x^n
+  // 2. Handle Power: x^2 or x^{10}
   formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
   
-  // 3. Handle Subscript: H_2O or H_{2}
+  // 3. Handle Subscript: H_2O
   formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
   formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
   
@@ -184,9 +195,7 @@ function CreateQuestionContent() {
   };
 
   const handleRemoveQuestion = (id: string) => {
-    if (confirm("আপনি কি নিশ্চিতভাবে এই প্রশ্নটি মুছে ফেলতে চান?")) {
-      setQuestions(questions.filter(q => q.id !== id));
-    }
+    setQuestions(questions.filter(q => q.id !== id));
   };
 
   const updateQuestion = (id: string, data: Partial<Question>) => {
@@ -380,9 +389,31 @@ function CreateQuestionContent() {
 
           {questions.map((q, idx) => (
             <Card key={q.id} className="relative border-l-4 border-l-primary">
-              <Button variant="ghost" size="icon" className="absolute top-2 right-2 text-destructive" onClick={() => handleRemoveQuestion(q.id)}>
-                <Trash2 className="w-4 h-4" />
-              </Button>
+              <div className="absolute top-2 right-2">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="icon" className="text-destructive">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="flex items-center gap-2">
+                        <AlertTriangle className="text-destructive w-5 h-5" /> আপনি কি নিশ্চিত?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        এই প্রশ্নটি স্থায়ীভাবে মুছে ফেলা হবে।
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>বাতিল</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => handleRemoveQuestion(q.id)} className="bg-destructive hover:bg-destructive/90">
+                        মুছে ফেলুন
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
               <CardContent className="pt-6 space-y-4">
                 <div className="flex items-center gap-2">
                   <span className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded">
@@ -416,7 +447,7 @@ function CreateQuestionContent() {
           @media print {
             @page { 
               size: A4; 
-              margin: 0.5in 0.5in 0.3in 0.5in; 
+              margin: 0.5in 0.5in 0.5in 0.5in; 
             }
             body { 
               font-family: 'Inter', sans-serif; 
@@ -428,24 +459,23 @@ function CreateQuestionContent() {
               padding: 0;
             }
             .paper { width: 100%; text-align: justify; }
-            .header { text-align: center; margin-bottom: 10px; border-bottom: 1.5pt solid black; padding-bottom: 8px; }
-            .inst-name { font-size: 16pt; font-weight: 800; margin-bottom: 1px; }
-            .exam-name { font-size: 10pt; font-weight: 700; margin-bottom: 1px; }
-            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 4px; font-size: 10pt; }
+            .header { text-align: center; margin-bottom: 8px; border-bottom: 1.5pt solid black; padding-bottom: 6px; }
+            .inst-name { font-size: 16pt; font-weight: 800; margin-bottom: 0px; }
+            .exam-name { font-size: 10pt; font-weight: 700; margin-bottom: 0px; }
+            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 2px; font-size: 10pt; }
             
             .section-header-container { text-align: center; width: 100%; margin-top: 5px; margin-bottom: 2px; }
-            .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 15px; text-transform: uppercase; }
-            .instruction { font-style: italic; font-size: 9pt; margin-bottom: 5px; text-align: center; display: block; width: 100%; }
+            .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 15px; }
+            .instruction { font-style: italic; font-size: 9pt; margin-bottom: 4px; text-align: center; display: block; width: 100%; }
             
-            .q-block { margin-bottom: 5px; page-break-inside: avoid; clear: both; width: 100%; position: relative; }
+            .q-block { margin-bottom: 0px; page-break-inside: avoid; clear: both; width: 100%; position: relative; }
             .stimulus { margin-bottom: 2px; white-space: pre-wrap; text-align: justify; display: block; line-height: 1.1; }
             
-            .sub-qs { display: flex; flex-direction: column; gap: 1px; margin-top: 1px; }
+            .sub-qs { display: flex; flex-direction: column; gap: 0px; margin-top: 0px; }
             .sub-q { display: flex; justify-content: space-between; align-items: flex-start; line-height: 1.1; width: 100%; }
             .q-text-part { flex: 1; text-align: justify; padding-right: 15px; }
             .mark { font-weight: bold; width: 30px; text-align: right; min-width: 30px; margin-left: 5px; }
             
-            /* Professional Math Rendering */
             .math-sup { font-size: 0.75em; vertical-align: baseline; position: relative; top: -0.4em; }
             .math-sub { font-size: 0.75em; vertical-align: baseline; position: relative; top: 0.2em; }
             .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 0.15em; line-height: 1; }
