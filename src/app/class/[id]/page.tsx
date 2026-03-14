@@ -22,8 +22,7 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
           <GraduationCap className="w-7 h-7" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold">{currentClass.label} শ্রেণির বইসমূহ</h2>
-          <p className="text-sm text-muted-foreground">নিচের তালিকা থেকে আপনার পাঠ্যবই নির্বাচন করুন</p>
+          <h2 className="text-2xl font-bold">{currentClass.label} শ্রেণি</h2>
         </div>
       </div>
 

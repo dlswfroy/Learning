@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { GraduationCap, ArrowRight, BookMarked, BrainCircuit } from 'lucide-react';
 import { CLASSES } from '@/lib/constants';
 
@@ -8,9 +8,6 @@ export default function Home() {
     <div className="space-y-8 animate-fade-in">
       <header className="text-center space-y-4">
         <h2 className="text-3xl font-bold text-primary font-headline">আপনার শিক্ষার সঙ্গী</h2>
-        <p className="text-muted-foreground max-w-xl mx-auto">
-          সহজেই আপনার শ্রেণির পাঠ্যবই পড়ুন এবং AI এর মাধ্যমে যেকোনো বিষয়ের ওপর প্রশ্ন তৈরি করে নিজেকে যাচাই করুন।
-        </p>
       </header>
 
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -19,8 +16,7 @@ export default function Home() {
             <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center text-white mb-2">
               <BookMarked className="w-6 h-6" />
             </div>
-            <CardTitle className="text-primary">পাঠ্যবই পড়ুন</CardTitle>
-            <CardDescription>আপনার শ্রেণির সকল বই অনলাইনে সহজে পড়ুন।</CardDescription>
+            <CardTitle className="text-primary">পাঠ্যবই</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-2 text-sm">
@@ -35,23 +31,21 @@ export default function Home() {
             <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center text-white mb-2">
               <BrainCircuit className="w-6 h-6" />
             </div>
-            <CardTitle className="text-accent-foreground">প্রশ্ন তৈরি করুন</CardTitle>
-            <CardDescription>AI ব্যবহার করে যেকোনো বিষয়ের ওপর প্রশ্ন তৈরি করুন।</CardDescription>
+            <CardTitle className="text-accent-foreground">প্রশ্ন ব্যাংক</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-2 text-sm">
-              <li className="flex items-center gap-2"><div className="w-1 h-1 bg-accent rounded-full"/> নির্ভুল উত্তরপত্র সহ</li>
-              <li className="flex items-center gap-2"><div className="w-1 h-1 bg-accent rounded-full"/> তাৎক্ষণিক ফলাফল</li>
+              <li className="flex items-center gap-2"><div className="w-1 h-1 bg-accent rounded-full"/> বোর্ড স্ট্যান্ডার্ড প্রশ্ন</li>
+              <li className="flex items-center gap-2"><div className="w-1 h-1 bg-accent rounded-full"/> সৃজনশীল ও সংক্ষিপ্ত</li>
             </ul>
           </CardContent>
         </Card>
 
         <div className="md:col-span-2 lg:col-span-1">
           <Card className="h-full flex flex-col justify-center items-center p-8 bg-white border-dashed border-2 border-primary/20 text-center">
-            <h3 className="font-semibold text-lg mb-2">নতুন বই যোগ করুন</h3>
-            <p className="text-sm text-muted-foreground mb-4">আপনার কাছে কি নতুন কোনো বইয়ের PDF আছে?</p>
+            <h3 className="font-semibold text-lg mb-4">বই আপলোড</h3>
             <Link href="/settings" className="px-6 py-2 bg-primary text-white rounded-full text-sm font-medium hover:bg-primary/90 transition-colors">
-              সেটিং থেকে আপলোড করুন
+              সেটিং
             </Link>
           </Card>
         </div>
@@ -71,7 +65,6 @@ export default function Home() {
                   </div>
                   <div>
                     <p className="font-bold text-lg">{cls.label} শ্রেণি</p>
-                    <p className="text-xs text-muted-foreground">শিক্ষা বর্ষ ২০২৪-২৫</p>
                   </div>
                   <ArrowRight className="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-all transform translate-x-[-10px] group-hover:translate-x-0" />
                 </CardContent>

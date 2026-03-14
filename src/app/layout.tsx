@@ -6,8 +6,8 @@ import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 export const metadata: Metadata = {
-  title: 'আমার প্রশ্ন - শিক্ষা সহায়ক অ্যাপ্লিকেশন',
-  description: 'AI চালিত প্রশ্ন তৈরি এবং ডিজিটাল পাঠ্যবই পড়ার আধুনিক প্ল্যাটফর্ম',
+  title: 'আমার প্রশ্ন',
+  description: 'শিক্ষা সহায়ক প্ল্যাটফর্ম',
 };
 
 export default function RootLayout({
