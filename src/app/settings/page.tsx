@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, Upload, FileText, CheckCircle, Trash2, Loader2, AlertCircle, ShieldAlert, LogIn, Link as LinkIcon, Globe, Image as ImageIcon, GraduationCap } from 'lucide-react';
+import { Settings, Upload, FileText, CheckCircle, Trash2, Loader2, AlertCircle, ShieldAlert, LogIn, Link as LinkIcon, Globe, Image as ImageIcon, GraduationCap, Filter } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useStorage, useUser } from '@/firebase';
 import { collection, addDoc, deleteDoc, doc, serverTimestamp, getDoc, setDoc } from 'firebase/firestore';
@@ -23,17 +23,22 @@ export default function SettingsPage() {
   const storage = useStorage();
   const { user, loading: userLoading } = useUser();
   
+  // States for uploading
   const [classId, setClassId] = useState('');
   const [subject, setSubject] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [pdfUrl, setPdfUrl] = useState('');
   const [coverImageUrl, setCoverImageUrl] = useState('');
   
+  // UI States
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminChecking, setAdminChecking] = useState(true);
   const [uploadMethod, setUploadMethod] = useState<'file' | 'link'>('file');
+
+  // New state for viewing/filtering books
+  const [viewClassId, setViewClassId] = useState<string>('');
 
   useEffect(() => {
     async function checkAdmin() {
@@ -77,6 +82,12 @@ export default function SettingsPage() {
       return dateB.getTime() - dateA.getTime();
     });
   }, [rawBooks]);
+
+  // Filtered books based on selection
+  const filteredBooks = useMemo(() => {
+    if (!viewClassId) return uploadedBooks;
+    return uploadedBooks.filter(b => b.classId === viewClassId);
+  }, [uploadedBooks, viewClassId]);
 
   const subjects = classId ? getSubjectsForClass(classId) : [];
 
@@ -349,67 +360,74 @@ export default function SettingsPage() {
       )}
 
       <section className="space-y-6">
-        <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-          <FileText className="w-5 h-5 text-muted-foreground" />
-          বর্তমানে থাকা বইসমূহ
-        </h3>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+            <FileText className="w-5 h-5 text-muted-foreground" />
+            বর্তমানে থাকা বইসমূহ
+          </h3>
+          
+          <div className="flex items-center gap-2 min-w-[200px]">
+            <Filter className="w-4 h-4 text-muted-foreground" />
+            <Select onValueChange={(v) => setViewClassId(v === 'all' ? '' : v)} value={viewClassId || 'all'}>
+              <SelectTrigger className="h-9 text-xs">
+                <SelectValue placeholder="শ্রেণি নির্বাচন" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">সকল শ্রেণি</SelectItem>
+                {CLASSES.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
         
         {loadingBooks ? (
           <div className="flex flex-col items-center justify-center p-12 bg-secondary/10 rounded-lg">
             <Loader2 className="w-10 h-10 animate-spin text-primary mb-2" />
             <p className="text-sm text-muted-foreground">তালিকা লোড হচ্ছে...</p>
           </div>
-        ) : uploadedBooks.length === 0 ? (
+        ) : filteredBooks.length === 0 ? (
           <Card className="p-12 text-center border-dashed border-2">
             <AlertCircle className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
-            <p className="text-muted-foreground">কোনো বই এখনো যোগ করা হয়নি।</p>
+            <p className="text-muted-foreground">এই ক্যাটাগরিতে কোনো বই পাওয়া যায়নি।</p>
           </Card>
         ) : (
-          <div className="space-y-8">
-            {CLASSES.map((cls) => {
-              const classBooks = uploadedBooks.filter(b => b.classId === cls.id);
-              if (classBooks.length === 0) return null;
-
-              return (
-                <div key={cls.id} className="space-y-4">
-                  <h4 className="font-bold text-primary flex items-center gap-2 border-b border-primary/20 pb-2">
-                    <GraduationCap className="w-5 h-5" />
-                    {cls.label} শ্রেণি
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {classBooks.map((book) => (
-                      <Card key={book.id} className="p-4 flex items-center justify-between hover:border-primary/30 transition-all group">
-                        <div className="flex items-center gap-4 overflow-hidden">
-                          <div className="w-12 h-16 rounded-md bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors shrink-0 overflow-hidden border">
-                            {book.coverImageUrl ? (
-                              <img src={book.coverImageUrl} alt="Cover" className="w-full h-full object-cover" />
-                            ) : (
-                              <FileText className="w-6 h-6" />
-                            )}
-                          </div>
-                          <div className="overflow-hidden">
-                            <h4 className="font-bold text-sm truncate">{book.subject}</h4>
-                            <p className="text-[10px] text-muted-foreground truncate">{book.fileName}</p>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          {isAdmin && (
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="text-destructive hover:bg-destructive/10" 
-                              onClick={() => removeBook(book.id)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </Card>
-                    ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in">
+            {filteredBooks.map((book) => (
+              <Card key={book.id} className="p-4 flex items-center justify-between hover:border-primary/30 transition-all group shadow-sm bg-card">
+                <div className="flex items-center gap-4 overflow-hidden">
+                  <div className="w-12 h-16 rounded-md bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors shrink-0 overflow-hidden border">
+                    {book.coverImageUrl ? (
+                      <img src={book.coverImageUrl} alt="Cover" className="w-full h-full object-cover" />
+                    ) : (
+                      <FileText className="w-6 h-6" />
+                    )}
+                  </div>
+                  <div className="overflow-hidden">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                        {CLASSES.find(c => c.id === book.classId)?.label || 'N/A'}
+                      </span>
+                      <h4 className="font-bold text-sm truncate">{book.subject}</h4>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground truncate">{book.fileName}</p>
                   </div>
                 </div>
-              );
-            })}
+                <div className="flex gap-2">
+                  {isAdmin && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="text-destructive hover:bg-destructive/10" 
+                      onClick={() => removeBook(book.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              </Card>
+            ))}
           </div>
         )}
       </section>
