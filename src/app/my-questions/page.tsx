@@ -185,7 +185,7 @@ export default function MyQuestionsPage() {
         <TabsList className="grid w-full grid-cols-2 mb-8 bg-secondary/50 p-1">
           <TabsTrigger value="written" className="gap-2 font-bold py-3">
             <FileText className="w-4 h-4" />
-            লিখিত প্রশ্ন (সৃজনশীল ও সংক্ষিপ্ত)
+            লিখিত প্রশ্ন
           </TabsTrigger>
           <TabsTrigger value="mcq" className="gap-2 font-bold py-3">
             <CheckSquare className="w-4 h-4" />
