@@ -7,6 +7,7 @@ import { collection, query, where, deleteDoc, doc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   FileText, 
   Edit, 
@@ -17,14 +18,14 @@ import {
   GraduationCap, 
   PlusCircle,
   AlertTriangle,
-  CheckSquare
+  CheckSquare,
+  Filter
 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
@@ -42,6 +43,7 @@ export default function MyQuestionsPage() {
   const { user, loading: userLoading } = useUser();
   const router = useRouter();
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [filterClassId, setFilterClassId] = useState<string>('all');
 
   useEffect(() => {
     if (!userLoading && !user) {
@@ -68,8 +70,13 @@ export default function MyQuestionsPage() {
     });
   }, [rawQuestions]);
 
-  const writtenQuestions = useMemo(() => sortedQuestions.filter(q => !q.isMcq), [sortedQuestions]);
-  const mcqQuestions = useMemo(() => sortedQuestions.filter(q => q.isMcq), [sortedQuestions]);
+  const filteredQuestions = useMemo(() => {
+    if (filterClassId === 'all') return sortedQuestions;
+    return sortedQuestions.filter(q => q.classId === filterClassId);
+  }, [sortedQuestions, filterClassId]);
+
+  const writtenQuestions = useMemo(() => filteredQuestions.filter(q => !q.isMcq), [filteredQuestions]);
+  const mcqQuestions = useMemo(() => filteredQuestions.filter(q => q.isMcq), [filteredQuestions]);
 
   const handleDelete = async (id: string) => {
     setDeleting(id);
@@ -174,12 +181,34 @@ export default function MyQuestionsPage() {
             <h2 className="text-2xl font-bold">আমার প্রশ্নসমূহ</h2>
           </div>
         </div>
-        <Link href="/create-question">
-          <Button className="gap-2 shadow-lg">
-            <PlusCircle className="w-4 h-4" /> নতুন প্রশ্ন তৈরি করুন
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/create-question">
+            <Button className="gap-2 shadow-lg">
+              <PlusCircle className="w-4 h-4" /> নতুন প্রশ্ন তৈরি করুন
+            </Button>
+          </Link>
+        </div>
       </header>
+
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-primary/5 p-4 rounded-xl border border-primary/10">
+        <div className="flex items-center gap-2 text-sm font-bold text-primary">
+          <Filter className="w-4 h-4" /> শ্রেণি অনুযায়ী দেখুন:
+        </div>
+        <Select value={filterClassId} onValueChange={setFilterClassId}>
+          <SelectTrigger className="w-full sm:w-[180px] bg-white">
+            <SelectValue placeholder="সব শ্রেণি" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">সব শ্রেণি</SelectItem>
+            {CLASSES.map(c => (
+              <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="ml-auto text-xs font-medium text-muted-foreground">
+          মোট প্রশ্নপত্র: {filteredQuestions.length} টি
+        </div>
+      </div>
 
       <Tabs defaultValue="written" className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-8 bg-secondary/50 p-1">

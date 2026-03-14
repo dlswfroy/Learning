@@ -72,7 +72,10 @@ function formatMath(text: string) {
   formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
   formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
   formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$2</span></span>');
+  
+  // Clean up backslashes and unnecessary AI-generated double parentheses
   formatted = formatted.replace(/\\/g, '');
+  formatted = formatted.replace(/\(\((.*?)\)\)/g, '$1');
 
   return formatted;
 }
@@ -182,6 +185,9 @@ function CreateQuestionContent() {
     const parts = { main: '', k: '', kh: '', g: '', gh: '' };
     if (!text) return parts;
     
+    // Cleanup double parentheses often added by AI
+    const cleanText = text.replace(/\(\((.*?)\)\)/g, '$1').trim();
+    
     const markers = ['ক', 'খ', 'গ', 'ঘ'];
     let firstMarkerPos = -1;
     
@@ -192,7 +198,7 @@ function CreateQuestionContent() {
       ];
       let minIdx = -1;
       for (const p of patterns) {
-        const idx = text.indexOf(p, fromIndex);
+        const idx = cleanText.indexOf(p, fromIndex);
         if (idx !== -1 && (minIdx === -1 || idx < minIdx)) minIdx = idx;
       }
       return minIdx;
@@ -206,28 +212,28 @@ function CreateQuestionContent() {
     }
 
     if (firstMarkerPos !== -1) {
-      parts.main = text.substring(0, firstMarkerPos).trim();
+      parts.main = cleanText.substring(0, firstMarkerPos).trim();
       const extract = (m: string) => {
         const startIdx = findMarkerPos(m);
         if (startIdx === -1) return '';
         let markerEnd = startIdx;
-        while (markerEnd < text.length && (text[markerEnd] === ' ' || text[markerEnd] === '\n' || markers.includes(text[markerEnd]) || ['.', ')'].includes(text[markerEnd]))) {
+        while (markerEnd < cleanText.length && (cleanText[markerEnd] === ' ' || cleanText[markerEnd] === '\n' || markers.includes(cleanText[markerEnd]) || ['.', ')'].includes(cleanText[markerEnd]))) {
           markerEnd++;
         }
-        let end = text.length;
+        let end = cleanText.length;
         for (const otherM of markers) {
           if (otherM === m) continue;
           const e = findMarkerPos(otherM, markerEnd);
           if (e !== -1 && e < end) end = e;
         }
-        return text.substring(markerEnd, end).trim();
+        return cleanText.substring(markerEnd, end).trim();
       };
       parts.k = extract('ক');
       parts.kh = extract('খ');
       parts.g = extract('গ');
       parts.gh = extract('ঘ');
     } else {
-      parts.main = text.trim();
+      parts.main = cleanText.trim();
     }
     return parts;
   };
@@ -364,7 +370,6 @@ function CreateQuestionContent() {
             .q-text-part { flex: 1; padding-right: 15px; }
             .mark { font-weight: bold; width: 35px; text-align: right; }
             
-            /* MCQ Layout: Precise vertical alignment */
             .mcq-row { 
               display: grid; 
               grid-template-columns: 1fr 1fr 1fr 1fr; 
@@ -374,7 +379,6 @@ function CreateQuestionContent() {
             }
             .mcq-opt { display: flex; gap: 4px; align-items: flex-start; }
             
-            /* Responsive columns for long options */
             @media (max-width: 600px) {
               .mcq-row { grid-template-columns: 1fr 1fr; }
             }
