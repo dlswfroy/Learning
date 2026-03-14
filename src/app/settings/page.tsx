@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, Upload, FileText, CheckCircle, Trash2, Loader2, AlertCircle, ShieldAlert, LogIn, Link as LinkIcon, Globe, Image as ImageIcon, Filter } from 'lucide-react';
+import { Settings, Upload, FileText, CheckCircle, Trash2, Loader2, ShieldAlert, Link as LinkIcon, Globe, Image as ImageIcon, Filter } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useStorage, useUser } from '@/firebase';
 import { collection, addDoc, deleteDoc, doc, serverTimestamp, getDoc, setDoc } from 'firebase/firestore';
@@ -268,14 +268,14 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">{uploadMethod === 'file' ? 'PDF ফাইল' : 'ডাউনলোড লিঙ্ক (URL)'}</label>
                   {uploadMethod === 'file' ? (
-                    <Input key="file-input" type="file" accept=".pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} disabled={uploading} />
+                    <Input key="file-input-field" type="file" accept=".pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} disabled={uploading} />
                   ) : (
-                    <Input key="link-input" placeholder="https://..." value={pdfUrl || ''} onChange={(e) => setPdfUrl(e.target.value)} disabled={uploading} />
+                    <Input key="pdf-url-field" placeholder="https://..." value={pdfUrl || ''} onChange={(e) => setPdfUrl(e.target.value)} disabled={uploading} />
                   )}
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold flex items-center gap-1"><ImageIcon className="w-3 h-3" /> কভার ইমেজ লিঙ্ক (ঐচ্ছিক)</label>
-                  <Input key="cover-input" placeholder="https://..." value={coverImageUrl || ''} onChange={(e) => setCoverImageUrl(e.target.value)} disabled={uploading} />
+                  <Input key="cover-url-field" placeholder="https://..." value={coverImageUrl || ''} onChange={(e) => setCoverImageUrl(e.target.value)} disabled={uploading} />
                 </div>
               </div>
             </CardContent>

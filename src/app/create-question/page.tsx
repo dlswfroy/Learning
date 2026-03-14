@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, Plus, Trash2, BookOpen, Save, FileText, ArrowLeft, Loader2, AlertTriangle, BrainCircuit, CheckCircle2 } from 'lucide-react';
+import { Printer, Plus, Trash2, BookOpen, Save, FileText, ArrowLeft, Loader2, BrainCircuit } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useUser } from '@/firebase';
 import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
@@ -31,14 +31,7 @@ import {
 type Question = {
   id: string;
   type: 'creative' | 'short' | 'mcq';
-  content?: string; // For Written
-  // For MCQ
-  mcqQuestion?: string;
-  optA?: string;
-  optB?: string;
-  optC?: string;
-  optD?: string;
-  correctOpt?: string;
+  content: string;
 };
 
 function toBengaliNumber(n: number | string | undefined | null): string {
@@ -119,16 +112,10 @@ function CreateQuestionContent() {
           const reconstructed = data.questions.map((q: any) => {
             const id = Math.random().toString(36).substr(2, 9);
             if (q.type === 'mcq') {
-              return { id, type: 'mcq', mcqQuestion: q.mcqQuestion, optA: q.optA, optB: q.optB, optC: q.optC, optD: q.optD, correctOpt: q.correctOpt };
+              return { id, type: 'mcq', content: `${q.mcqQuestion || ''}\nক. ${q.optA || ''}\nখ. ${q.optB || ''}\nগ. ${q.optC || ''}\nঘ. ${q.optD || ''}` };
             }
             if (q.type === 'creative') {
-              let content = q.stimulus || '';
-              const parts = [];
-              if (q.qA) parts.push(`ক. ${q.qA}`);
-              if (q.qB) parts.push(`খ. ${q.qB}`);
-              if (q.qC) parts.push(`গ. ${q.qC}`);
-              if (q.qD) parts.push(`ঘ. ${q.qD}`);
-              return { id, type: 'creative', content: content + (parts.length > 0 ? '\n' + parts.join('\n') : '') };
+              return { id, type: 'creative', content: `${q.stimulus || ''}\nক. ${q.qA || ''}\nখ. ${q.qB || ''}\nগ. ${q.qC || ''}\nঘ. ${q.qD || ''}` };
             }
             return { id, type: 'short', content: q.shortText || '' };
           });
@@ -142,9 +129,7 @@ function CreateQuestionContent() {
   const subjects = useMemo(() => meta.classId ? getSubjectsForClass(meta.classId) : [], [meta.classId]);
 
   const handleAddQuestion = (type: 'creative' | 'short' | 'mcq') => {
-    const newQ: Question = { id: Math.random().toString(36).substr(2, 9), type };
-    if (type !== 'mcq') newQ.content = '';
-    else { newQ.mcqQuestion = ''; newQ.optA = ''; newQ.optB = ''; newQ.optC = ''; newQ.optD = ''; newQ.correctOpt = ''; }
+    const newQ: Question = { id: Math.random().toString(36).substr(2, 9), type, content: '' };
     setQuestions(prev => [...prev, newQ]);
   };
 
@@ -159,12 +144,12 @@ function CreateQuestionContent() {
       const newQs = result.questions.map(q => {
         const id = Math.random().toString(36).substr(2, 9);
         if (q.type === 'mcq') {
-          return { id, type: 'mcq', mcqQuestion: q.mcqQuestion, optA: q.optA, optB: q.optB, optC: q.optC, optD: q.optD, correctOpt: q.correctOpt };
+          return { id, type: 'mcq', content: `${q.mcqQuestion}\nক. ${q.optA}\nখ. ${q.optB}\nগ. ${q.optC}\nঘ. ${q.optD}` };
         }
         if (q.type === 'creative') {
           return { id, type: 'creative', content: `${q.stimulus}\nক. ${q.qA}\nখ. ${q.qB}\nগ. ${q.qC}\nঘ. ${q.qD}` };
         }
-        return { id, type: 'short', content: q.shortText };
+        return { id, type: 'short', content: q.shortText || '' };
       });
       setQuestions(prev => [...prev, ...newQs]);
       toast({ title: "সফল", description: "AI প্রশ্নপত্র তৈরি করেছে।" });
@@ -173,22 +158,22 @@ function CreateQuestionContent() {
     } finally { setGenerating(false); }
   };
 
-  const parseCreative = (text: string) => {
-    const parts = { stimulus: '', qA: '', qB: '', qC: '', qD: '' };
+  const parseText = (text: string) => {
+    const parts = { main: '', k: '', kh: '', g: '', gh: '' };
     if (!text) return parts;
     const markers = ['ক.', 'খ.', 'গ.', 'ঘ.'];
     let positions = markers.map(m => text.indexOf(m));
     const firstMarkerIndex = positions.findIndex(p => p !== -1);
     if (firstMarkerIndex !== -1) {
-      parts.stimulus = text.substring(0, positions[firstMarkerIndex]).trim();
+      parts.main = text.substring(0, positions[firstMarkerIndex]).trim();
       for (let i = 0; i < markers.length; i++) {
         const start = positions[i]; if (start === -1) continue;
         let end = text.length;
         for (let j = i + 1; j < markers.length; j++) { if (positions[j] !== -1) { end = positions[j]; break; } }
         const content = text.substring(start + markers[i].length, end).trim();
-        if (i === 0) parts.qA = content; else if (i === 1) parts.qB = content; else if (i === 2) parts.qC = content; else if (i === 3) parts.qD = content;
+        if (i === 0) parts.k = content; else if (i === 1) parts.kh = content; else if (i === 2) parts.g = content; else if (i === 3) parts.gh = content;
       }
-    } else { parts.stimulus = text.trim(); }
+    } else { parts.main = text.trim(); }
     return parts;
   };
 
@@ -196,11 +181,9 @@ function CreateQuestionContent() {
     if (!user) { toast({ title: "লগইন প্রয়োজন", variant: "destructive" }); return; }
     setSaving(true);
     const formattedQuestions = questions.map(q => {
-      if (q.type === 'creative') {
-        const p = parseCreative(q.content || '');
-        return { type: 'creative', stimulus: p.stimulus, qA: p.qA, qB: p.qB, qC: p.qC, qD: p.qD };
-      }
-      if (q.type === 'mcq') return { type: 'mcq', mcqQuestion: q.mcqQuestion, optA: q.optA, optB: q.optB, optC: q.optC, optD: q.optD, correctOpt: q.correctOpt };
+      const p = parseText(q.content || '');
+      if (q.type === 'creative') return { type: 'creative', stimulus: p.main, qA: p.k, qB: p.kh, qC: p.g, qD: p.gh };
+      if (q.type === 'mcq') return { type: 'mcq', mcqQuestion: p.main, optA: p.k, optB: p.kh, optC: p.g, optD: p.gh };
       return { type: 'short', shortText: q.content };
     });
     const docId = editId || doc(collection(db!, 'questions')).id;
@@ -237,41 +220,33 @@ function CreateQuestionContent() {
           <CardHeader className="bg-primary/5 border-b py-3"><CardTitle className="text-base flex items-center gap-2 font-bold"><BookOpen className="w-4 h-4 text-primary" /> পরীক্ষার তথ্য ও মান বণ্টন</CardTitle></CardHeader>
           <CardContent className="pt-6 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {['institution', 'exam', 'time', 'totalMarks'].map(f => (
-                <div key={f} className="space-y-2">
-                  <label className="text-sm font-semibold">{f === 'institution' ? 'প্রতিষ্ঠানের নাম' : f === 'exam' ? 'পরীক্ষার নাম' : f === 'time' ? 'সময়' : 'পূর্ণমান'}</label>
-                  <Input value={(meta as any)[f] || ''} onChange={e => setMeta(prev => ({...prev, [f]: e.target.value}))} />
-                </div>
-              ))}
-              <div className="space-y-2">
-                <label className="text-sm font-semibold">শ্রেণি</label>
-                <Select onValueChange={v => setMeta(prev => ({...prev, classId: v}))} value={meta.classId || ''}><SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger><SelectContent>{CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}</SelectContent></Select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold">বিষয়</label>
-                <Select onValueChange={v => setMeta(prev => ({...prev, subject: v}))} value={meta.subject || ''} disabled={!meta.classId}><SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger><SelectContent>{subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
-              </div>
+              <div className="space-y-2"><label className="text-sm font-semibold">প্রতিষ্ঠানের নাম</label><Input key="meta-inst" value={meta.institution || ''} onChange={e => setMeta(prev => ({...prev, institution: e.target.value}))} /></div>
+              <div className="space-y-2"><label className="text-sm font-semibold">পরীক্ষার নাম</label><Input key="meta-exam" value={meta.exam || ''} onChange={e => setMeta(prev => ({...prev, exam: e.target.value}))} /></div>
+              <div className="space-y-2"><label className="text-sm font-semibold">সময়</label><Input key="meta-time" value={meta.time || ''} onChange={e => setMeta(prev => ({...prev, time: e.target.value}))} /></div>
+              <div className="space-y-2"><label className="text-sm font-semibold">পূর্ণমান</label><Input key="meta-marks" value={meta.totalMarks || ''} onChange={e => setMeta(prev => ({...prev, totalMarks: e.target.value}))} /></div>
+              <div className="space-y-2"><label className="text-sm font-semibold">শ্রেণি</label><Select onValueChange={v => setMeta(prev => ({...prev, classId: v}))} value={meta.classId || ''}><SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger><SelectContent>{CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}</SelectContent></Select></div>
+              <div className="space-y-2"><label className="text-sm font-semibold">বিষয়</label><Select onValueChange={v => setMeta(prev => ({...prev, subject: v}))} value={meta.subject || ''} disabled={!meta.classId}><SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger><SelectContent>{subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 border-t pt-6">
               <div className="space-y-2">
                 <h4 className="text-sm font-bold text-primary">সৃজনশীল মান (ক-ঘ)</h4>
                 <div className="flex gap-2">
-                  {['marksA', 'marksB', 'marksC', 'marksD'].map(m => <Input key={m} type="number" value={(meta as any)[m]} onChange={e => setMeta(prev => ({...prev, [m]: parseInt(e.target.value) || 0}))} className="h-8 text-center" />)}
+                  <Input key="marksA" type="number" value={meta.marksA || 0} onChange={e => setMeta(prev => ({...prev, marksA: parseInt(e.target.value) || 0}))} className="h-8 text-center" />
+                  <Input key="marksB" type="number" value={meta.marksB || 0} onChange={e => setMeta(prev => ({...prev, marksB: parseInt(e.target.value) || 0}))} className="h-8 text-center" />
+                  <Input key="marksC" type="number" value={meta.marksC || 0} onChange={e => setMeta(prev => ({...prev, marksC: parseInt(e.target.value) || 0}))} className="h-8 text-center" />
+                  <Input key="marksD" type="number" value={meta.marksD || 0} onChange={e => setMeta(prev => ({...prev, marksD: parseInt(e.target.value) || 0}))} className="h-8 text-center" />
                 </div>
               </div>
-              <div className="space-y-2"><h4 className="text-sm font-bold text-accent">সংক্ষিপ্ত মান</h4><Input type="number" value={meta.shortMarks} onChange={e => setMeta(prev => ({...prev, shortMarks: parseInt(e.target.value) || 0}))} className="h-8 text-center w-20" /></div>
-              <div className="space-y-2"><h4 className="text-sm font-bold text-orange-500">MCQ মান</h4><Input type="number" value={meta.mcqMarks} onChange={e => setMeta(prev => ({...prev, mcqMarks: parseInt(e.target.value) || 0}))} className="h-8 text-center w-20" /></div>
+              <div className="space-y-2"><h4 className="text-sm font-bold text-accent">সংক্ষিপ্ত মান</h4><Input key="shortMarks" type="number" value={meta.shortMarks || 0} onChange={e => setMeta(prev => ({...prev, shortMarks: parseInt(e.target.value) || 0}))} className="h-8 text-center w-20" /></div>
+              <div className="space-y-2"><h4 className="text-sm font-bold text-orange-500">MCQ মান</h4><Input key="mcqMarks" type="number" value={meta.mcqMarks || 0} onChange={e => setMeta(prev => ({...prev, mcqMarks: parseInt(e.target.value) || 0}))} className="h-8 text-center w-20" /></div>
             </div>
           </CardContent>
         </Card>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {['creativeInstruction', 'shortInstruction', 'mcqInstruction'].map(f => (
-            <div key={f} className="space-y-2">
-              <label className="text-sm font-bold">{f === 'creativeInstruction' ? 'সৃজনশীল নির্দেশ' : f === 'shortInstruction' ? 'সংক্ষিপ্ত নির্দেশ' : 'MCQ নির্দেশ'}</label>
-              <Input value={(meta as any)[f] || ''} onChange={e => setMeta(prev => ({...prev, [f]: e.target.value}))} />
-            </div>
-          ))}
+          <div className="space-y-2"><label className="text-sm font-bold">সৃজনশীল নির্দেশ</label><Input key="instr-creative" value={meta.creativeInstruction || ''} onChange={e => setMeta(prev => ({...prev, creativeInstruction: e.target.value}))} /></div>
+          <div className="space-y-2"><label className="text-sm font-bold">সংক্ষিপ্ত নির্দেশ</label><Input key="instr-short" value={meta.shortInstruction || ''} onChange={e => setMeta(prev => ({...prev, shortInstruction: e.target.value}))} /></div>
+          <div className="space-y-2"><label className="text-sm font-bold">MCQ নির্দেশ</label><Input key="instr-mcq" value={meta.mcqInstruction || ''} onChange={e => setMeta(prev => ({...prev, mcqInstruction: e.target.value}))} /></div>
         </div>
 
         <div className="space-y-6">
@@ -299,22 +274,13 @@ function CreateQuestionContent() {
                   </span>
                   <span className="text-sm font-bold">প্রশ্ন নং: {isEnglish ? (idx + 1) : toBengaliNumber(idx + 1)}</span>
                 </div>
-                
-                {q.type === 'mcq' ? (
-                  <div className="space-y-4">
-                    <Input placeholder="প্রশ্নটি লিখুন..." value={q.mcqQuestion || ''} onChange={e => setQuestions(prev => prev.map(item => item.id === q.id ? {...item, mcqQuestion: e.target.value} : item))} />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {['optA', 'optB', 'optC', 'optD'].map((opt, i) => (
-                        <div key={opt} className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-muted-foreground">{['ক.', 'খ.', 'গ.', 'ঘ.'][i]}</span>
-                          <Input placeholder="অপশন লিখুন" value={(q as any)[opt] || ''} onChange={e => setQuestions(prev => prev.map(item => item.id === q.id ? {...item, [opt]: e.target.value} : item))} className="h-9" />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <Textarea placeholder={q.type === 'creative' ? "উদ্দীপক ও প্রশ্ন একসাথে (ক. খ. গ. ঘ. সহ) লিখুন।" : "সংক্ষিপ্ত প্রশ্ন লিখুন..."} value={q.content || ''} onChange={e => setQuestions(prev => prev.map(item => item.id === q.id ? {...item, content: e.target.value} : item))} className="min-h-[100px] text-sm" />
-                )}
+                <Textarea 
+                  key={`q-text-${q.id}`}
+                  placeholder={q.type === 'creative' ? "উদ্দীপক ও প্রশ্ন একসাথে (ক. খ. গ. ঘ. সহ) লিখুন।" : q.type === 'mcq' ? "প্রশ্ন ও অপশনগুলো একসাথে (ক. খ. গ. ঘ. সহ) লিখুন।" : "সংক্ষিপ্ত প্রশ্ন লিখুন..."} 
+                  value={q.content || ''} 
+                  onChange={e => setQuestions(prev => prev.map(item => item.id === q.id ? {...item, content: e.target.value} : item))} 
+                  className="min-h-[120px] text-sm" 
+                />
               </CardContent>
             </Card>
           ))}
@@ -329,29 +295,29 @@ function CreateQuestionContent() {
       <div className="print-only">
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
-            @page { size: A4; margin: 0in; }
-            body { font-family: 'Inter', sans-serif; font-size: 10pt; color: black !important; line-height: 1.1 !important; background: white !important; margin: 0; padding: 0; }
-            .paper { width: 100%; padding: 0.5in; text-align: justify; }
-            .header { text-align: center; margin-bottom: 8px; border-bottom: 1.5pt solid black; padding-bottom: 6px; }
-            .inst-name { font-size: 16pt; font-weight: 800; }
-            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 2px; }
-            .section { margin-top: 10px; }
-            .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 15px; margin: 5px auto; }
-            .instruction { font-style: italic; font-size: 9pt; text-align: center; margin-bottom: 5px; display: block; }
-            .q-block { margin-bottom: 8px; page-break-inside: avoid; clear: both; }
-            .stimulus { margin-bottom: 2px; white-space: pre-wrap; display: block; }
-            .sub-q { display: flex; justify-content: space-between; line-height: 1.2; width: 100%; }
-            .q-text-part { flex: 1; padding-right: 15px; }
-            .mark { font-weight: bold; width: 40px; text-align: right; }
-            .mcq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; margin-top: 2px; padding-left: 15px; }
-            .mcq-opt { display: flex; gap: 4px; }
+            @page { size: A4; margin: 0.5in; }
+            body { font-family: 'Inter', sans-serif; font-size: 11pt; color: black !important; line-height: 1.2 !important; background: white !important; margin: 0; padding: 0; }
+            .paper { width: 100%; text-align: justify; }
+            .header { text-align: center; margin-bottom: 10px; border-bottom: 1.5pt solid black; padding-bottom: 8px; }
+            .inst-name { font-size: 18pt; font-weight: 800; }
+            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 4px; }
+            .section { margin-top: 15px; }
+            .section-label { font-size: 11pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 20px; margin: 8px auto; }
+            .instruction { font-style: italic; font-size: 10pt; text-align: center; margin-bottom: 10px; display: block; }
+            .q-block { margin-bottom: 12px; page-break-inside: avoid; clear: both; }
+            .stimulus { margin-bottom: 4px; white-space: pre-wrap; display: block; }
+            .sub-q { display: flex; justify-content: space-between; line-height: 1.4; width: 100%; margin-bottom: 2px; }
+            .q-text-part { flex: 1; padding-right: 20px; }
+            .mark { font-weight: bold; width: 45px; text-align: right; }
+            .mcq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 4px; padding-left: 20px; }
+            .mcq-opt { display: flex; gap: 6px; }
             .no-print { display: none !important; }
           }
         `}} />
         <div className="paper">
           <div className="header">
             <div className="inst-name">{meta.institution || 'শিক্ষা প্রতিষ্ঠানের নাম'}</div>
-            <div className="font-bold">{meta.exam || 'পরীক্ষার নাম'}</div>
+            <div className="font-bold text-lg">{meta.exam || 'পরীক্ষার নাম'}</div>
             <div className="font-bold">শ্রেণি: {CLASSES.find(c => c.id === meta.classId)?.label || ''} | বিষয়: {meta.subject}</div>
             <div className="meta-info"><div>সময়: {meta.time}</div><div>পূর্ণমান: {meta.totalMarks}</div></div>
           </div>
@@ -361,14 +327,14 @@ function CreateQuestionContent() {
               <div className="text-center"><div className="section-label">সৃজনশীল প্রশ্ন</div></div>
               <div className="instruction">{meta.creativeInstruction}</div>
               {questions.filter(q => q.type === 'creative').map((q, idx) => {
-                const p = parseCreative(q.content || '');
+                const p = parseText(q.content || '');
                 const qNum = isEnglish ? (idx + 1) : toBengaliNumber(idx + 1);
                 return (
                   <div key={q.id} className="q-block">
-                    <div className="font-bold">{qNum}. উদ্দীপকটি পড়ো এবং প্রশ্নগুলোর উত্তর দাও:</div>
-                    <div className="stimulus" dangerouslySetInnerHTML={{ __html: formatMath(p.stimulus) }} />
+                    <div className="font-bold mb-1">{qNum}. উদ্দীপকটি পড়ো এবং প্রশ্নগুলোর উত্তর দাও:</div>
+                    <div className="stimulus" dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} />
                     {['ক', 'খ', 'গ', 'ঘ'].map((l, i) => {
-                      const text = (p as any)[`q${l}`];
+                      const text = (p as any)[i === 0 ? 'k' : i === 1 ? 'kh' : i === 2 ? 'g' : 'gh'];
                       const mark = i === 0 ? meta.marksA : i === 1 ? meta.marksB : i === 2 ? meta.marksC : meta.marksD;
                       return text && (
                         <div key={l} className="sub-q">
@@ -404,16 +370,17 @@ function CreateQuestionContent() {
               <div className="text-center"><div className="section-label">বহুনির্বাচনি প্রশ্ন</div></div>
               <div className="instruction">{meta.mcqInstruction}</div>
               {questions.filter(q => q.type === 'mcq').map((q, idx) => {
+                const p = parseText(q.content || '');
                 const qNum = isEnglish ? (idx + 1) : toBengaliNumber(idx + 1);
                 return (
                   <div key={q.id} className="q-block">
                     <div className="sub-q">
-                      <span className="q-text-part" dangerouslySetInnerHTML={{ __html: `${qNum}. ${formatMath(q.mcqQuestion || '')}` }} />
+                      <span className="q-text-part" dangerouslySetInnerHTML={{ __html: `${qNum}. ${formatMath(p.main)}` }} />
                       <span className="mark">{isEnglish ? meta.mcqMarks : toBengaliNumber(meta.mcqMarks)}</span>
                     </div>
                     <div className="mcq-grid">
                       {['ক', 'খ', 'গ', 'ঘ'].map((l, i) => {
-                        const opt = (q as any)[`opt${String.fromCharCode(65 + i)}`];
+                        const opt = (p as any)[i === 0 ? 'k' : i === 1 ? 'kh' : i === 2 ? 'g' : 'gh'];
                         return opt && (
                           <div key={l} className="mcq-opt">
                             <span className="font-bold">{l})</span>
