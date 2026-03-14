@@ -31,6 +31,10 @@ type Question = {
   id: string;
   type: 'creative' | 'short';
   content: string; 
+  marksA?: number;
+  marksB?: number;
+  marksC?: number;
+  marksD?: number;
   shortMarks?: number;
 };
 
@@ -90,10 +94,6 @@ function CreateQuestionContent() {
     subject: '',
     time: '২ ঘণ্টা ৩০ মিনিট',
     totalMarks: '১০০',
-    marksA: 1,
-    marksB: 2,
-    marksC: 3,
-    marksD: 4,
     creativeInstruction: 'যেকোনো ৭টি প্রশ্নের উত্তর দাও',
     shortInstruction: 'সকল প্রশ্নের উত্তর দাও',
   });
@@ -139,10 +139,6 @@ function CreateQuestionContent() {
             subject: data.subject || '',
             time: data.time || '',
             totalMarks: data.totalMarks || '',
-            marksA: data.marksA || 1,
-            marksB: data.marksB || 2,
-            marksC: data.marksC || 3,
-            marksD: data.marksD || 4,
             creativeInstruction: data.creativeInstruction || '',
             shortInstruction: data.shortInstruction || '',
           });
@@ -159,7 +155,11 @@ function CreateQuestionContent() {
               return { 
                 id,
                 type: 'creative', 
-                content: content + (parts.length > 0 ? '\n' + parts.join('\n') : '') 
+                content: content + (parts.length > 0 ? '\n' + parts.join('\n') : ''),
+                marksA: q.marksA || 1,
+                marksB: q.marksB || 2,
+                marksC: q.marksC || 3,
+                marksD: q.marksD || 4,
               };
             }
             return { 
@@ -185,7 +185,7 @@ function CreateQuestionContent() {
       id: Math.random().toString(36).substr(2, 9),
       type,
       content: '',
-      ...(type === 'short' ? { shortMarks: 2 } : {})
+      ...(type === 'creative' ? { marksA: 1, marksB: 2, marksC: 3, marksD: 4 } : { shortMarks: 2 })
     };
     setQuestions(prev => [...prev, newQ]);
   };
@@ -246,16 +246,16 @@ function CreateQuestionContent() {
           qB: parsed.qB,
           qC: parsed.qC,
           qD: parsed.qD,
-          marksA: meta.marksA, 
-          marksB: meta.marksB, 
-          marksC: meta.marksC, 
-          marksD: meta.marksD
+          marksA: q.marksA || 1, 
+          marksB: q.marksB || 2, 
+          marksC: q.marksC || 3, 
+          marksD: q.marksD || 4
         };
       }
       return {
         type: 'short',
         shortText: q.content,
-        shortMarks: q.shortMarks
+        shortMarks: q.shortMarks || 2
       };
     });
 
@@ -267,10 +267,6 @@ function CreateQuestionContent() {
       subject: meta.subject || '',
       time: meta.time || '',
       totalMarks: meta.totalMarks || '',
-      marksA: meta.marksA || 1,
-      marksB: meta.marksB || 2,
-      marksC: meta.marksC || 3,
-      marksD: meta.marksD || 4,
       creativeInstruction: meta.creativeInstruction || '',
       shortInstruction: meta.shortInstruction || '',
       questions: formattedQuestions,
@@ -284,7 +280,7 @@ function CreateQuestionContent() {
       .then(() => {
         setSaving(false);
         localStorage.removeItem('question_draft');
-        toast({ title: "সফল!", description: "প্রশ্নপত্রটি ফায়ারবেসে স্থায়ীভাবে সেভ হয়েছে।" });
+        toast({ title: "সফল!", description: "প্রশ্নপত্রটি ডাটাবেসে সেভ হয়েছে।" });
         if (!editId) router.replace(`/create-question?id=${docId}`);
       })
       .catch(async () => {
@@ -328,7 +324,7 @@ function CreateQuestionContent() {
         <Card className="shadow-md">
           <CardHeader className="bg-primary/5 border-b py-3">
             <CardTitle className="text-base flex items-center gap-2 font-bold">
-              <BookOpen className="w-4 h-4 text-primary" /> পরীক্ষার সাধারণ তথ্য
+              <BookOpen className="w-4 h-4 text-primary" /> পরীক্ষার তথ্য
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -394,8 +390,8 @@ function CreateQuestionContent() {
           </div>
 
           {questions.map((q, idx) => (
-            <Card key={q.id} className="relative border-l-4 border-l-primary">
-              <div className="absolute top-2 right-2">
+            <Card key={q.id} className="relative border-l-4 border-l-primary group">
+              <div className="absolute top-2 right-2 no-print">
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="ghost" size="icon" className="text-destructive">
@@ -421,12 +417,31 @@ function CreateQuestionContent() {
                 </AlertDialog>
               </div>
               <CardContent className="pt-6 space-y-4">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded">
-                    {q.type === 'creative' ? 'সৃজনশীল' : 'সংক্ষিপ্ত'}
-                  </span>
-                  <span className="text-sm font-bold">প্রশ্ন নং: {isEnglishSubject ? (idx + 1) : toBengaliNumber(idx + 1)}</span>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded">
+                      {q.type === 'creative' ? 'সৃজনশীল' : 'সংক্ষিপ্ত'}
+                    </span>
+                    <span className="text-sm font-bold">প্রশ্ন নং: {isEnglishSubject ? (idx + 1) : toBengaliNumber(idx + 1)}</span>
+                  </div>
+                  
+                  {/* Individual Question Marks Input */}
+                  <div className="flex items-center gap-3">
+                    {q.type === 'creative' ? (
+                      <div className="flex gap-2 text-[10px] font-bold">
+                        <div className="flex items-center gap-1">ক: <Input className="w-8 h-6 p-1 text-center" type="number" value={q.marksA || 1} onChange={e => updateQuestion(q.id, {marksA: parseInt(e.target.value) || 0})} /></div>
+                        <div className="flex items-center gap-1">খ: <Input className="w-8 h-6 p-1 text-center" type="number" value={q.marksB || 2} onChange={e => updateQuestion(q.id, {marksB: parseInt(e.target.value) || 0})} /></div>
+                        <div className="flex items-center gap-1">গ: <Input className="w-8 h-6 p-1 text-center" type="number" value={q.marksC || 3} onChange={e => updateQuestion(q.id, {marksC: parseInt(e.target.value) || 0})} /></div>
+                        <div className="flex items-center gap-1">ঘ: <Input className="w-8 h-6 p-1 text-center" type="number" value={q.marksD || 4} onChange={e => updateQuestion(q.id, {marksD: parseInt(e.target.value) || 0})} /></div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-xs font-bold">
+                        নম্বর: <Input className="w-12 h-7 p-1 text-center" type="number" value={q.shortMarks || 2} onChange={e => updateQuestion(q.id, {shortMarks: parseInt(e.target.value) || 0})} />
+                      </div>
+                    )}
+                  </div>
                 </div>
+                
                 <Textarea 
                   placeholder={q.type === 'creative' ? "উদ্দীপক ও প্রশ্ন একসাথে (ক. খ. গ. ঘ. সহ) লিখুন।" : "সংক্ষিপ্ত প্রশ্ন লিখুন..."} 
                   value={q.content || ''} 
@@ -522,25 +537,25 @@ function CreateQuestionContent() {
                       {parsed.qA && (
                         <div className="sub-q">
                           <span className="q-text-part" dangerouslySetInnerHTML={{ __html: 'ক. ' + formatMath(parsed.qA) }} />
-                          <span className="mark">{isEnglishSubject ? meta.marksA : toBengaliNumber(meta.marksA)}</span>
+                          <span className="mark">{isEnglishSubject ? (q.marksA || 1) : toBengaliNumber(q.marksA || 1)}</span>
                         </div>
                       )}
                       {parsed.qB && (
                         <div className="sub-q">
                           <span className="q-text-part" dangerouslySetInnerHTML={{ __html: 'খ. ' + formatMath(parsed.qB) }} />
-                          <span className="mark">{isEnglishSubject ? meta.marksB : toBengaliNumber(meta.marksB)}</span>
+                          <span className="mark">{isEnglishSubject ? (q.marksB || 2) : toBengaliNumber(q.marksB || 2)}</span>
                         </div>
                       )}
                       {parsed.qC && (
                         <div className="sub-q">
                           <span className="q-text-part" dangerouslySetInnerHTML={{ __html: 'গ. ' + formatMath(parsed.qC) }} />
-                          <span className="mark">{isEnglishSubject ? meta.marksC : toBengaliNumber(meta.marksC)}</span>
+                          <span className="mark">{isEnglishSubject ? (q.marksC || 3) : toBengaliNumber(q.marksC || 3)}</span>
                         </div>
                       )}
                       {parsed.qD && (
                         <div className="sub-q">
                           <span className="q-text-part" dangerouslySetInnerHTML={{ __html: 'ঘ. ' + formatMath(parsed.qD) }} />
-                          <span className="mark">{isEnglishSubject ? meta.marksD : toBengaliNumber(meta.marksD)}</span>
+                          <span className="mark">{isEnglishSubject ? (q.marksD || 4) : toBengaliNumber(q.marksD || 4)}</span>
                         </div>
                       )}
                     </div>
