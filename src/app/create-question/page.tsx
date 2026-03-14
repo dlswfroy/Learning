@@ -32,7 +32,7 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 function formatMath(text: string) {
   if (!text) return '';
   
-  // Clean up double parentheses added by AI
+  // Clean up redundant double parentheses added by AI
   let formatted = text.replace(/\(\((.*?)\)\)/g, '$1');
   
   const symbolMap: Record<string, string> = {
@@ -75,7 +75,6 @@ function formatMath(text: string) {
   formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
   formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>');
   
-  // Clean up remaining backslashes
   formatted = formatted.replace(/\\/g, '');
 
   return formatted;
@@ -186,7 +185,6 @@ function CreateQuestionContent() {
     const parts = { main: '', k: '', kh: '', g: '', gh: '' };
     if (!text) return parts;
     
-    // Cleanup double parentheses often added by AI
     const cleanText = text.replace(/\(\((.*?)\)\)/g, '$1').trim();
     
     const markers = ['ক', 'খ', 'গ', 'ঘ'];
