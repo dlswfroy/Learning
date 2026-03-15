@@ -264,7 +264,7 @@ export default function SettingsPage() {
                   ) : (
                     <Input 
                       placeholder="অধ্যায়ের নাম লিখুন" 
-                      value={chapterName || ''} 
+                      value={chapterName ?? ''} 
                       onChange={(e) => setChapterName(e.target.value)}
                     />
                   )}
@@ -284,7 +284,7 @@ export default function SettingsPage() {
                   ) : (
                     <Input 
                       placeholder="https://..." 
-                      value={pdfUrl || ''} 
+                      value={pdfUrl ?? ''} 
                       onChange={(e) => setPdfUrl(e.target.value)}
                       disabled={uploading}
                     />
@@ -294,7 +294,7 @@ export default function SettingsPage() {
                   <label className="text-sm font-semibold">কভার ইমেজ (ঐচ্ছিক)</label>
                   <Input 
                     placeholder="https://..." 
-                    value={coverImageUrl || ''} 
+                    value={coverImageUrl ?? ''} 
                     onChange={(e) => setCoverImageUrl(e.target.value)}
                     disabled={uploading}
                   />

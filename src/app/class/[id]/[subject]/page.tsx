@@ -21,6 +21,7 @@ function toBengaliNumber(n: number | string): string {
 function naturalSort(a: any, b: any) {
   const nameA = a.chapterName || a.fileName || "";
   const nameB = b.chapterName || b.fileName || "";
+  // Use numeric sorting for chapters like "গদ্য-১", "গদ্য-১০"
   return nameA.localeCompare(nameB, 'bn', { numeric: true, sensitivity: 'base' });
 }
 
@@ -52,7 +53,8 @@ export default function SubjectPage() {
   const nctbBooks = useMemo(() => books?.filter(b => !b.isGuide) || [], [books]);
   const guideBooks = useMemo(() => {
     const list = books?.filter(b => b.isGuide) || [];
-    return list.sort(naturalSort);
+    // Apply natural sort so गদ্য-১, गদ্য-২, गদ্য-১০ stays in order
+    return [...list].sort(naturalSort);
   }, [books]);
 
   const renderTextbookList = (bookList: any[]) => {
