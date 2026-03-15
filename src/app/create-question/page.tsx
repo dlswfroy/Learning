@@ -32,7 +32,7 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 function formatMath(text: string) {
   if (!text) return '';
   
-  // Clean redundant formatting and brackets added by AI
+  // Clean redundant formatting and brackets added by AI (( ))
   let formatted = text.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
   
   const symbolMap: Record<string, string> = {
@@ -185,7 +185,7 @@ function CreateQuestionContent() {
     const parts = { main: '', k: '', kh: '', g: '', gh: '' };
     if (!text) return parts;
     
-    // Clean brackets added by AI
+    // Clean brackets added by AI (( ))
     const cleanText = text.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
     
     const markers = ['ক', 'খ', 'গ', 'ঘ'];
@@ -398,42 +398,52 @@ function CreateQuestionContent() {
             <div className="meta-info"><div>সময়: {meta.time}</div><div>পূর্ণমান: {meta.totalMarks}</div></div>
           </div>
 
-          {questions.some(q => q.type === 'creative' || q.type === 'short') && (
+          {/* Creative Section */}
+          {questions.some(q => q.type === 'creative') && (
             <div className="section">
-              <div className="text-center"><div className="section-label">লিখিত প্রশ্ন</div></div>
+              <div className="text-center"><div className="section-label">সৃজনশীল প্রশ্ন</div></div>
               <div className="instruction">{meta.creativeInstruction}</div>
-              {questions.filter(q => q.type === 'creative' || q.type === 'short').map((q, idx) => {
+              {questions.filter(q => q.type === 'creative').map((q, idx) => {
                 const qNum = isEnglish ? (idx + 1) : toBengaliNumber(idx + 1);
-                if (q.type === 'creative') {
-                  const p = parseText(q.content || '');
-                  return (
-                    <div key={q.id} className="q-block">
-                      <div className="font-bold mb-1">{qNum}. উদ্দীপকটি পড়ো এবং প্রশ্নগুলোর উত্তর দাও:</div>
-                      <div className="stimulus" dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} />
-                      {['ক', 'খ', 'গ', 'ঘ'].map((l, i) => {
-                        const text = (p as any)[i === 0 ? 'k' : i === 1 ? 'kh' : i === 2 ? 'g' : 'gh'];
-                        const mark = i === 0 ? meta.marksA : i === 1 ? meta.marksB : i === 2 ? meta.marksC : meta.marksD;
-                        return text && (
-                          <div key={l} className="sub-q">
-                            <span className="q-text-part" dangerouslySetInnerHTML={{ __html: `${l}. ${formatMath(text)}` }} />
-                            <span className="mark">{isEnglish ? mark : toBengaliNumber(mark)}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                } else {
-                  return (
-                    <div key={q.id} className="q-block sub-q">
-                      <span className="q-text-part" dangerouslySetInnerHTML={{ __html: `${qNum}. ${formatMath(q.content || '')}` }} />
-                      <span className="mark">{isEnglish ? meta.shortMarks : toBengaliNumber(meta.shortMarks)}</span>
-                    </div>
-                  );
-                }
+                const p = parseText(q.content || '');
+                return (
+                  <div key={q.id} className="q-block">
+                    <div className="font-bold mb-1">{qNum}. উদ্দীপকটি পড়ো এবং প্রশ্নগুলোর উত্তর দাও:</div>
+                    <div className="stimulus" dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} />
+                    {['ক', 'খ', 'গ', 'ঘ'].map((l, i) => {
+                      const text = (p as any)[i === 0 ? 'k' : i === 1 ? 'kh' : i === 2 ? 'g' : 'gh'];
+                      const mark = i === 0 ? meta.marksA : i === 1 ? meta.marksB : i === 2 ? meta.marksC : meta.marksD;
+                      return text && (
+                        <div key={l} className="sub-q">
+                          <span className="q-text-part" dangerouslySetInnerHTML={{ __html: `${l}. ${formatMath(text)}` }} />
+                          <span className="mark">{isEnglish ? mark : toBengaliNumber(mark)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
               })}
             </div>
           )}
 
+          {/* Short Questions Section */}
+          {questions.some(q => q.type === 'short') && (
+            <div className="section">
+              <div className="text-center"><div className="section-label">সংক্ষিপ্ত প্রশ্ন</div></div>
+              <div className="instruction">{meta.shortInstruction}</div>
+              {questions.filter(q => q.type === 'short').map((q, idx) => {
+                const qNum = isEnglish ? (idx + 1) : toBengaliNumber(idx + 1);
+                return (
+                  <div key={q.id} className="q-block sub-q">
+                    <span className="q-text-part" dangerouslySetInnerHTML={{ __html: `${qNum}. ${formatMath(q.content || '')}` }} />
+                    <span className="mark">{isEnglish ? meta.shortMarks : toBengaliNumber(meta.shortMarks)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* MCQ Section */}
           {questions.some(q => q.type === 'mcq') && (
             <div className="section">
               <div className="text-center"><div className="section-label">বহুনির্বাচনি প্রশ্ন</div></div>
