@@ -20,6 +20,20 @@ import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
+function naturalSort(a: any, b: any) {
+  // Sort by class id first
+  if (a.classId !== b.classId) return parseInt(a.classId) - parseInt(b.classId);
+  // Then by subject
+  if (a.subject !== b.subject) return a.subject.localeCompare(b.subject, 'bn');
+  // Then by guide status (nctb first)
+  if (a.isGuide !== b.isGuide) return a.isGuide ? 1 : -1;
+  
+  const nameA = a.chapterName || a.fileName || "";
+  const nameB = b.chapterName || b.fileName || "";
+  // Natural sort for chapters like গদ্য-১, গদ্য-২, গদ্য-১০
+  return nameA.localeCompare(nameB, 'bn', { numeric: true, sensitivity: 'base' });
+}
+
 export default function SettingsPage() {
   const db = useFirestore();
   const storage = useStorage();
@@ -37,7 +51,9 @@ export default function SettingsPage() {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [uploadMethod, setUploadMethod] = useState<'file' | 'link'>('file');
+  
   const [viewClassId, setViewClassId] = useState<string>('all');
+  const [viewBookType, setViewBookType] = useState<string>('all');
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminCheckLoading, setAdminCheckLoading] = useState(true);
 
@@ -56,7 +72,7 @@ export default function SettingsPage() {
           setIsAdmin(true);
         }
       } catch (e) {
-        console.error("Admin check failed", e);
+        // Silent fail for non-admins
       } finally {
         setAdminCheckLoading(false);
       }
@@ -71,19 +87,23 @@ export default function SettingsPage() {
 
   const { data: rawBooks, loading: loadingBooks } = useCollection(booksQuery);
 
-  const uploadedBooks = useMemo(() => {
+  const sortedBooks = useMemo(() => {
     if (!rawBooks) return [];
-    return [...rawBooks].sort((a, b) => {
-      const dateA = (a.uploadedAt as any)?.toDate?.() || new Date(0);
-      const dateB = (b.uploadedAt as any)?.toDate?.() || new Date(0);
-      return dateB.getTime() - dateA.getTime();
-    });
+    return [...rawBooks].sort(naturalSort);
   }, [rawBooks]);
 
   const filteredBooks = useMemo(() => {
-    if (!viewClassId || viewClassId === 'all') return uploadedBooks;
-    return uploadedBooks.filter(b => b.classId === viewClassId);
-  }, [uploadedBooks, viewClassId]);
+    let list = sortedBooks;
+    if (viewClassId !== 'all') {
+      list = list.filter(b => b.classId === viewClassId);
+    }
+    if (viewBookType === 'nctb') {
+      list = list.filter(b => !b.isGuide);
+    } else if (viewBookType === 'guide') {
+      list = list.filter(b => b.isGuide);
+    }
+    return list;
+  }, [sortedBooks, viewClassId, viewBookType]);
 
   const subjectsList = useMemo(() => classId ? getSubjectsForClass(classId) : [], [classId]);
   const chaptersList = useMemo(() => (classId && subject) ? getChaptersForSubject(classId, subject) : [], [classId, subject]);
@@ -122,12 +142,12 @@ export default function SettingsPage() {
 
   const saveToFirestore = (url: string, fileName: string) => {
     const bookData = {
-      classId: classId || '',
-      subject: subject || '',
+      classId: classId,
+      subject: subject,
       chapterName: bookType === 'guide' ? chapterName : '',
-      fileName: fileName || '',
-      pdfUrl: url || '',
-      coverImageUrl: coverImageUrl || '',
+      fileName: fileName,
+      pdfUrl: url,
+      coverImageUrl: coverImageUrl,
       isGuide: bookType === 'guide',
       uploadedAt: serverTimestamp(),
       userId: user?.uid || '',
@@ -221,7 +241,7 @@ export default function SettingsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">শ্রেণি</label>
-                  <Select onValueChange={setClassId} value={classId || ''}>
+                  <Select onValueChange={setClassId} value={classId}>
                     <SelectTrigger>
                       <SelectValue placeholder="নির্বাচন করুন" />
                     </SelectTrigger>
@@ -234,7 +254,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">বিষয়</label>
-                  <Select onValueChange={setSubject} value={subject || ''} disabled={!classId}>
+                  <Select onValueChange={setSubject} value={subject} disabled={!classId}>
                     <SelectTrigger>
                       <SelectValue placeholder="নির্বাচন করুন" />
                     </SelectTrigger>
@@ -251,7 +271,7 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">অধ্যায়ের নাম</label>
                   {chaptersList.length > 0 ? (
-                    <Select onValueChange={setChapterName} value={chapterName || ''}>
+                    <Select onValueChange={setChapterName} value={chapterName}>
                       <SelectTrigger>
                         <SelectValue placeholder="অধ্যায় নির্বাচন করুন" />
                       </SelectTrigger>
@@ -264,7 +284,7 @@ export default function SettingsPage() {
                   ) : (
                     <Input 
                       placeholder="অধ্যায়ের নাম লিখুন" 
-                      value={chapterName ?? ''} 
+                      value={chapterName} 
                       onChange={(e) => setChapterName(e.target.value)}
                     />
                   )}
@@ -284,7 +304,7 @@ export default function SettingsPage() {
                   ) : (
                     <Input 
                       placeholder="https://..." 
-                      value={pdfUrl ?? ''} 
+                      value={pdfUrl} 
                       onChange={(e) => setPdfUrl(e.target.value)}
                       disabled={uploading}
                     />
@@ -294,7 +314,7 @@ export default function SettingsPage() {
                   <label className="text-sm font-semibold">কভার ইমেজ (ঐচ্ছিক)</label>
                   <Input 
                     placeholder="https://..." 
-                    value={coverImageUrl ?? ''} 
+                    value={coverImageUrl} 
                     onChange={(e) => setCoverImageUrl(e.target.value)}
                     disabled={uploading}
                   />
@@ -327,10 +347,10 @@ export default function SettingsPage() {
       <section className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h3 className="text-lg font-bold">বর্তমানে থাকা বইসমূহ</h3>
-          <div className="flex items-center gap-2 bg-secondary/30 p-1.5 rounded-lg border">
+          <div className="flex flex-wrap items-center gap-2 bg-secondary/30 p-1.5 rounded-lg border">
             <Filter className="w-4 h-4 text-muted-foreground ml-2" />
             <Select value={viewClassId} onValueChange={setViewClassId}>
-              <SelectTrigger className="w-[150px] h-8 text-xs bg-white">
+              <SelectTrigger className="w-[120px] h-8 text-xs bg-white">
                 <SelectValue placeholder="সব শ্রেণি" />
               </SelectTrigger>
               <SelectContent>
@@ -338,6 +358,16 @@ export default function SettingsPage() {
                 {CLASSES.map((c) => (
                   <SelectItem key={`filter-opt-${c.id}`} value={c.id}>{c.label} শ্রেণি</SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+            <Select value={viewBookType} onValueChange={setViewBookType}>
+              <SelectTrigger className="w-[120px] h-8 text-xs bg-white">
+                <SelectValue placeholder="বইয়ের ধরন" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">সব বই</SelectItem>
+                <SelectItem value="nctb">বোর্ড বই</SelectItem>
+                <SelectItem value="guide">গাইড বই</SelectItem>
               </SelectContent>
             </Select>
           </div>
