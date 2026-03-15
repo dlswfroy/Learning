@@ -114,7 +114,7 @@ export default function SubjectPage() {
               </div>
               <h3 className="text-xl font-bold mb-2 text-foreground/80">বইটি এখনো নেই</h3>
               <p className="text-muted-foreground max-w-sm mb-6 text-sm">
-                দুঃখিত, এই বইটির ডিজিটাল কপি সিস্টেমে নেই। আপনি এডমিন হয়ে থাকলে সেটিং থেকে বইয়ের লিঙ্ক যোগ করতে পারেন।
+                দুঃখিত, এই বইটির ডিজিটাল কপি সিস্টেমে নেই। আপনি সেটিং থেকে বইয়ের লিঙ্ক যোগ করতে পারেন।
               </p>
               <Link href="/settings">
                 <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-white transition-all font-bold">
