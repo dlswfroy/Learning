@@ -9,13 +9,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, Plus, Trash2, BookOpen, Save, FileText, ArrowLeft, Loader2, BrainCircuit } from 'lucide-react';
+import { Printer, Plus, Trash2, BookOpen, Save, FileText, ArrowLeft, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useUser } from '@/firebase';
 import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import { generatePracticeQuestions } from '@/ai/flows/generate-practice-questions';
 
 type Question = {
   id: string;
@@ -60,7 +59,6 @@ function CreateQuestionContent() {
   const editId = searchParams.get('id');
   const [loading, setLoading] = useState(!!editId);
   const [saving, setSaving] = useState(false);
-  const [generating, setGenerating] = useState(false);
   const [meta, setMeta] = useState({
     institution: '', exam: '', classId: '', subject: '', time: '২ ঘণ্টা ৩০ মিনিট', totalMarks: '১০০',
     creativeInstruction: 'যেকোনো ৭টি প্রশ্নের উত্তর দাও', shortInstruction: 'সকল প্রশ্নের উত্তর দাও',

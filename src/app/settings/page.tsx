@@ -27,7 +27,6 @@ function naturalSort(a: any, b: any) {
   
   const nameA = a.chapterName || a.fileName || "";
   const nameB = b.chapterName || b.fileName || "";
-  // Natural sorting for names like "গদ্য-১", "গদ্য-১০"
   return nameA.localeCompare(nameB, 'bn', { numeric: true, sensitivity: 'base' });
 }
 
