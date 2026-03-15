@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Settings, Upload, FileText, CheckCircle, Trash2, Loader2, Link as LinkIcon, Filter, BookCopy } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -221,7 +221,7 @@ export default function SettingsPage() {
             <CardContent className="pt-4 space-y-6">
               <div className="space-y-3">
                 <Label className="font-bold text-primary">বইয়ের ধরন</Label>
-                <RadioGroup value={bookType} onValueChange={(v) => setBookType(v as 'nctb' | 'guide')} className="flex gap-6">
+                <RadioGroup value={bookType || 'nctb'} onValueChange={(v) => setBookType(v as 'nctb' | 'guide')} className="flex gap-6">
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="nctb" id="nctb" />
                     <Label htmlFor="nctb" className="cursor-pointer">পাঠ্যবই (NCTB)</Label>
@@ -344,7 +344,7 @@ export default function SettingsPage() {
           <h3 className="text-lg font-bold">বর্তমানে থাকা বইসমূহ</h3>
           <div className="flex flex-wrap items-center gap-2 bg-secondary/30 p-1.5 rounded-lg border">
             <Filter className="w-4 h-4 text-muted-foreground ml-2" />
-            <Select value={viewClassId} onValueChange={setViewClassId}>
+            <Select value={viewClassId || 'all'} onValueChange={setViewClassId}>
               <SelectTrigger className="w-[120px] h-8 text-xs bg-white">
                 <SelectValue placeholder="সব শ্রেণি" />
               </SelectTrigger>
@@ -355,7 +355,7 @@ export default function SettingsPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={viewBookType} onValueChange={setViewBookType}>
+            <Select value={viewBookType || 'all'} onValueChange={setViewBookType}>
               <SelectTrigger className="w-[120px] h-8 text-xs bg-white">
                 <SelectValue placeholder="বইয়ের ধরন" />
               </SelectTrigger>
