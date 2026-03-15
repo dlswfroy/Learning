@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { CLASSES, getSubjectsForClass, getChaptersForSubject } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useStorage, useUser, useDoc } from '@/firebase';
 import { collection, addDoc, deleteDoc, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL, uploadBytes } from 'firebase/storage';
 import { updateProfile } from 'firebase/auth';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -38,6 +38,10 @@ export default function SettingsPage() {
   const { user, loading: userLoading } = useUser();
   const router = useRouter();
   
+  // Refs
+  const profileInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
   // States for Book Upload
   const [classId, setClassId] = useState<string>('');
   const [subject, setSubject] = useState<string>('');
@@ -60,12 +64,14 @@ export default function SettingsPage() {
   const [displayName, setDisplayName] = useState('');
   const [photoURL, setPhotoURL] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
+  const [profileUploading, setProfileUploading] = useState(false);
 
   const softwareDocRef = useMemo(() => doc(db, 'config', 'software'), [db]);
   const { data: softwareConfig, loading: loadingSoftware } = useDoc(softwareDocRef);
   const [appName, setAppName] = useState('');
   const [appLogoUrl, setAppLogoUrl] = useState('');
   const [savingSoftware, setSavingSoftware] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
 
   useEffect(() => {
     if (!userLoading && !user) router.push('/auth');
@@ -116,6 +122,42 @@ export default function SettingsPage() {
   const subjectsList = useMemo(() => classId ? getSubjectsForClass(classId) : [], [classId]);
   const chaptersList = useMemo(() => (classId && subject) ? getChaptersForSubject(classId, subject) : [], [classId, subject]);
 
+  const handleProfileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !storage || !user) return;
+    
+    setProfileUploading(true);
+    const storageRef = ref(storage, `profiles/${user.uid}/${Date.now()}_${file.name}`);
+    try {
+      const snapshot = await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(snapshot.ref);
+      setPhotoURL(url);
+      toast({ title: "ছবি আপলোড সফল", description: "এখন প্রোফাইল সেভ করুন।" });
+    } catch (error) {
+      toast({ variant: "destructive", title: "আপলোড ব্যর্থ", description: "আবার চেষ্টা করুন।" });
+    } finally {
+      setProfileUploading(false);
+    }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !storage || !isAdmin) return;
+    
+    setLogoUploading(true);
+    const storageRef = ref(storage, `branding/logo_${Date.now()}_${file.name}`);
+    try {
+      const snapshot = await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(snapshot.ref);
+      setAppLogoUrl(url);
+      toast({ title: "লোগো আপলোড সফল", description: "এখন ব্র্যান্ডিং সেভ করুন।" });
+    } catch (error) {
+      toast({ variant: "destructive", title: "আপলোড ব্যর্থ", description: "আবার চেষ্টা করুন।" });
+    } finally {
+      setLogoUploading(false);
+    }
+  };
+
   const handleUpdateProfile = async () => {
     if (!user) return;
     setSavingProfile(true);
@@ -132,7 +174,7 @@ export default function SettingsPage() {
   const handleUpdateSoftware = async () => {
     if (!isAdmin || !db) return;
     setSavingSoftware(true);
-    const data = { appName, appLogoUrl };
+    const data = { appName: appName || '', appLogoUrl: appLogoUrl || '' };
     try {
       await setDoc(softwareDocRef, data, { merge: true });
       toast({ title: "সফল", description: "সফটওয়্যার ব্র্যান্ডিং আপডেট করা হয়েছে।" });
@@ -231,10 +273,26 @@ export default function SettingsPage() {
             <CardHeader><CardTitle>ব্যক্তিগত প্রোফাইল</CardTitle><CardDescription>আপনার নাম ও প্রোফাইল ছবি আপডেট করুন</CardDescription></CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center gap-6">
-                <Avatar className="h-20 w-20 border-2 border-primary/20">
-                  <AvatarImage src={photoURL || ''} />
-                  <AvatarFallback className="text-2xl font-bold bg-secondary text-primary">{displayName?.charAt(0) || 'U'}</AvatarFallback>
-                </Avatar>
+                <div className="relative group">
+                  <Avatar className="h-20 w-20 border-2 border-primary/20">
+                    <AvatarImage src={photoURL || ''} />
+                    <AvatarFallback className="text-2xl font-bold bg-secondary text-primary">{displayName?.charAt(0) || 'U'}</AvatarFallback>
+                  </Avatar>
+                  <button 
+                    onClick={() => profileInputRef.current?.click()}
+                    disabled={profileUploading}
+                    className="absolute -bottom-1 -right-1 bg-primary text-white p-1.5 rounded-full shadow-lg hover:scale-110 transition-transform disabled:opacity-50"
+                  >
+                    {profileUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Camera className="w-3 h-3" />}
+                  </button>
+                  <input 
+                    type="file" 
+                    ref={profileInputRef} 
+                    className="hidden" 
+                    accept="image/*" 
+                    onChange={handleProfileUpload}
+                  />
+                </div>
                 <div className="flex-1 space-y-4">
                   <div className="space-y-2">
                     <Label>আপনার নাম</Label>
@@ -242,10 +300,7 @@ export default function SettingsPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>প্রোফাইল ছবির লিঙ্ক</Label>
-                    <div className="flex gap-2">
-                      <Input value={photoURL || ''} onChange={e => setPhotoURL(e.target.value)} placeholder="https://..." />
-                      <Button size="icon" variant="outline"><Camera className="w-4 h-4" /></Button>
-                    </div>
+                    <Input value={photoURL || ''} onChange={e => setPhotoURL(e.target.value)} placeholder="https://..." />
                   </div>
                 </div>
               </div>
@@ -335,23 +390,42 @@ export default function SettingsPage() {
           <TabsContent value="software" className="space-y-6">
             <Card>
               <CardHeader><CardTitle>সফটওয়্যার ব্র্যান্ডিং</CardTitle><CardDescription>অ্যাপের নাম ও লোগো পরিবর্তন করুন</CardDescription></CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>সফটওয়্যারের নাম</Label>
-                  <Input value={appName || ''} onChange={e => setAppName(e.target.value)} placeholder="আমার প্রশ্ন" />
-                </div>
-                <div className="space-y-2">
-                  <Label>লোগো ছবির লিঙ্ক</Label>
-                  <Input value={appLogoUrl || ''} onChange={e => setAppLogoUrl(e.target.value)} placeholder="https://..." />
-                </div>
-                {appLogoUrl && (
-                  <div className="pt-2">
-                    <Label className="block mb-2 text-xs">লোগো প্রিভিউ</Label>
-                    <div className="w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center p-2 border">
-                      <img src={appLogoUrl} alt="Logo Preview" className="max-w-full max-h-full object-contain" />
+              <CardContent className="space-y-6">
+                <div className="flex items-center gap-6">
+                  <div className="relative group">
+                    <div className="w-20 h-20 rounded-lg bg-primary/10 flex items-center justify-center p-2 border overflow-hidden">
+                      {appLogoUrl ? (
+                        <img src={appLogoUrl} alt="Logo" className="max-w-full max-h-full object-contain" />
+                      ) : (
+                        <Globe className="w-10 h-10 text-primary" />
+                      )}
+                    </div>
+                    <button 
+                      onClick={() => logoInputRef.current?.click()}
+                      disabled={logoUploading}
+                      className="absolute -bottom-2 -right-2 bg-accent text-white p-1.5 rounded-full shadow-lg hover:scale-110 transition-transform disabled:opacity-50"
+                    >
+                      {logoUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Camera className="w-3 h-3" />}
+                    </button>
+                    <input 
+                      type="file" 
+                      ref={logoInputRef} 
+                      className="hidden" 
+                      accept="image/*" 
+                      onChange={handleLogoUpload}
+                    />
+                  </div>
+                  <div className="flex-1 space-y-4">
+                    <div className="space-y-2">
+                      <Label>সফটওয়্যারের নাম</Label>
+                      <Input value={appName || ''} onChange={e => setAppName(e.target.value)} placeholder="আমার প্রশ্ন" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>লোগো ছবির লিঙ্ক</Label>
+                      <Input value={appLogoUrl || ''} onChange={e => setAppLogoUrl(e.target.value)} placeholder="https://..." />
                     </div>
                   </div>
-                )}
+                </div>
               </CardContent>
               <CardFooter className="flex justify-end border-t bg-muted/20 py-4">
                 <Button onClick={handleUpdateSoftware} disabled={savingSoftware} className="gap-2">

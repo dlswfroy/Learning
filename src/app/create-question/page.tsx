@@ -172,7 +172,7 @@ function CreateQuestionContent() {
 
     const docId = editId || doc(collection(db, 'questions')).id;
     
-    const data = {
+    const data: any = {
       institution: meta.institution || '',
       exam: meta.exam || '',
       classId: meta.classId || '',
@@ -182,18 +182,21 @@ function CreateQuestionContent() {
       creativeInstruction: meta.creativeInstruction || '',
       shortInstruction: meta.shortInstruction || '',
       mcqInstruction: meta.mcqInstruction || 'সঠিক উত্তরের বৃত্তটি ভরাট করো',
-      marksA: meta.marksA || 1,
-      marksB: meta.marksB || 2,
-      marksC: meta.marksC || 3,
-      marksD: meta.marksD || 4,
-      shortMarks: meta.shortMarks || 2,
-      mcqMarks: meta.mcqMarks || 1,
+      marksA: meta.marksA || 0,
+      marksB: meta.marksB || 0,
+      marksC: meta.marksC || 0,
+      marksD: meta.marksD || 0,
+      shortMarks: meta.shortMarks || 0,
+      mcqMarks: meta.mcqMarks || 0,
       questions: formattedQuestions,
       userId: user.uid,
       updatedAt: serverTimestamp(),
-      isMcq: questions.some(q => q.type === 'mcq'),
-      ...(editId ? {} : { createdAt: serverTimestamp() })
+      isMcq: questions.some(q => q.type === 'mcq')
     };
+
+    if (!editId) {
+      data.createdAt = serverTimestamp();
+    }
 
     const ref = doc(db, 'questions', docId);
     setDoc(ref, data, { merge: true })
