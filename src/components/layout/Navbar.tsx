@@ -27,8 +27,14 @@ export function Navbar() {
   const softwareDocRef = useMemo(() => doc(db, 'config', 'software'), [db]);
   const { data: softwareConfig } = useDoc(softwareDocRef);
 
+  const userProfileRef = useMemo(() => user ? doc(db, 'users', user.uid) : null, [db, user]);
+  const { data: userProfile } = useDoc(userProfileRef);
+
   const appName = softwareConfig?.appName || 'আমার প্রশ্ন';
   const appLogoUrl = softwareConfig?.appLogoUrl || '';
+
+  const userName = userProfile?.displayName || user?.displayName || 'ব্যবহারকারী';
+  const userPhoto = userProfile?.photoURL || user?.photoURL || '';
 
   const handleLogout = async () => {
     try {
@@ -59,9 +65,9 @@ export function Navbar() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                   <Avatar className="h-10 w-10 border-2 border-white/20">
-                    <AvatarImage src={user.photoURL || ''} alt={user.displayName || ''} />
+                    <AvatarImage src={userPhoto} alt={userName} />
                     <AvatarFallback className="bg-secondary text-primary font-bold">
-                      {user.displayName?.charAt(0) || user.email?.charAt(0) || 'U'}
+                      {userName.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
@@ -69,7 +75,7 @@ export function Navbar() {
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{user.displayName || 'ব্যবহারকারী'}</p>
+                    <p className="text-sm font-medium leading-none">{userName}</p>
                     <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
                   </div>
                 </DropdownMenuLabel>

@@ -109,13 +109,22 @@ export default function SettingsPage() {
   const [appLogoUrl, setAppLogoUrl] = useState('');
   const [savingSoftware, setSavingSoftware] = useState(false);
 
+  const userProfileRef = useMemo(() => user ? doc(db, 'users', user.uid) : null, [db, user]);
+  const { data: userProfile } = useDoc(userProfileRef);
+
   useEffect(() => {
     if (!userLoading && !user) router.push('/auth');
-    if (user) {
+  }, [user, userLoading, router]);
+
+  useEffect(() => {
+    if (userProfile) {
+      setDisplayName(userProfile.displayName || user?.displayName || '');
+      setPhotoURL(userProfile.photoURL || user?.photoURL || '');
+    } else if (user) {
       setDisplayName(user.displayName || '');
       setPhotoURL(user.photoURL || '');
     }
-  }, [user, userLoading, router]);
+  }, [userProfile, user]);
 
   useEffect(() => {
     if (softwareConfig) {
@@ -183,12 +192,31 @@ export default function SettingsPage() {
   };
 
   const handleUpdateProfile = async () => {
-    if (!user) return;
+    if (!user || !userProfileRef) return;
     setSavingProfile(true);
+    const profileData = { 
+      displayName: displayName || '', 
+      photoURL: photoURL || '', 
+      updatedAt: serverTimestamp() 
+    };
     try {
-      await updateProfile(user, { displayName, photoURL });
+      // Save to Firestore to support large Base64 strings (Firebase Auth has small limits)
+      await setDoc(userProfileRef, profileData, { merge: true });
+      
+      // Also try to update Auth Profile (might fail if photoURL is too large, but we mainly care about displayName)
+      try {
+        await updateProfile(user, { displayName });
+      } catch (authErr) {
+        // Ignore auth error as we're primarily using Firestore
+      }
+      
       toast({ title: "সফল", description: "প্রোফাইল আপডেট করা হয়েছে।" });
     } catch (e) {
+      errorEmitter.emit('permission-error', new FirestorePermissionError({
+        path: userProfileRef.path,
+        operation: 'write',
+        requestResourceData: profileData
+      }));
       toast({ variant: "destructive", title: "ত্রুটি", description: "প্রোফাইল আপডেট করা সম্ভব হয়নি।" });
     } finally {
       setSavingProfile(false);

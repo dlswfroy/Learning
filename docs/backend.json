@@ -79,6 +79,16 @@
         "appName": { "type": "string" },
         "appLogoUrl": { "type": "string" }
       }
+    },
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores extended user profile information including large Base64 images.",
+      "type": "object",
+      "properties": {
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "auth": {
@@ -100,6 +110,10 @@
     "/config/software": {
       "schema": "SoftwareConfig",
       "description": "Global software settings branding."
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Stored user profile data."
     }
   }
 }
