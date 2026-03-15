@@ -70,6 +70,15 @@
       "properties": {
         "adminUid": { "type": "string" }
       }
+    },
+    "SoftwareConfig": {
+      "title": "Software Config",
+      "description": "Global settings for the application branding.",
+      "type": "object",
+      "properties": {
+        "appName": { "type": "string" },
+        "appLogoUrl": { "type": "string" }
+      }
     }
   },
   "auth": {
@@ -87,6 +96,10 @@
     "/config/admin": {
       "schema": "AdminConfig",
       "description": "Global config to store the first admin's UID."
+    },
+    "/config/software": {
+      "schema": "SoftwareConfig",
+      "description": "Global software settings branding."
     }
   }
 }

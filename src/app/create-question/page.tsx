@@ -59,14 +59,17 @@ function CreateQuestionContent() {
   const editId = searchParams.get('id');
   const [loading, setLoading] = useState(!!editId);
   const [saving, setSaving] = useState(false);
+  
   const [meta, setMeta] = useState({
     institution: '', exam: '', classId: '', subject: '', time: '২ ঘণ্টা ৩০ মিনিট', totalMarks: '১০০',
     creativeInstruction: 'যেকোনো ৭টি প্রশ্নের উত্তর দাও', shortInstruction: 'সকল প্রশ্নের উত্তর দাও',
     mcqInstruction: 'সঠিক উত্তরের বৃত্তটি ভরাট করো', marksA: 1, marksB: 2, marksC: 3, marksD: 4, shortMarks: 2, mcqMarks: 1
   });
+  
   const [questions, setQuestions] = useState<Question[]>([]);
 
   useEffect(() => { if (!userLoading && !user) router.push('/auth'); }, [user, userLoading, router]);
+  
   useEffect(() => {
     async function loadQuestion() {
       if (!editId || !db || !user) return;
@@ -139,18 +142,74 @@ function CreateQuestionContent() {
   };
 
   const handleSaveToDb = () => {
-    if (!user) { toast({ title: "লগইন প্রয়োজন", variant: "destructive" }); return; }
+    if (!user || !db) { toast({ title: "লগইন প্রয়োজন", variant: "destructive" }); return; }
     setSaving(true);
+    
+    // Sanitize formatted questions to avoid undefined
     const formattedQuestions = questions.map(q => {
       const p = parseText(q.content || '');
-      if (q.type === 'creative') return { type: 'creative', stimulus: p.main, qA: p.k, qB: p.kh, qC: p.g, qD: p.gh };
-      if (q.type === 'mcq') return { type: 'mcq', mcqQuestion: p.main, optA: p.k, optB: p.kh, optC: p.g, optD: p.gh };
-      return { type: 'short', shortText: q.content };
+      if (q.type === 'creative') {
+        return { 
+          type: 'creative', 
+          stimulus: p.main || '', 
+          qA: p.k || '', 
+          qB: p.kh || '', 
+          qC: p.g || '', 
+          qD: p.gh || '' 
+        };
+      }
+      if (q.type === 'mcq') {
+        return { 
+          type: 'mcq', 
+          mcqQuestion: p.main || '', 
+          optA: p.k || '', 
+          optB: p.kh || '', 
+          optC: p.g || '', 
+          optD: p.gh || '' 
+        };
+      }
+      return { type: 'short', shortText: q.content || '' };
     });
-    const docId = editId || doc(collection(db!, 'questions')).id;
-    const data = { ...meta, questions: formattedQuestions, userId: user.uid, updatedAt: serverTimestamp(), isMcq: questions.some(q => q.type === 'mcq'), ...(editId ? {} : { createdAt: serverTimestamp() }) };
-    const ref = doc(db!, 'questions', docId);
-    setDoc(ref, data, { merge: true }).then(() => { setSaving(false); toast({ title: "সফল!", description: "ডাটাবেসে সেভ হয়েছে।" }); if (!editId) router.replace(`/create-question?id=${docId}`); }).catch(async () => { setSaving(false); errorEmitter.emit('permission-error', new FirestorePermissionError({ path: ref.path, operation: 'write', requestResourceData: data })); });
+
+    const docId = editId || doc(collection(db, 'questions')).id;
+    
+    // Sanitize metadata to avoid undefined
+    const data = {
+      institution: meta.institution || '',
+      exam: meta.exam || '',
+      classId: meta.classId || '',
+      subject: meta.subject || '',
+      time: meta.time || '',
+      totalMarks: meta.totalMarks || '',
+      creativeInstruction: meta.creativeInstruction || '',
+      shortInstruction: meta.shortInstruction || '',
+      mcqInstruction: meta.mcqInstruction || 'সঠিক উত্তরের বৃত্তটি ভরাট করো',
+      marksA: meta.marksA || 1,
+      marksB: meta.marksB || 2,
+      marksC: meta.marksC || 3,
+      marksD: meta.marksD || 4,
+      shortMarks: meta.shortMarks || 2,
+      mcqMarks: meta.mcqMarks || 1,
+      questions: formattedQuestions,
+      userId: user.uid,
+      updatedAt: serverTimestamp(),
+      isMcq: questions.some(q => q.type === 'mcq'),
+      ...(editId ? {} : { createdAt: serverTimestamp() })
+    };
+
+    const ref = doc(db, 'questions', docId);
+    setDoc(ref, data, { merge: true })
+      .then(() => { 
+        setSaving(false); 
+        toast({ title: "সফল!", description: "ডাটাবেসে সেভ হয়েছে।" }); 
+        if (!editId) router.replace(`/create-question?id=${docId}`); 
+      })
+      .catch(async () => { 
+        setSaving(false); 
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ 
+          path: ref.path, operation: 'write', requestResourceData: data 
+        })); 
+      });
   };
 
   const isEnglish = meta.subject?.toLowerCase().includes('english') || meta.subject?.toLowerCase().includes('ইংরেজি');
