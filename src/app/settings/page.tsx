@@ -221,26 +221,26 @@ export default function SettingsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">শ্রেণি</label>
-                  <Select key={`sel-cls-${classId}`} onValueChange={setClassId} value={classId || ''}>
+                  <Select onValueChange={setClassId} value={classId || ''}>
                     <SelectTrigger>
                       <SelectValue placeholder="নির্বাচন করুন" />
                     </SelectTrigger>
                     <SelectContent>
                       {CLASSES.map((c) => (
-                        <SelectItem key={`opt-${c.id}`} value={c.id}>{c.label} শ্রেণি</SelectItem>
+                        <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">বিষয়</label>
-                  <Select key={`sel-sub-${subject}`} onValueChange={setSubject} value={subject || ''} disabled={!classId}>
+                  <Select onValueChange={setSubject} value={subject || ''} disabled={!classId}>
                     <SelectTrigger>
                       <SelectValue placeholder="নির্বাচন করুন" />
                     </SelectTrigger>
                     <SelectContent>
                       {subjectsList.map((s) => (
-                        <SelectItem key={`opt-${s}`} value={s}>{s}</SelectItem>
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -276,7 +276,6 @@ export default function SettingsPage() {
                   <label className="text-sm font-semibold">{uploadMethod === 'file' ? 'PDF ফাইল' : 'ডাউনলোড লিঙ্ক'}</label>
                   {uploadMethod === 'file' ? (
                     <Input 
-                      key="f-inp"
                       type="file" 
                       accept=".pdf" 
                       onChange={(e) => setFile(e.target.files?.[0] || null)}
@@ -284,7 +283,6 @@ export default function SettingsPage() {
                     />
                   ) : (
                     <Input 
-                      key="u-inp"
                       placeholder="https://..." 
                       value={pdfUrl || ''} 
                       onChange={(e) => setPdfUrl(e.target.value)}
@@ -295,7 +293,6 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">কভার ইমেজ (ঐচ্ছিক)</label>
                   <Input 
-                    key="c-inp"
                     placeholder="https://..." 
                     value={coverImageUrl || ''} 
                     onChange={(e) => setCoverImageUrl(e.target.value)}

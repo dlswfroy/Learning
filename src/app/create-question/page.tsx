@@ -31,42 +31,16 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 
 function formatMath(text: string) {
   if (!text) return '';
-  
-  // Clean redundant formatting and brackets added by AI (( ))
   let formatted = text.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
-  
   const symbolMap: Record<string, string> = {
-    '\\\\log': 'log',
-    '\\\\triangle': '△',
-    '\\\\angle': '∠',
-    '\\\\circ': '°',
-    '\\\\theta': 'θ',
-    '\\\\pi': 'π',
-    '\\\\pm': '±',
-    '\\\\times': '×',
-    '\\\\neq': '≠',
-    '\\\\ne': '≠',
-    '\\\\leq': '≤',
-    '\\\\geq': '≥',
-    '\\\\degree': '°',
-    '\\\\cdot': '·',
-    '\\\\infty': '∞',
-    '\\\\approx': '≈',
-    '\\\\sum': '∑',
-    '\\\\prod': '∏',
-    '\\\\alpha': 'α',
-    '\\\\beta': 'β',
-    '\\\\gamma': 'γ',
-    '\\\\delta': 'δ',
-    '\\\\sigma': 'σ',
-    '\\\\phi': 'φ',
-    '\\\\omega': 'ω'
+    '\\\\log': 'log', '\\\\triangle': '△', '\\\\angle': '∠', '\\\\circ': '°',
+    '\\\\theta': 'θ', '\\\\pi': 'π', '\\\\pm': '±', '\\\\times': '×',
+    '\\\\neq': '≠', '\\\\ne': '≠', '\\\\leq': '≤', '\\\\geq': '≥',
+    '\\\\degree': '°', '\\\\cdot': '·', '\\\\infty': '∞', '\\\\approx': '≈',
+    '\\\\sum': '∑', '\\\\prod': '∏', '\\\\alpha': 'α', '\\\\beta': 'β',
+    '\\\\gamma': 'γ', '\\\\delta': 'δ', '\\\\sigma': 'σ', '\\\\phi': 'φ', '\\\\omega': 'ω'
   };
-
-  Object.entries(symbolMap).forEach(([key, val]) => {
-    formatted = formatted.replace(new RegExp(key, 'g'), val);
-  });
-
+  Object.entries(symbolMap).forEach(([key, val]) => { formatted = formatted.replace(new RegExp(key, 'g'), val); });
   formatted = formatted.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
   formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
@@ -74,9 +48,7 @@ function formatMath(text: string) {
   formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
   formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
   formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>');
-  
   formatted = formatted.replace(/\\/g, '');
-
   return formatted;
 }
 
@@ -85,36 +57,18 @@ function CreateQuestionContent() {
   const { user, loading: userLoading } = useUser();
   const searchParams = useSearchParams();
   const router = useRouter();
-  
   const editId = searchParams.get('id');
   const [loading, setLoading] = useState(!!editId);
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
-
   const [meta, setMeta] = useState({
-    institution: '',
-    exam: '',
-    classId: '',
-    subject: '',
-    time: '২ ঘণ্টা ৩০ মিনিট',
-    totalMarks: '১০০',
-    creativeInstruction: 'যেকোনো ৭টি প্রশ্নের উত্তর দাও',
-    shortInstruction: 'সকল প্রশ্নের উত্তর দাও',
-    mcqInstruction: 'সঠিক উত্তরের বৃত্তটি ভরাট করো',
-    marksA: 1,
-    marksB: 2,
-    marksC: 3,
-    marksD: 4,
-    shortMarks: 2,
-    mcqMarks: 1
+    institution: '', exam: '', classId: '', subject: '', time: '২ ঘণ্টা ৩০ মিনিট', totalMarks: '১০০',
+    creativeInstruction: 'যেকোনো ৭টি প্রশ্নের উত্তর দাও', shortInstruction: 'সকল প্রশ্নের উত্তর দাও',
+    mcqInstruction: 'সঠিক উত্তরের বৃত্তটি ভরাট করো', marksA: 1, marksB: 2, marksC: 3, marksD: 4, shortMarks: 2, mcqMarks: 1
   });
-
   const [questions, setQuestions] = useState<Question[]>([]);
 
-  useEffect(() => {
-    if (!userLoading && !user) router.push('/auth');
-  }, [user, userLoading, router]);
-
+  useEffect(() => { if (!userLoading && !user) router.push('/auth'); }, [user, userLoading, router]);
   useEffect(() => {
     async function loadQuestion() {
       if (!editId || !db || !user) return;
@@ -134,12 +88,8 @@ function CreateQuestionContent() {
           });
           const reconstructed = data.questions.map((q: any) => {
             const id = Math.random().toString(36).substr(2, 9);
-            if (q.type === 'mcq') {
-              return { id, type: 'mcq', content: `${q.mcqQuestion || ''}\nক. ${q.optA || ''}\nখ. ${q.optB || ''}\nগ. ${q.optC || ''}\nঘ. ${q.optD || ''}` };
-            }
-            if (q.type === 'creative') {
-              return { id, type: 'creative', content: `${q.stimulus || ''}\nক. ${q.qA || ''}\nখ. ${q.qB || ''}\nগ. ${q.qC || ''}\nঘ. ${q.qD || ''}` };
-            }
+            if (q.type === 'mcq') return { id, type: 'mcq', content: `${q.mcqQuestion || ''}\nক. ${q.optA || ''}\nখ. ${q.optB || ''}\nগ. ${q.optC || ''}\nঘ. ${q.optD || ''}` };
+            if (q.type === 'creative') return { id, type: 'creative', content: `${q.stimulus || ''}\nক. ${q.qA || ''}\nখ. ${q.qB || ''}\nগ. ${q.qC || ''}\nঘ. ${q.qD || ''}` };
             return { id, type: 'short', content: q.shortText || '' };
           });
           setQuestions(reconstructed);
@@ -152,50 +102,17 @@ function CreateQuestionContent() {
   const subjects = useMemo(() => meta.classId ? getSubjectsForClass(meta.classId) : [], [meta.classId]);
 
   const handleAddQuestion = (type: 'creative' | 'short' | 'mcq') => {
-    const newQ: Question = { id: Math.random().toString(36).substr(2, 9), type, content: '' };
-    setQuestions(prev => [...prev, newQ]);
-  };
-
-  const handleAiGenerate = async (type: 'creative' | 'short' | 'mcq') => {
-    if (!meta.classId || !meta.subject) {
-      toast({ title: "তথ্য দিন", description: "প্রথমে শ্রেণি ও বিষয় নির্বাচন করুন।", variant: "destructive" });
-      return;
-    }
-    setGenerating(true);
-    try {
-      const result = await generatePracticeQuestions({ classId: meta.classId, subject: meta.subject, type: type === 'creative' ? 'creative' : type === 'short' ? 'short' : 'mcq', count: 5 });
-      const newQs = result.questions.map(q => {
-        const id = Math.random().toString(36).substr(2, 9);
-        if (q.type === 'mcq') {
-          return { id, type: 'mcq', content: `${q.mcqQuestion}\nক. ${q.optA}\nখ. ${q.optB}\nগ. ${q.optC}\nঘ. ${q.optD}` };
-        }
-        if (q.type === 'creative') {
-          return { id, type: 'creative', content: `${q.stimulus}\nক. ${q.qA}\nখ. ${q.qB}\nগ. ${q.qC}\nঘ. ${q.qD}` };
-        }
-        return { id, type: 'short', content: q.shortText || '' };
-      });
-      setQuestions(prev => [...prev, ...newQs]);
-      toast({ title: "সফল", description: "AI প্রশ্নপত্র তৈরি করেছে।" });
-    } catch (e) {
-      toast({ title: "ত্রুটি", description: "প্রশ্ন তৈরিতে সমস্যা হয়েছে।", variant: "destructive" });
-    } finally { setGenerating(false); }
+    setQuestions(prev => [...prev, { id: Math.random().toString(36).substr(2, 9), type, content: '' }]);
   };
 
   const parseText = (text: string) => {
     const parts = { main: '', k: '', kh: '', g: '', gh: '' };
     if (!text) return parts;
-    
-    // Clean brackets added by AI (( ))
     const cleanText = text.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
-    
     const markers = ['ক', 'খ', 'গ', 'ঘ'];
     let firstMarkerPos = -1;
-    
     const findMarkerPos = (m: string, fromIndex: number = 0) => {
-      const patterns = [
-        m + '.', m + ')', m + ' .', m + ' )', 
-        m + '.\n', m + ')\n', '\n' + m + '.', '\n' + m + ')'
-      ];
+      const patterns = [ m + '.', m + ')', m + ' .', m + ' )', m + '.\n', m + ')\n', '\n' + m + '.', '\n' + m + ')' ];
       let minIdx = -1;
       for (const p of patterns) {
         const idx = cleanText.indexOf(p, fromIndex);
@@ -203,38 +120,23 @@ function CreateQuestionContent() {
       }
       return minIdx;
     };
-
     for (const m of markers) {
       const pos = findMarkerPos(m);
-      if (pos !== -1 && (firstMarkerPos === -1 || pos < firstMarkerPos)) {
-        firstMarkerPos = pos;
-      }
+      if (pos !== -1 && (firstMarkerPos === -1 || pos < firstMarkerPos)) firstMarkerPos = pos;
     }
-
     if (firstMarkerPos !== -1) {
       parts.main = cleanText.substring(0, firstMarkerPos).trim();
       const extract = (m: string) => {
         const startIdx = findMarkerPos(m);
         if (startIdx === -1) return '';
         let markerEnd = startIdx;
-        while (markerEnd < cleanText.length && (cleanText[markerEnd] === ' ' || cleanText[markerEnd] === '\n' || markers.includes(cleanText[markerEnd]) || ['.', ')'].includes(cleanText[markerEnd]))) {
-          markerEnd++;
-        }
+        while (markerEnd < cleanText.length && (cleanText[markerEnd] === ' ' || cleanText[markerEnd] === '\n' || markers.includes(cleanText[markerEnd]) || ['.', ')'].includes(cleanText[markerEnd]))) markerEnd++;
         let end = cleanText.length;
-        for (const otherM of markers) {
-          if (otherM === m) continue;
-          const e = findMarkerPos(otherM, markerEnd);
-          if (e !== -1 && e < end) end = e;
-        }
+        for (const otherM of markers) { if (otherM === m) continue; const e = findMarkerPos(otherM, markerEnd); if (e !== -1 && e < end) end = e; }
         return cleanText.substring(markerEnd, end).trim();
       };
-      parts.k = extract('ক');
-      parts.kh = extract('খ');
-      parts.g = extract('গ');
-      parts.gh = extract('ঘ');
-    } else {
-      parts.main = cleanText.trim();
-    }
+      parts.k = extract('ক'); parts.kh = extract('খ'); parts.g = extract('গ'); parts.gh = extract('ঘ');
+    } else { parts.main = cleanText.trim(); }
     return parts;
   };
 
@@ -248,18 +150,9 @@ function CreateQuestionContent() {
       return { type: 'short', shortText: q.content };
     });
     const docId = editId || doc(collection(db!, 'questions')).id;
-    const data = {
-      ...meta, questions: formattedQuestions, userId: user.uid, updatedAt: serverTimestamp(),
-      isMcq: questions.some(q => q.type === 'mcq'),
-      ...(editId ? {} : { createdAt: serverTimestamp() })
-    };
+    const data = { ...meta, questions: formattedQuestions, userId: user.uid, updatedAt: serverTimestamp(), isMcq: questions.some(q => q.type === 'mcq'), ...(editId ? {} : { createdAt: serverTimestamp() }) };
     const ref = doc(db!, 'questions', docId);
-    setDoc(ref, data, { merge: true }).then(() => {
-      setSaving(false); toast({ title: "সফল!", description: "ডাটাবেসে সেভ হয়েছে।" });
-      if (!editId) router.replace(`/create-question?id=${docId}`);
-    }).catch(async () => {
-      setSaving(false); errorEmitter.emit('permission-error', new FirestorePermissionError({ path: ref.path, operation: 'write', requestResourceData: data }));
-    });
+    setDoc(ref, data, { merge: true }).then(() => { setSaving(false); toast({ title: "সফল!", description: "ডাটাবেসে সেভ হয়েছে।" }); if (!editId) router.replace(`/create-question?id=${docId}`); }).catch(async () => { setSaving(false); errorEmitter.emit('permission-error', new FirestorePermissionError({ path: ref.path, operation: 'write', requestResourceData: data })); });
   };
 
   const isEnglish = meta.subject?.toLowerCase().includes('english') || meta.subject?.toLowerCase().includes('ইংরেজি');
@@ -281,10 +174,10 @@ function CreateQuestionContent() {
           <CardHeader className="bg-primary/5 border-b py-3"><CardTitle className="text-base flex items-center gap-2 font-bold"><BookOpen className="w-4 h-4 text-primary" /> পরীক্ষার তথ্য ও মান বণ্টন</CardTitle></CardHeader>
           <CardContent className="pt-6 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="space-y-2"><label className="text-sm font-semibold">প্রতিষ্ঠানের নাম</label><Input key="meta-inst" value={meta.institution || ''} onChange={e => setMeta(prev => ({...prev, institution: e.target.value}))} /></div>
-              <div className="space-y-2"><label className="text-sm font-semibold">পরীক্ষার নাম</label><Input key="meta-exam" value={meta.exam || ''} onChange={e => setMeta(prev => ({...prev, exam: e.target.value}))} /></div>
-              <div className="space-y-2"><label className="text-sm font-semibold">সময়</label><Input key="meta-time" value={meta.time || ''} onChange={e => setMeta(prev => ({...prev, time: e.target.value}))} /></div>
-              <div className="space-y-2"><label className="text-sm font-semibold">পূর্ণমান</label><Input key="meta-marks" value={meta.totalMarks || ''} onChange={e => setMeta(prev => ({...prev, totalMarks: e.target.value}))} /></div>
+              <div className="space-y-2"><label className="text-sm font-semibold">প্রতিষ্ঠানের নাম</label><Input value={meta.institution || ''} onChange={e => setMeta(prev => ({...prev, institution: e.target.value}))} /></div>
+              <div className="space-y-2"><label className="text-sm font-semibold">পরীক্ষার নাম</label><Input value={meta.exam || ''} onChange={e => setMeta(prev => ({...prev, exam: e.target.value}))} /></div>
+              <div className="space-y-2"><label className="text-sm font-semibold">সময়</label><Input value={meta.time || ''} onChange={e => setMeta(prev => ({...prev, time: e.target.value}))} /></div>
+              <div className="space-y-2"><label className="text-sm font-semibold">পূর্ণমান</label><Input value={meta.totalMarks || ''} onChange={e => setMeta(prev => ({...prev, totalMarks: e.target.value}))} /></div>
               <div className="space-y-2"><label className="text-sm font-semibold">শ্রেণি</label><Select onValueChange={v => setMeta(prev => ({...prev, classId: v}))} value={meta.classId || ''}><SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger><SelectContent>{CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}</SelectContent></Select></div>
               <div className="space-y-2"><label className="text-sm font-semibold">বিষয়</label><Select onValueChange={v => setMeta(prev => ({...prev, subject: v}))} value={meta.subject || ''} disabled={!meta.classId}><SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger><SelectContent>{subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
             </div>
@@ -292,60 +185,39 @@ function CreateQuestionContent() {
               <div className="space-y-2">
                 <h4 className="text-sm font-bold text-primary">সৃজনশীল মান (ক-ঘ)</h4>
                 <div className="flex gap-2">
-                  <Input key="marksA" type="number" value={meta.marksA ?? 1} onChange={e => setMeta(prev => ({...prev, marksA: parseInt(e.target.value) || 0}))} className="h-8 text-center" />
-                  <Input key="marksB" type="number" value={meta.marksB ?? 2} onChange={e => setMeta(prev => ({...prev, marksB: parseInt(e.target.value) || 0}))} className="h-8 text-center" />
-                  <Input key="marksC" type="number" value={meta.marksC ?? 3} onChange={e => setMeta(prev => ({...prev, marksC: parseInt(e.target.value) || 0}))} className="h-8 text-center" />
-                  <Input key="marksD" type="number" value={meta.marksD ?? 4} onChange={e => setMeta(prev => ({...prev, marksD: parseInt(e.target.value) || 0}))} className="h-8 text-center" />
+                  <Input type="number" value={meta.marksA} onChange={e => setMeta(prev => ({...prev, marksA: parseInt(e.target.value) || 0}))} className="h-8 text-center" />
+                  <Input type="number" value={meta.marksB} onChange={e => setMeta(prev => ({...prev, marksB: parseInt(e.target.value) || 0}))} className="h-8 text-center" />
+                  <Input type="number" value={meta.marksC} onChange={e => setMeta(prev => ({...prev, marksC: parseInt(e.target.value) || 0}))} className="h-8 text-center" />
+                  <Input type="number" value={meta.marksD} onChange={e => setMeta(prev => ({...prev, marksD: parseInt(e.target.value) || 0}))} className="h-8 text-center" />
                 </div>
               </div>
-              <div className="space-y-2"><h4 className="text-sm font-bold text-accent">সংক্ষিপ্ত মান</h4><Input key="shortMarks" type="number" value={meta.shortMarks ?? 2} onChange={e => setMeta(prev => ({...prev, shortMarks: parseInt(e.target.value) || 0}))} className="h-8 text-center w-20" /></div>
-              <div className="space-y-2"><h4 className="text-sm font-bold text-orange-500">MCQ মান</h4><Input key="mcqMarks" type="number" value={meta.mcqMarks ?? 1} onChange={e => setMeta(prev => ({...prev, mcqMarks: parseInt(e.target.value) || 0}))} className="h-8 text-center w-20" /></div>
+              <div className="space-y-2"><h4 className="text-sm font-bold text-accent">সংক্ষিপ্ত মান</h4><Input type="number" value={meta.shortMarks} onChange={e => setMeta(prev => ({...prev, shortMarks: parseInt(e.target.value) || 0}))} className="h-8 text-center w-20" /></div>
+              <div className="space-y-2"><h4 className="text-sm font-bold text-orange-500">MCQ মান</h4><Input type="number" value={meta.mcqMarks} onChange={e => setMeta(prev => ({...prev, mcqMarks: parseInt(e.target.value) || 0}))} className="h-8 text-center w-20" /></div>
             </div>
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-2"><label className="text-sm font-bold">সৃজনশীল নির্দেশ</label><Input key="instr-creative" value={meta.creativeInstruction || ''} onChange={e => setMeta(prev => ({...prev, creativeInstruction: e.target.value}))} /></div>
-          <div className="space-y-2"><label className="text-sm font-bold">সংক্ষিপ্ত নির্দেশ</label><Input key="instr-short" value={meta.shortInstruction || ''} onChange={e => setMeta(prev => ({...prev, shortInstruction: e.target.value}))} /></div>
-          <div className="space-y-2"><label className="text-sm font-bold">MCQ নির্দেশ</label><Input key="instr-mcq" value={meta.mcqInstruction || ''} onChange={e => setMeta(prev => ({...prev, mcqInstruction: e.target.value}))} /></div>
-        </div>
-
-        <div className="space-y-6">
-          <div className="flex items-center justify-between border-b pb-2">
-            <h3 className="text-lg font-bold">প্রশ্নসমূহ ({questions.length})</h3>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" onClick={() => handleAddQuestion('creative')} className="border-primary text-primary"><Plus className="w-3 h-3" /> সৃজনশীল</Button>
-              <Button variant="outline" size="sm" onClick={() => handleAddQuestion('short')} className="border-accent text-accent"><Plus className="w-3 h-3" /> সংক্ষিপ্ত</Button>
-              <Button variant="outline" size="sm" onClick={() => handleAddQuestion('mcq')} className="border-orange-500 text-orange-500"><Plus className="w-3 h-3" /> বহুনির্বাচনি</Button>
-              <div className="h-6 w-px bg-border mx-1" />
-              <Button size="sm" onClick={() => handleAiGenerate('creative')} disabled={generating} className="bg-primary text-white"><BrainCircuit className="w-3 h-3" /> AI লিখিত</Button>
-              <Button size="sm" onClick={() => handleAiGenerate('mcq')} disabled={generating} className="bg-orange-500 text-white"><BrainCircuit className="w-3 h-3" /> AI MCQ</Button>
-            </div>
+        <div className="flex items-center justify-between border-b pb-2">
+          <h3 className="text-lg font-bold">প্রশ্নসমূহ ({questions.length})</h3>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => handleAddQuestion('creative')} className="border-primary text-primary"><Plus className="w-3 h-3" /> সৃজনশীল</Button>
+            <Button variant="outline" size="sm" onClick={() => handleAddQuestion('short')} className="border-accent text-accent"><Plus className="w-3 h-3" /> সংক্ষিপ্ত</Button>
+            <Button variant="outline" size="sm" onClick={() => handleAddQuestion('mcq')} className="border-orange-500 text-orange-500"><Plus className="w-3 h-3" /> বহুনির্বাচনি</Button>
           </div>
-
-          {questions.map((q, idx) => (
-            <Card key={q.id} className={`relative border-l-4 group ${q.type === 'mcq' ? 'border-l-orange-500' : q.type === 'short' ? 'border-l-accent' : 'border-l-primary'}`}>
-              <div className="absolute top-2 right-2 no-print">
-                <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => setQuestions(prev => prev.filter(item => item.id !== q.id))}><Trash2 className="w-4 h-4" /></Button>
-              </div>
-              <CardContent className="pt-6 space-y-4">
-                <div className="flex items-center gap-2">
-                  <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${q.type === 'mcq' ? 'bg-orange-100 text-orange-600' : q.type === 'short' ? 'bg-accent/10 text-accent' : 'bg-primary/10 text-primary'}`}>
-                    {q.type === 'mcq' ? 'বহুনির্বাচনি' : q.type === 'short' ? 'সংক্ষিপ্ত' : 'সৃজনশীল'}
-                  </span>
-                  <span className="text-sm font-bold">প্রশ্ন নং: {isEnglish ? (idx + 1) : toBengaliNumber(idx + 1)}</span>
-                </div>
-                <Textarea 
-                  key={`q-text-${q.id}`}
-                  placeholder={q.type === 'mcq' ? "প্রশ্ন ও অপশনগুলো একসাথে (ক. খ. গ. ঘ. সহ) লিখুন।" : "উদ্দীপক ও প্রশ্ন একসাথে (ক. খ. গ. ঘ. সহ) লিখুন।"} 
-                  value={q.content || ''} 
-                  onChange={e => setQuestions(prev => prev.map(item => item.id === q.id ? {...item, content: e.target.value} : item))} 
-                  className="min-h-[120px] text-sm" 
-                />
-              </CardContent>
-            </Card>
-          ))}
         </div>
+
+        {questions.map((q, idx) => (
+          <Card key={q.id} className={`relative border-l-4 ${q.type === 'mcq' ? 'border-l-orange-500' : q.type === 'short' ? 'border-l-accent' : 'border-l-primary'}`}>
+            <div className="absolute top-2 right-2 no-print"><Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => setQuestions(prev => prev.filter(item => item.id !== q.id))}><Trash2 className="w-4 h-4" /></Button></div>
+            <CardContent className="pt-6 space-y-4">
+              <div className="flex items-center gap-2">
+                <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${q.type === 'mcq' ? 'bg-orange-100 text-orange-600' : q.type === 'short' ? 'bg-accent/10 text-accent' : 'bg-primary/10 text-primary'}`}>{q.type === 'mcq' ? 'বহুনির্বাচনি' : q.type === 'short' ? 'সংক্ষিপ্ত' : 'সৃজনশীল'}</span>
+                <span className="text-sm font-bold">প্রশ্ন নং: {isEnglish ? (idx + 1) : toBengaliNumber(idx + 1)}</span>
+              </div>
+              <Textarea placeholder={q.type === 'mcq' ? "প্রশ্ন ও অপশনগুলো ক. খ. গ. ঘ. সহ লিখুন" : "উদ্দীপক ও প্রশ্ন ক. খ. গ. ঘ. সহ লিখুন"} value={q.content || ''} onChange={e => setQuestions(prev => prev.map(item => item.id === q.id ? {...item, content: e.target.value} : item))} className="min-h-[120px] text-sm" />
+            </CardContent>
+          </Card>
+        ))}
 
         <div className="flex gap-4 pt-8">
           <Button onClick={handleSaveToDb} disabled={saving} className="gap-2 px-8 font-bold"><Save className="w-4 h-4" /> সেভ করুন</Button>
@@ -357,7 +229,7 @@ function CreateQuestionContent() {
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
             @page { size: A4; margin: 0.5in; }
-            body { font-family: 'Inter', sans-serif; font-size: 11pt; color: black !important; line-height: 1.3 !important; background: white !important; margin: 0; padding: 0; }
+            body { font-family: 'Inter', sans-serif; font-size: 11pt; color: black !important; line-height: 1.3 !important; background: white !important; }
             .paper { width: 100%; text-align: justify; }
             .header { text-align: center; margin-bottom: 8px; border-bottom: 1pt solid black; padding-bottom: 6px; }
             .inst-name { font-size: 16pt; font-weight: 800; }
@@ -370,16 +242,8 @@ function CreateQuestionContent() {
             .sub-q { display: flex; justify-content: space-between; width: 100%; margin-bottom: 1px; }
             .q-text-part { flex: 1; padding-right: 15px; }
             .mark { font-weight: bold; width: 35px; text-align: right; }
-            
-            .mcq-row { 
-              display: grid; 
-              grid-template-columns: repeat(4, 1fr); 
-              gap: 4px 10px; 
-              margin-top: 3px; 
-              padding-left: 20px; 
-            }
+            .mcq-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px 10px; margin-top: 3px; padding-left: 20px; }
             .mcq-opt { display: flex; gap: 4px; align-items: flex-start; }
-            
             .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
             .math-num { border-bottom: 0.5pt solid black; padding: 0 1px; }
             .math-den { padding: 0 1px; }
@@ -398,7 +262,6 @@ function CreateQuestionContent() {
             <div className="meta-info"><div>সময়: {meta.time}</div><div>পূর্ণমান: {meta.totalMarks}</div></div>
           </div>
 
-          {/* Creative Section */}
           {questions.some(q => q.type === 'creative') && (
             <div className="section">
               <div className="text-center"><div className="section-label">সৃজনশীল প্রশ্ন</div></div>
@@ -426,7 +289,6 @@ function CreateQuestionContent() {
             </div>
           )}
 
-          {/* Short Questions Section */}
           {questions.some(q => q.type === 'short') && (
             <div className="section">
               <div className="text-center"><div className="section-label">সংক্ষিপ্ত প্রশ্ন</div></div>
@@ -443,7 +305,6 @@ function CreateQuestionContent() {
             </div>
           )}
 
-          {/* MCQ Section */}
           {questions.some(q => q.type === 'mcq') && (
             <div className="section">
               <div className="text-center"><div className="section-label">বহুনির্বাচনি প্রশ্ন</div></div>
@@ -476,6 +337,4 @@ function CreateQuestionContent() {
   );
 }
 
-export default function CreateQuestionPage() {
-  return <Suspense fallback={<div className="flex justify-center p-20"><Loader2 className="animate-spin text-primary" /></div>}><CreateQuestionContent /></Suspense>;
-}
+export default function CreateQuestionPage() { return <Suspense fallback={<div className="flex justify-center p-20"><Loader2 className="animate-spin text-primary" /></div>}><CreateQuestionContent /></Suspense>; }

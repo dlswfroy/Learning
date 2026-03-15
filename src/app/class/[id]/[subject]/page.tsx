@@ -7,7 +7,7 @@ import { CLASSES } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { BookOpen, HelpCircle, FileText, Download, Loader2, BookCopy, ChevronRight } from 'lucide-react';
+import { BookOpen, HelpCircle, FileText, Download, Loader2, BookCopy } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { useFirestore, useCollection } from '@/firebase';
@@ -16,6 +16,12 @@ import { collection, query, where } from 'firebase/firestore';
 function toBengaliNumber(n: number | string): string {
   const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
   return n.toString().replace(/\d/g, (digit) => bengaliDigits[parseInt(digit)]);
+}
+
+function naturalSort(a: any, b: any) {
+  const nameA = a.chapterName || a.fileName || "";
+  const nameB = b.chapterName || b.fileName || "";
+  return nameA.localeCompare(nameB, 'bn', { numeric: true, sensitivity: 'base' });
 }
 
 export default function SubjectPage() {
@@ -44,7 +50,10 @@ export default function SubjectPage() {
   const { data: books, loading: loadingBooks } = useCollection(bookQuery);
   
   const nctbBooks = useMemo(() => books?.filter(b => !b.isGuide) || [], [books]);
-  const guideBooks = useMemo(() => books?.filter(b => b.isGuide) || [], [books]);
+  const guideBooks = useMemo(() => {
+    const list = books?.filter(b => b.isGuide) || [];
+    return list.sort(naturalSort);
+  }, [books]);
 
   const renderTextbookList = (bookList: any[]) => {
     if (bookList.length === 0) {
