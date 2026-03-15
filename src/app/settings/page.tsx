@@ -21,16 +21,12 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
 function naturalSort(a: any, b: any) {
-  // Sort by class id first
   if (a.classId !== b.classId) return parseInt(a.classId) - parseInt(b.classId);
-  // Then by subject
   if (a.subject !== b.subject) return a.subject.localeCompare(b.subject, 'bn');
-  // Then by guide status (nctb first)
   if (a.isGuide !== b.isGuide) return a.isGuide ? 1 : -1;
   
   const nameA = a.chapterName || a.fileName || "";
   const nameB = b.chapterName || b.fileName || "";
-  // Natural sort for chapters like গদ্য-১, গদ্য-২, গদ্য-১০
   return nameA.localeCompare(nameB, 'bn', { numeric: true, sensitivity: 'base' });
 }
 
@@ -72,7 +68,6 @@ export default function SettingsPage() {
           setIsAdmin(true);
         }
       } catch (e) {
-        // Silent fail for non-admins
       } finally {
         setAdminCheckLoading(false);
       }
