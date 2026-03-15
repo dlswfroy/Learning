@@ -87,7 +87,7 @@ function CreateQuestionContent() {
             marksA: data.marksA || 1, marksB: data.marksB || 2, marksC: data.marksC || 3, marksD: data.marksD || 4,
             shortMarks: data.shortMarks || 2, mcqMarks: data.mcqMarks || 1
           });
-          const reconstructed = data.questions.map((q: any) => {
+          const reconstructed = (data.questions || []).map((q: any) => {
             const id = Math.random().toString(36).substr(2, 9);
             if (q.type === 'mcq') return { id, type: 'mcq', content: `${q.mcqQuestion || ''}\nক. ${q.optA || ''}\nখ. ${q.optB || ''}\nগ. ${q.optC || ''}\nঘ. ${q.optD || ''}` };
             if (q.type === 'creative') return { id, type: 'creative', content: `${q.stimulus || ''}\nক. ${q.qA || ''}\nখ. ${q.qB || ''}\nগ. ${q.qC || ''}\nঘ. ${q.qD || ''}` };
@@ -145,7 +145,6 @@ function CreateQuestionContent() {
     if (!user || !db) { toast({ title: "লগইন প্রয়োজন", variant: "destructive" }); return; }
     setSaving(true);
     
-    // Sanitize formatted questions to avoid undefined
     const formattedQuestions = questions.map(q => {
       const p = parseText(q.content || '');
       if (q.type === 'creative') {
@@ -173,7 +172,6 @@ function CreateQuestionContent() {
 
     const docId = editId || doc(collection(db, 'questions')).id;
     
-    // Sanitize metadata to avoid undefined
     const data = {
       institution: meta.institution || '',
       exam: meta.exam || '',

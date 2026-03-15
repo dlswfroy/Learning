@@ -3,7 +3,7 @@
 
 import { useMemo } from 'react';
 import Link from 'next/link';
-import { BookOpenText, LogIn, LogOut } from 'lucide-react';
+import { BookOpenText, LogIn, LogOut, Settings } from 'lucide-react';
 import { useUser, useAuth, useFirestore, useDoc } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
