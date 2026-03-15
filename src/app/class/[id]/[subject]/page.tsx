@@ -7,11 +7,16 @@ import { CLASSES } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { BookOpen, HelpCircle, FileText, Download, Loader2, BookCopy } from 'lucide-react';
+import { BookOpen, HelpCircle, FileText, Download, Loader2, BookCopy, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { useFirestore, useCollection } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
+
+function toBengaliNumber(n: number | string): string {
+  const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+  return n.toString().replace(/\d/g, (digit) => bengaliDigits[parseInt(digit)]);
+}
 
 export default function SubjectPage() {
   const params = useParams();
@@ -41,15 +46,12 @@ export default function SubjectPage() {
   const nctbBooks = useMemo(() => books?.filter(b => !b.isGuide) || [], [books]);
   const guideBooks = useMemo(() => books?.filter(b => b.isGuide) || [], [books]);
 
-  const renderBookList = (bookList: any[], emptyTitle: string) => {
+  const renderTextbookList = (bookList: any[]) => {
     if (bookList.length === 0) {
       return (
-        <Card className="border-2 border-dashed border-primary/20 bg-primary/5 min-h-[300px] flex flex-col items-center justify-center p-8 text-center">
+        <Card className="border-2 border-dashed border-primary/20 bg-primary/5 min-h-[250px] flex flex-col items-center justify-center p-8 text-center">
           <FileText className="w-12 h-12 text-muted-foreground/20 mb-4" />
-          <h3 className="text-lg font-bold mb-2 text-foreground/80">{emptyTitle}</h3>
-          <p className="text-muted-foreground max-w-sm text-sm">
-            দুঃখিত, এই ক্যাটাগরিতে কোনো বই পাওয়া যায়নি।
-          </p>
+          <h3 className="text-lg font-bold mb-2">পাঠ্যবই এখনো নেই</h3>
         </Card>
       );
     }
@@ -64,18 +66,11 @@ export default function SubjectPage() {
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center">
                   <FileText className="w-16 h-16 text-primary/20 mb-4" />
-                  <span className="text-sm font-bold text-primary/40 uppercase tracking-widest">
-                    {book.isGuide ? 'গাইড বই' : 'পাঠ্যবই'}
-                  </span>
+                  <span className="text-sm font-bold text-primary/40 uppercase tracking-widest">পাঠ্যবই</span>
                 </div>
               )}
               <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-6">
-                <a 
-                  href={book.pdfUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="w-full"
-                >
+                <a href={book.pdfUrl} target="_blank" rel="noopener noreferrer" className="w-full">
                   <Button className="w-full gap-2 font-bold bg-white text-primary hover:bg-white/90">
                     <BookOpen className="w-4 h-4" /> পড়ুন
                   </Button>
@@ -83,14 +78,48 @@ export default function SubjectPage() {
               </div>
             </div>
             <CardHeader className="p-4">
-              <CardTitle className="text-sm font-bold truncate">
-                {book.chapterName || book.fileName || subject}
-              </CardTitle>
-              <CardDescription className="text-[10px] truncate">
-                {subject} | {currentClass.label} শ্রেণি
-              </CardDescription>
+              <CardTitle className="text-sm font-bold truncate">{book.fileName || subject}</CardTitle>
+              <CardDescription className="text-[10px] truncate">{subject} | {currentClass.label} শ্রেণি</CardDescription>
             </CardHeader>
           </Card>
+        ))}
+      </div>
+    );
+  };
+
+  const renderGuideList = (bookList: any[]) => {
+    if (bookList.length === 0) {
+      return (
+        <Card className="border-2 border-dashed border-primary/20 bg-primary/5 min-h-[250px] flex flex-col items-center justify-center p-8 text-center">
+          <BookCopy className="w-12 h-12 text-muted-foreground/20 mb-4" />
+          <h3 className="text-lg font-bold mb-2">গাইড বই এখনো নেই</h3>
+        </Card>
+      );
+    }
+
+    return (
+      <div className="space-y-3">
+        {bookList.map((book, idx) => (
+          <div key={book.id} className="flex items-center justify-between p-4 bg-white rounded-xl border border-primary/10 hover:border-primary/40 hover:shadow-sm transition-all group">
+            <div className="flex items-center gap-4 flex-1 min-w-0">
+              <div className="w-10 h-10 rounded-lg bg-primary/5 text-primary flex items-center justify-center font-bold text-sm shrink-0">
+                {toBengaliNumber(idx + 1)}
+              </div>
+              <div className="min-w-0">
+                <h4 className="font-bold text-sm md:text-base text-foreground group-hover:text-primary transition-colors truncate">
+                  {book.chapterName || book.fileName || subject}
+                </h4>
+                <p className="text-[10px] text-muted-foreground truncate">
+                  {subject} | {currentClass.label} শ্রেণি
+                </p>
+              </div>
+            </div>
+            <a href={book.pdfUrl} target="_blank" rel="noopener noreferrer" className="ml-4 shrink-0">
+              <Button size="sm" className="gap-2 font-bold bg-primary text-white hover:bg-primary/90">
+                <BookOpen className="w-4 h-4" /> পড়ুন
+              </Button>
+            </a>
+          </div>
         ))}
       </div>
     );
@@ -119,16 +148,13 @@ export default function SubjectPage() {
       <Tabs defaultValue="textbook" className="w-full">
         <TabsList className="grid w-full grid-cols-3 mb-8 bg-secondary/50 p-1">
           <TabsTrigger value="textbook" className="gap-2 data-[state=active]:bg-white data-[state=active]:text-primary font-bold">
-            <FileText className="w-4 h-4" />
-            পাঠ্যবই
+            <FileText className="w-4 h-4" /> পাঠ্যবই
           </TabsTrigger>
           <TabsTrigger value="guidebook" className="gap-2 data-[state=active]:bg-white data-[state=active]:text-primary font-bold">
-            <BookCopy className="w-4 h-4" />
-            গাইড বই
+            <BookCopy className="w-4 h-4" /> গাইড বই
           </TabsTrigger>
           <TabsTrigger value="resources" className="gap-2 data-[state=active]:bg-white data-[state=active]:text-primary font-bold">
-            <Download className="w-4 h-4" />
-            রিসোর্স
+            <Download className="w-4 h-4" /> রিসোর্স
           </TabsTrigger>
         </TabsList>
         
@@ -140,33 +166,17 @@ export default function SubjectPage() {
         ) : (
           <>
             <TabsContent value="textbook" className="animate-fade-in">
-              {renderBookList(nctbBooks, "পাঠ্যবই এখনো নেই")}
+              {renderTextbookList(nctbBooks)}
             </TabsContent>
             
             <TabsContent value="guidebook" className="animate-fade-in">
-              {renderBookList(guideBooks, "গাইড বই এখনো নেই")}
+              {renderGuideList(guideBooks)}
             </TabsContent>
             
             <TabsContent value="resources">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card className="hover:shadow-md transition-shadow bg-background border-primary/10">
-                  <CardHeader>
-                    <CardTitle className="text-base font-bold">অধ্যায় ভিত্তিক নোট</CardTitle>
-                    <CardDescription>শীঘ্রই আসছে...</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button variant="secondary" className="w-full" disabled>ডাউনলোড করুন</Button>
-                  </CardContent>
-                </Card>
-                <Card className="hover:shadow-md transition-shadow bg-background border-primary/10">
-                  <CardHeader>
-                    <CardTitle className="text-base font-bold">বিগত বছরের প্রশ্ন</CardTitle>
-                    <CardDescription>শীঘ্রই আসছে...</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button variant="secondary" className="w-full" disabled>ডাউনলোড করুন</Button>
-                  </CardContent>
-                </Card>
+                <Card className="bg-background border-primary/10"><CardHeader><CardTitle className="text-base font-bold">অধ্যায় ভিত্তিক নোট</CardTitle><CardDescription>শীঘ্রই আসছে...</CardDescription></CardHeader><CardContent><Button variant="secondary" className="w-full" disabled>ডাউনলোড</Button></CardContent></Card>
+                <Card className="bg-background border-primary/10"><CardHeader><CardTitle className="text-base font-bold">বিগত বছরের প্রশ্ন</CardTitle><CardDescription>শীঘ্রই আসছে...</CardDescription></CardHeader><CardContent><Button variant="secondary" className="w-full" disabled>ডাউনলোড</Button></CardContent></Card>
               </div>
             </TabsContent>
           </>
