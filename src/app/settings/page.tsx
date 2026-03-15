@@ -27,7 +27,6 @@ function naturalSort(a: any, b: any) {
   
   const nameA = a.chapterName || a.fileName || "";
   const nameB = b.chapterName || b.fileName || "";
-  // Use numeric sorting for chapters like "গদ্য-১", "গদ্য-১০"
   return nameA.localeCompare(nameB, 'bn', { numeric: true, sensitivity: 'base' });
 }
 
@@ -69,7 +68,6 @@ export default function SettingsPage() {
           setIsAdmin(true);
         }
       } catch (e) {
-        // Silently fail if admin check fails
       } finally {
         setAdminCheckLoading(false);
       }
