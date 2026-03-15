@@ -314,7 +314,8 @@ function CreateQuestionContent() {
           <div className="flex items-center justify-between border-b pb-2">
             <h3 className="text-lg font-bold">প্রশ্নসমূহ ({questions.length})</h3>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" onClick={() => handleAddQuestion('creative')} className="border-primary text-primary"><Plus className="w-3 h-3" /> লিখিত</Button>
+              <Button variant="outline" size="sm" onClick={() => handleAddQuestion('creative')} className="border-primary text-primary"><Plus className="w-3 h-3" /> সৃজনশীল</Button>
+              <Button variant="outline" size="sm" onClick={() => handleAddQuestion('short')} className="border-accent text-accent"><Plus className="w-3 h-3" /> সংক্ষিপ্ত</Button>
               <Button variant="outline" size="sm" onClick={() => handleAddQuestion('mcq')} className="border-orange-500 text-orange-500"><Plus className="w-3 h-3" /> বহুনির্বাচনি</Button>
               <div className="h-6 w-px bg-border mx-1" />
               <Button size="sm" onClick={() => handleAiGenerate('creative')} disabled={generating} className="bg-primary text-white"><BrainCircuit className="w-3 h-3" /> AI লিখিত</Button>
@@ -323,14 +324,14 @@ function CreateQuestionContent() {
           </div>
 
           {questions.map((q, idx) => (
-            <Card key={q.id} className={`relative border-l-4 group ${q.type === 'mcq' ? 'border-l-orange-500' : 'border-l-primary'}`}>
+            <Card key={q.id} className={`relative border-l-4 group ${q.type === 'mcq' ? 'border-l-orange-500' : q.type === 'short' ? 'border-l-accent' : 'border-l-primary'}`}>
               <div className="absolute top-2 right-2 no-print">
                 <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => setQuestions(prev => prev.filter(item => item.id !== q.id))}><Trash2 className="w-4 h-4" /></Button>
               </div>
               <CardContent className="pt-6 space-y-4">
                 <div className="flex items-center gap-2">
-                  <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${q.type === 'mcq' ? 'bg-orange-100 text-orange-600' : 'bg-primary/10 text-primary'}`}>
-                    {q.type === 'mcq' ? 'বহুনির্বাচনি' : 'লিখিত'}
+                  <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${q.type === 'mcq' ? 'bg-orange-100 text-orange-600' : q.type === 'short' ? 'bg-accent/10 text-accent' : 'bg-primary/10 text-primary'}`}>
+                    {q.type === 'mcq' ? 'বহুনির্বাচনি' : q.type === 'short' ? 'সংক্ষিপ্ত' : 'সৃজনশীল'}
                   </span>
                   <span className="text-sm font-bold">প্রশ্ন নং: {isEnglish ? (idx + 1) : toBengaliNumber(idx + 1)}</span>
                 </div>
@@ -370,7 +371,6 @@ function CreateQuestionContent() {
             .q-text-part { flex: 1; padding-right: 15px; }
             .mark { font-weight: bold; width: 35px; text-align: right; }
             
-            /* 4-column grid for perfect alignment of ক, খ, গ, ঘ across questions in one line */
             .mcq-row { 
               display: grid; 
               grid-template-columns: repeat(4, 1fr); 
