@@ -16,11 +16,53 @@ import { Label } from "@/components/ui/label";
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useStorage, useUser, useDoc } from '@/firebase';
 import { collection, addDoc, deleteDoc, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL, uploadBytes } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { updateProfile } from 'firebase/auth';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
+// Utility to process images: resize (max 512x512) and compress (80% quality) to Base64
+async function processImage(file: File): Promise<string> {
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error('ফাইল সাইজ ৫ মেগাবাইটের বেশি হতে পারবে না।');
+  }
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const maxSide = 512;
+
+        if (width > height) {
+          if (width > maxSide) {
+            height *= maxSide / width;
+            width = maxSide;
+          }
+        } else {
+          if (height > maxSide) {
+            width *= maxSide / height;
+            height = maxSide;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.8));
+      };
+      img.onerror = () => reject(new Error('ছবি লোড করা সম্ভব হয়নি।'));
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => reject(new Error('ফাইল পড়া সম্ভব হয়নি।'));
+    reader.readAsDataURL(file);
+  });
+}
 
 function naturalSort(a: any, b: any) {
   if (a.classId !== b.classId) return parseInt(a.classId) - parseInt(b.classId);
@@ -38,11 +80,9 @@ export default function SettingsPage() {
   const { user, loading: userLoading } = useUser();
   const router = useRouter();
   
-  // Refs
   const profileInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
-  // States for Book Upload
   const [classId, setClassId] = useState<string>('');
   const [subject, setSubject] = useState<string>('');
   const [chapterName, setChapterName] = useState<string>('');
@@ -54,24 +94,20 @@ export default function SettingsPage() {
   const [progress, setProgress] = useState(0);
   const [uploadMethod, setUploadMethod] = useState<'file' | 'link'>('file');
   
-  // States for Filters
   const [viewClassId, setViewClassId] = useState<string>('all');
   const [viewBookType, setViewBookType] = useState<string>('all');
   
-  // Profile & Software States
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminCheckLoading, setAdminCheckLoading] = useState(true);
   const [displayName, setDisplayName] = useState('');
   const [photoURL, setPhotoURL] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
-  const [profileUploading, setProfileUploading] = useState(false);
 
   const softwareDocRef = useMemo(() => doc(db, 'config', 'software'), [db]);
-  const { data: softwareConfig, loading: loadingSoftware } = useDoc(softwareDocRef);
+  const { data: softwareConfig } = useDoc(softwareDocRef);
   const [appName, setAppName] = useState('');
   const [appLogoUrl, setAppLogoUrl] = useState('');
   const [savingSoftware, setSavingSoftware] = useState(false);
-  const [logoUploading, setLogoUploading] = useState(false);
 
   useEffect(() => {
     if (!userLoading && !user) router.push('/auth');
@@ -122,39 +158,27 @@ export default function SettingsPage() {
   const subjectsList = useMemo(() => classId ? getSubjectsForClass(classId) : [], [classId]);
   const chaptersList = useMemo(() => (classId && subject) ? getChaptersForSubject(classId, subject) : [], [classId, subject]);
 
-  const handleProfileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleProfilePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !storage || !user) return;
-    
-    setProfileUploading(true);
-    const storageRef = ref(storage, `profiles/${user.uid}/${Date.now()}_${file.name}`);
+    if (!file) return;
     try {
-      const snapshot = await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(snapshot.ref);
-      setPhotoURL(url);
-      toast({ title: "ছবি আপলোড সফল", description: "এখন প্রোফাইল সেভ করুন।" });
-    } catch (error) {
-      toast({ variant: "destructive", title: "আপলোড ব্যর্থ", description: "আবার চেষ্টা করুন।" });
-    } finally {
-      setProfileUploading(false);
+      const base64 = await processImage(file);
+      setPhotoURL(base64);
+      toast({ title: "সফল", description: "ছবি প্রসেস করা হয়েছে। সেভ বাটনে ক্লিক করুন।" });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "ত্রুটি", description: err.message });
     }
   };
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !storage || !isAdmin) return;
-    
-    setLogoUploading(true);
-    const storageRef = ref(storage, `branding/logo_${Date.now()}_${file.name}`);
+    if (!file) return;
     try {
-      const snapshot = await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(snapshot.ref);
-      setAppLogoUrl(url);
-      toast({ title: "লোগো আপলোড সফল", description: "এখন ব্র্যান্ডিং সেভ করুন।" });
-    } catch (error) {
-      toast({ variant: "destructive", title: "আপলোড ব্যর্থ", description: "আবার চেষ্টা করুন।" });
-    } finally {
-      setLogoUploading(false);
+      const base64 = await processImage(file);
+      setAppLogoUrl(base64);
+      toast({ title: "সফল", description: "লোগো প্রসেস করা হয়েছে। সেভ বাটনে ক্লিক করুন।" });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "ত্রুটি", description: err.message });
     }
   };
 
@@ -278,20 +302,10 @@ export default function SettingsPage() {
                     <AvatarImage src={photoURL || ''} />
                     <AvatarFallback className="text-2xl font-bold bg-secondary text-primary">{displayName?.charAt(0) || 'U'}</AvatarFallback>
                   </Avatar>
-                  <button 
-                    onClick={() => profileInputRef.current?.click()}
-                    disabled={profileUploading}
-                    className="absolute -bottom-1 -right-1 bg-primary text-white p-1.5 rounded-full shadow-lg hover:scale-110 transition-transform disabled:opacity-50"
-                  >
-                    {profileUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Camera className="w-3 h-3" />}
+                  <button onClick={() => profileInputRef.current?.click()} className="absolute -bottom-1 -right-1 bg-primary text-white p-1.5 rounded-full shadow-lg hover:scale-110 transition-transform">
+                    <Camera className="w-3 h-3" />
                   </button>
-                  <input 
-                    type="file" 
-                    ref={profileInputRef} 
-                    className="hidden" 
-                    accept="image/*" 
-                    onChange={handleProfileUpload}
-                  />
+                  <input type="file" ref={profileInputRef} className="hidden" accept="image/*" onChange={handleProfilePhotoChange} />
                 </div>
                 <div className="flex-1 space-y-4">
                   <div className="space-y-2">
@@ -299,7 +313,7 @@ export default function SettingsPage() {
                     <Input value={displayName || ''} onChange={e => setDisplayName(e.target.value)} placeholder="নাম লিখুন" />
                   </div>
                   <div className="space-y-2">
-                    <Label>প্রোফাইল ছবির লিঙ্ক</Label>
+                    <Label>প্রোফাইল ছবির লিঙ্ক বা Base64</Label>
                     <Input value={photoURL || ''} onChange={e => setPhotoURL(e.target.value)} placeholder="https://..." />
                   </div>
                 </div>
@@ -400,20 +414,10 @@ export default function SettingsPage() {
                         <Globe className="w-10 h-10 text-primary" />
                       )}
                     </div>
-                    <button 
-                      onClick={() => logoInputRef.current?.click()}
-                      disabled={logoUploading}
-                      className="absolute -bottom-2 -right-2 bg-accent text-white p-1.5 rounded-full shadow-lg hover:scale-110 transition-transform disabled:opacity-50"
-                    >
-                      {logoUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Camera className="w-3 h-3" />}
+                    <button onClick={() => logoInputRef.current?.click()} className="absolute -bottom-2 -right-2 bg-accent text-white p-1.5 rounded-full shadow-lg hover:scale-110 transition-transform">
+                      <Camera className="w-3 h-3" />
                     </button>
-                    <input 
-                      type="file" 
-                      ref={logoInputRef} 
-                      className="hidden" 
-                      accept="image/*" 
-                      onChange={handleLogoUpload}
-                    />
+                    <input type="file" ref={logoInputRef} className="hidden" accept="image/*" onChange={handleLogoChange} />
                   </div>
                   <div className="flex-1 space-y-4">
                     <div className="space-y-2">
@@ -421,7 +425,7 @@ export default function SettingsPage() {
                       <Input value={appName || ''} onChange={e => setAppName(e.target.value)} placeholder="আমার প্রশ্ন" />
                     </div>
                     <div className="space-y-2">
-                      <Label>লোগো ছবির লিঙ্ক</Label>
+                      <Label>লোগো ছবির লিঙ্ক বা Base64</Label>
                       <Input value={appLogoUrl || ''} onChange={e => setAppLogoUrl(e.target.value)} placeholder="https://..." />
                     </div>
                   </div>

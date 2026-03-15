@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, Suspense, useMemo } from 'react';
+import { useState, useEffect, Suspense, useMemo, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { CLASSES, getSubjectsForClass } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, Plus, Trash2, BookOpen, Save, FileText, ArrowLeft, Loader2 } from 'lucide-react';
+import { Printer, Plus, Trash2, BookOpen, Save, FileText, ArrowLeft, Loader2, Image as ImageIcon, X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useUser } from '@/firebase';
 import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
@@ -20,7 +20,50 @@ type Question = {
   id: string;
   type: 'creative' | 'short' | 'mcq';
   content: string;
+  imageUrl?: string;
 };
+
+// Utility to process images: resize (max 512x512) and compress (80% quality) to Base64
+async function processImage(file: File): Promise<string> {
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error('ফাইল সাইজ ৫ মেগাবাইটের বেশি হতে পারবে না।');
+  }
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const maxSide = 512;
+
+        if (width > height) {
+          if (width > maxSide) {
+            height *= maxSide / width;
+            width = maxSide;
+          }
+        } else {
+          if (height > maxSide) {
+            width *= maxSide / height;
+            height = maxSide;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.8));
+      };
+      img.onerror = () => reject(new Error('ছবি লোড করা সম্ভব হয়নি।'));
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => reject(new Error('ফাইল পড়া সম্ভব হয়নি।'));
+    reader.readAsDataURL(file);
+  });
+}
 
 function toBengaliNumber(n: number | string | undefined | null): string {
   if (n === undefined || n === null || n === '') return '';
@@ -67,6 +110,8 @@ function CreateQuestionContent() {
   });
   
   const [questions, setQuestions] = useState<Question[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
 
   useEffect(() => { if (!userLoading && !user) router.push('/auth'); }, [user, userLoading, router]);
   
@@ -89,9 +134,10 @@ function CreateQuestionContent() {
           });
           const reconstructed = (data.questions || []).map((q: any) => {
             const id = Math.random().toString(36).substr(2, 9);
-            if (q.type === 'mcq') return { id, type: 'mcq', content: `${q.mcqQuestion || ''}\nক. ${q.optA || ''}\nখ. ${q.optB || ''}\nগ. ${q.optC || ''}\nঘ. ${q.optD || ''}` };
-            if (q.type === 'creative') return { id, type: 'creative', content: `${q.stimulus || ''}\nক. ${q.qA || ''}\nখ. ${q.qB || ''}\nগ. ${q.qC || ''}\nঘ. ${q.qD || ''}` };
-            return { id, type: 'short', content: q.shortText || '' };
+            const commonFields = { id, type: q.type, imageUrl: q.imageUrl || '' };
+            if (q.type === 'mcq') return { ...commonFields, content: `${q.mcqQuestion || ''}\nক. ${q.optA || ''}\nখ. ${q.optB || ''}\nগ. ${q.optC || ''}\nঘ. ${q.optD || ''}` };
+            if (q.type === 'creative') return { ...commonFields, content: `${q.stimulus || ''}\nক. ${q.qA || ''}\nখ. ${q.qB || ''}\nগ. ${q.qC || ''}\nঘ. ${q.qD || ''}` };
+            return { ...commonFields, content: q.shortText || '' };
           });
           setQuestions(reconstructed);
         }
@@ -103,7 +149,23 @@ function CreateQuestionContent() {
   const subjects = useMemo(() => meta.classId ? getSubjectsForClass(meta.classId) : [], [meta.classId]);
 
   const handleAddQuestion = (type: 'creative' | 'short' | 'mcq') => {
-    setQuestions(prev => [...prev, { id: Math.random().toString(36).substr(2, 9), type, content: '' }]);
+    setQuestions(prev => [...prev, { id: Math.random().toString(36).substr(2, 9), type, content: '', imageUrl: '' }]);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeQuestionId) return;
+
+    try {
+      const base64 = await processImage(file);
+      setQuestions(prev => prev.map(q => q.id === activeQuestionId ? { ...q, imageUrl: base64 } : q));
+      toast({ title: "সফল", description: "ছবি যুক্ত করা হয়েছে।" });
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "ত্রুটি", description: error.message });
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      setActiveQuestionId(null);
+    }
   };
 
   const parseText = (text: string) => {
@@ -147,9 +209,10 @@ function CreateQuestionContent() {
     
     const formattedQuestions = questions.map(q => {
       const p = parseText(q.content || '');
+      const common = { type: q.type, imageUrl: q.imageUrl || '' };
       if (q.type === 'creative') {
         return { 
-          type: 'creative', 
+          ...common,
           stimulus: p.main || '', 
           qA: p.k || '', 
           qB: p.kh || '', 
@@ -159,7 +222,7 @@ function CreateQuestionContent() {
       }
       if (q.type === 'mcq') {
         return { 
-          type: 'mcq', 
+          ...common,
           mcqQuestion: p.main || '', 
           optA: p.k || '', 
           optB: p.kh || '', 
@@ -167,7 +230,7 @@ function CreateQuestionContent() {
           optD: p.gh || '' 
         };
       }
-      return { type: 'short', shortText: q.content || '' };
+      return { ...common, shortText: q.content || '' };
     });
 
     const docId = editId || doc(collection(db, 'questions')).id;
@@ -182,12 +245,12 @@ function CreateQuestionContent() {
       creativeInstruction: meta.creativeInstruction || '',
       shortInstruction: meta.shortInstruction || '',
       mcqInstruction: meta.mcqInstruction || 'সঠিক উত্তরের বৃত্তটি ভরাট করো',
-      marksA: meta.marksA || 0,
-      marksB: meta.marksB || 0,
-      marksC: meta.marksC || 0,
-      marksD: meta.marksD || 0,
-      shortMarks: meta.shortMarks || 0,
-      mcqMarks: meta.mcqMarks || 0,
+      marksA: meta.marksA || 1,
+      marksB: meta.marksB || 2,
+      marksC: meta.marksC || 3,
+      marksD: meta.marksD || 4,
+      shortMarks: meta.shortMarks || 2,
+      mcqMarks: meta.mcqMarks || 1,
       questions: formattedQuestions,
       userId: user.uid,
       updatedAt: serverTimestamp(),
@@ -239,19 +302,6 @@ function CreateQuestionContent() {
               <div className="space-y-2"><label className="text-sm font-semibold">শ্রেণি</label><Select onValueChange={v => setMeta(prev => ({...prev, classId: v}))} value={meta.classId || ''}><SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger><SelectContent>{CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}</SelectContent></Select></div>
               <div className="space-y-2"><label className="text-sm font-semibold">বিষয়</label><Select onValueChange={v => setMeta(prev => ({...prev, subject: v}))} value={meta.subject || ''} disabled={!meta.classId}><SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger><SelectContent>{subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 border-t pt-6">
-              <div className="space-y-2">
-                <h4 className="text-sm font-bold text-primary">সৃজনশীল মান (ক-ঘ)</h4>
-                <div className="flex gap-2">
-                  <Input type="number" value={meta.marksA} onChange={e => setMeta(prev => ({...prev, marksA: parseInt(e.target.value) || 0}))} className="h-8 text-center" />
-                  <Input type="number" value={meta.marksB} onChange={e => setMeta(prev => ({...prev, marksB: parseInt(e.target.value) || 0}))} className="h-8 text-center" />
-                  <Input type="number" value={meta.marksC} onChange={e => setMeta(prev => ({...prev, marksC: parseInt(e.target.value) || 0}))} className="h-8 text-center" />
-                  <Input type="number" value={meta.marksD} onChange={e => setMeta(prev => ({...prev, marksD: parseInt(e.target.value) || 0}))} className="h-8 text-center" />
-                </div>
-              </div>
-              <div className="space-y-2"><h4 className="text-sm font-bold text-accent">সংক্ষিপ্ত মান</h4><Input type="number" value={meta.shortMarks} onChange={e => setMeta(prev => ({...prev, shortMarks: parseInt(e.target.value) || 0}))} className="h-8 text-center w-20" /></div>
-              <div className="space-y-2"><h4 className="text-sm font-bold text-orange-500">MCQ মান</h4><Input type="number" value={meta.mcqMarks} onChange={e => setMeta(prev => ({...prev, mcqMarks: parseInt(e.target.value) || 0}))} className="h-8 text-center w-20" /></div>
-            </div>
           </CardContent>
         </Card>
 
@@ -264,15 +314,48 @@ function CreateQuestionContent() {
           </div>
         </div>
 
+        <input 
+          type="file" 
+          ref={fileInputRef} 
+          className="hidden" 
+          accept="image/*" 
+          onChange={handleImageUpload} 
+        />
+
         {questions.map((q, idx) => (
           <Card key={q.id} className={`relative border-l-4 ${q.type === 'mcq' ? 'border-l-orange-500' : q.type === 'short' ? 'border-l-accent' : 'border-l-primary'}`}>
-            <div className="absolute top-2 right-2 no-print"><Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => setQuestions(prev => prev.filter(item => item.id !== q.id))}><Trash2 className="w-4 h-4" /></Button></div>
+            <div className="absolute top-2 right-2 no-print flex gap-1">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="text-primary h-8 w-8" 
+                onClick={() => {
+                  setActiveQuestionId(q.id);
+                  fileInputRef.current?.click();
+                }}
+              >
+                <ImageIcon className="w-4 h-4" />
+              </Button>
+              <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => setQuestions(prev => prev.filter(item => item.id !== q.id))}><Trash2 className="w-4 h-4" /></Button>
+            </div>
             <CardContent className="pt-6 space-y-4">
               <div className="flex items-center gap-2">
                 <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${q.type === 'mcq' ? 'bg-orange-100 text-orange-600' : q.type === 'short' ? 'bg-accent/10 text-accent' : 'bg-primary/10 text-primary'}`}>{q.type === 'mcq' ? 'বহুনির্বাচনি' : q.type === 'short' ? 'সংক্ষিপ্ত' : 'সৃজনশীল'}</span>
                 <span className="text-sm font-bold">প্রশ্ন নং: {isEnglish ? (idx + 1) : toBengaliNumber(idx + 1)}</span>
               </div>
               <Textarea placeholder={q.type === 'mcq' ? "প্রশ্ন ও অপশনগুলো ক. খ. গ. ঘ. সহ লিখুন" : "উদ্দীপক ও প্রশ্ন ক. খ. গ. ঘ. সহ লিখুন"} value={q.content || ''} onChange={e => setQuestions(prev => prev.map(item => item.id === q.id ? {...item, content: e.target.value} : item))} className="min-h-[120px] text-sm" />
+              
+              {q.imageUrl && (
+                <div className="relative w-full max-w-sm rounded-lg border overflow-hidden bg-muted/20">
+                  <img src={q.imageUrl} alt="Question Diagram" className="w-full h-auto object-contain" />
+                  <button 
+                    onClick={() => setQuestions(prev => prev.map(item => item.id === q.id ? { ...item, imageUrl: '' } : item))}
+                    className="absolute top-1 right-1 bg-destructive text-white p-1 rounded-full shadow-lg"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}
@@ -295,8 +378,9 @@ function CreateQuestionContent() {
             .section { margin-top: 10px; }
             .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 15px; margin: 5px auto; text-transform: uppercase; }
             .instruction { font-style: italic; font-size: 9.5pt; text-align: center; margin-bottom: 8px; display: block; }
-            .q-block { margin-bottom: 8px; page-break-inside: avoid; clear: both; display: block; }
-            .stimulus { margin-bottom: 3px; white-space: pre-wrap; display: block; text-align: justify; }
+            .q-block { margin-bottom: 15px; page-break-inside: avoid; clear: both; display: block; }
+            .stimulus { margin-bottom: 5px; white-space: pre-wrap; display: block; text-align: justify; }
+            .q-image { max-width: 400px; margin: 10px auto; display: block; border: 0.5pt solid #eee; }
             .sub-q { display: flex; justify-content: space-between; width: 100%; margin-bottom: 1px; }
             .q-text-part { flex: 1; padding-right: 15px; }
             .mark { font-weight: bold; width: 35px; text-align: right; }
@@ -331,6 +415,7 @@ function CreateQuestionContent() {
                   <div key={q.id} className="q-block">
                     <div className="font-bold mb-1">{qNum}. উদ্দীপকটি পড়ো এবং প্রশ্নগুলোর উত্তর দাও:</div>
                     <div className="stimulus" dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} />
+                    {q.imageUrl && <img src={q.imageUrl} className="q-image" alt="Question" />}
                     {['ক', 'খ', 'গ', 'ঘ'].map((l, i) => {
                       const text = (p as any)[i === 0 ? 'k' : i === 1 ? 'kh' : i === 2 ? 'g' : 'gh'];
                       const mark = i === 0 ? meta.marksA : i === 1 ? meta.marksB : i === 2 ? meta.marksC : meta.marksD;
@@ -354,9 +439,12 @@ function CreateQuestionContent() {
               {questions.filter(q => q.type === 'short').map((q, idx) => {
                 const qNum = isEnglish ? (idx + 1) : toBengaliNumber(idx + 1);
                 return (
-                  <div key={q.id} className="q-block sub-q">
-                    <span className="q-text-part" dangerouslySetInnerHTML={{ __html: `${qNum}. ${formatMath(q.content || '')}` }} />
-                    <span className="mark">{isEnglish ? meta.shortMarks : toBengaliNumber(meta.shortMarks)}</span>
+                  <div key={q.id} className="q-block">
+                    <div className="sub-q">
+                      <span className="q-text-part" dangerouslySetInnerHTML={{ __html: `${qNum}. ${formatMath(q.content || '')}` }} />
+                      <span className="mark">{isEnglish ? meta.shortMarks : toBengaliNumber(meta.shortMarks)}</span>
+                    </div>
+                    {q.imageUrl && <img src={q.imageUrl} className="q-image" alt="Question" />}
                   </div>
                 );
               })}
@@ -373,6 +461,7 @@ function CreateQuestionContent() {
                 return (
                   <div key={q.id} className="q-block">
                     <div className="font-bold mb-0.5" dangerouslySetInnerHTML={{ __html: `${qNum}. ${formatMath(p.main)}` }} />
+                    {q.imageUrl && <img src={q.imageUrl} className="q-image" alt="Question" />}
                     <div className="mcq-row">
                       {['ক', 'খ', 'গ', 'ঘ'].map((l, i) => {
                         const opt = (p as any)[i === 0 ? 'k' : i === 1 ? 'kh' : i === 2 ? 'g' : 'gh'];
