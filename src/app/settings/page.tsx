@@ -241,7 +241,7 @@ export default function SettingsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">শ্রেণি</label>
-                  <Select onValueChange={setClassId} value={classId}>
+                  <Select onValueChange={setClassId} value={classId || ''}>
                     <SelectTrigger>
                       <SelectValue placeholder="নির্বাচন করুন" />
                     </SelectTrigger>
@@ -254,7 +254,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">বিষয়</label>
-                  <Select onValueChange={setSubject} value={subject} disabled={!classId}>
+                  <Select onValueChange={setSubject} value={subject || ''} disabled={!classId}>
                     <SelectTrigger>
                       <SelectValue placeholder="নির্বাচন করুন" />
                     </SelectTrigger>
@@ -271,7 +271,7 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">অধ্যায়ের নাম</label>
                   {chaptersList.length > 0 ? (
-                    <Select onValueChange={setChapterName} value={chapterName}>
+                    <Select onValueChange={setChapterName} value={chapterName || ''}>
                       <SelectTrigger>
                         <SelectValue placeholder="অধ্যায় নির্বাচন করুন" />
                       </SelectTrigger>
@@ -284,7 +284,7 @@ export default function SettingsPage() {
                   ) : (
                     <Input 
                       placeholder="অধ্যায়ের নাম লিখুন" 
-                      value={chapterName} 
+                      value={chapterName || ''} 
                       onChange={(e) => setChapterName(e.target.value)}
                     />
                   )}
@@ -304,7 +304,7 @@ export default function SettingsPage() {
                   ) : (
                     <Input 
                       placeholder="https://..." 
-                      value={pdfUrl} 
+                      value={pdfUrl || ''} 
                       onChange={(e) => setPdfUrl(e.target.value)}
                       disabled={uploading}
                     />
@@ -314,7 +314,7 @@ export default function SettingsPage() {
                   <label className="text-sm font-semibold">কভার ইমেজ (ঐচ্ছিক)</label>
                   <Input 
                     placeholder="https://..." 
-                    value={coverImageUrl} 
+                    value={coverImageUrl || ''} 
                     onChange={(e) => setCoverImageUrl(e.target.value)}
                     disabled={uploading}
                   />
