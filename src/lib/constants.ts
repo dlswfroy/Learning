@@ -48,7 +48,7 @@ export const CHAPTERS_DATA: Record<string, Record<string, string[]>> = {
       'গদ্য-১৬: প্রবাস বন্ধু - সৈয়দ মুজতবা আলী',
       'গদ্য-১৭: মমতাদি -মানিক বন্দ্যোপাধ্যায়',
       'গদ্য-১৮: রহমানের মা - রণেশ দাশগুপ্ত',
-      'গদ্য-১৯: বনমানুষ - আবু ইসহাক',
+      'গদ্য-十九: বনমানুষ - আবু ইসহাক',
       'গদ্য-২০: একাত্তরের দিনগুলি - জাহানারা ইমাম',
       'গদ্য-২১: স্বাধীনতা আমার স্বাধীনতা - মমতাজউদদীন আহমদ',
       'গদ্য-২২: একুশের গল্প - জহির রায়হান',
@@ -105,6 +105,23 @@ export const CHAPTERS_DATA: Record<string, Record<string, string[]>> = {
       'অধ্যায় ১৩: ঘন জ্যামিতি (Solid Geometry)',
       'অধ্যায় ১৪: সম্ভাবনা (Probability)',
       'গণিত: মডেল টেস্ট (Higher Math - Model Tests)'
+    ],
+    'পদার্থ': [
+      'অধ্যায় ১: ভৌত রাশি এবং পরিমাপ (Physical Quantities and Their Measurements)',
+      'অধ্যায় ২: গতি (Motion)',
+      'অধ্যায় ৩: বল (Force)',
+      'অধ্যায় ৪: কাজ, ক্ষমতা ও শক্তি (Work, Power and Energy)',
+      'অধ্যায় ৫: পদার্থের অবস্থা ও চাপ (State of Matter and Pressure)',
+      'অধ্যায় ৬: বস্তুর ওপর তাপের প্রভাব (Effect of Heat on Matter)',
+      'অধ্যায় ৭: তরঙ্গ ও শব্দ (Waves and Sound)',
+      'অধ্যায় ৮: আলোর প্রতিফলন (Reflection of Light)',
+      'অধ্যায় ৯: আলোর প্রতিসরণ (Refraction of light)',
+      'অধ্যায় ১০: স্থির বিদ্যুৎ (Static Electricity)',
+      'অধ্যায় ১১: চল বিদ্যুৎ (Current Electricity)',
+      'অধ্যায় ১২: বিদ্যুতের চৌম্বক ক্রিয়া (Magnetic Effects of Current)',
+      'অধ্যায় ১৩: তেজস্ক্রিয়তা ও ইলেকট্রনিকস (Radioactivity and Electronics)',
+      'পদার্থবিজ্ঞান: ব্যবহারিক অংশ',
+      'পদার্থবিজ্ঞান: মডেল টেস্ট'
     ]
   }
 };
