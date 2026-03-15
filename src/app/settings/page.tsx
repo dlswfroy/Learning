@@ -10,7 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, Upload, FileText, CheckCircle, Trash2, Loader2, Link as LinkIcon, Filter } from 'lucide-react';
+import { Settings, Upload, FileText, CheckCircle, Trash2, Loader2, Link as LinkIcon, Filter, BookCopy } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useStorage, useUser } from '@/firebase';
 import { collection, addDoc, deleteDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
@@ -29,6 +31,7 @@ export default function SettingsPage() {
   const [file, setFile] = useState<File | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string>('');
   const [coverImageUrl, setCoverImageUrl] = useState<string>('');
+  const [bookType, setBookType] = useState<'nctb' | 'guide'>('nctb');
   
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -122,6 +125,7 @@ export default function SettingsPage() {
       fileName: fileName || '',
       pdfUrl: url || '',
       coverImageUrl: coverImageUrl || '',
+      isGuide: bookType === 'guide',
       uploadedAt: serverTimestamp(),
       userId: user?.uid || '',
     };
@@ -195,7 +199,21 @@ export default function SettingsPage() {
                 </TabsList>
               </Tabs>
             </CardHeader>
-            <CardContent className="pt-4 space-y-4">
+            <CardContent className="pt-4 space-y-6">
+              <div className="space-y-3">
+                <Label className="font-bold text-primary">বইয়ের ধরন</Label>
+                <RadioGroup value={bookType} onValueChange={(v) => setBookType(v as 'nctb' | 'guide')} className="flex gap-6">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="nctb" id="nctb" />
+                    <Label htmlFor="nctb" className="cursor-pointer">পাঠ্যবই (NCTB)</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="guide" id="guide" />
+                    <Label htmlFor="guide" className="cursor-pointer">গাইড বই</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">শ্রেণি</label>
@@ -309,17 +327,23 @@ export default function SettingsPage() {
             {filteredBooks.map((book) => (
               <Card key={book.id} className="p-4 flex items-center justify-between hover:border-primary/40 transition-colors group">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-16 rounded border bg-primary/10 flex items-center justify-center overflow-hidden shrink-0">
+                  <div className="w-12 h-16 rounded border bg-primary/10 flex items-center justify-center overflow-hidden shrink-0 relative">
                     {book.coverImageUrl ? (
                       <img src={book.coverImageUrl} alt="Cover" className="w-full h-full object-cover" />
                     ) : (
                       <FileText className="w-6 h-6 text-primary" />
                     )}
+                    {book.isGuide && (
+                      <div className="absolute top-0 right-0 bg-accent text-[8px] px-1 text-white font-bold">GUIDE</div>
+                    )}
                   </div>
                   <div>
-                    <h4 className="font-bold text-sm">{book.subject}</h4>
+                    <h4 className="font-bold text-sm flex items-center gap-1">
+                      {book.subject}
+                      {book.isGuide && <BookCopy className="w-3 h-3 text-accent" />}
+                    </h4>
                     <p className="text-[10px] text-muted-foreground">
-                      {CLASSES.find(c => c.id === book.classId)?.label || 'অজানা'} শ্রেণি
+                      {CLASSES.find(c => c.id === book.classId)?.label || 'অজানা'} শ্রেণি | {book.isGuide ? 'গাইড বই' : 'পাঠ্যবই'}
                     </p>
                     <p className="text-[10px] text-primary hover:underline truncate max-w-[150px]">
                       {book.fileName}

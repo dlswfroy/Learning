@@ -7,7 +7,7 @@ import { CLASSES } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { BookOpen, HelpCircle, FileText, Download, Loader2 } from 'lucide-react';
+import { BookOpen, HelpCircle, FileText, Download, Loader2, BookCopy } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { useFirestore, useCollection } from '@/firebase';
@@ -37,7 +37,60 @@ export default function SubjectPage() {
   }, [db, id, subject]);
 
   const { data: books, loading: loadingBooks } = useCollection(bookQuery);
-  const hasBook = books && books.length > 0;
+  
+  const nctbBooks = useMemo(() => books?.filter(b => !b.isGuide) || [], [books]);
+  const guideBooks = useMemo(() => books?.filter(b => b.isGuide) || [], [books]);
+
+  const renderBookList = (bookList: any[], emptyTitle: string) => {
+    if (bookList.length === 0) {
+      return (
+        <Card className="border-2 border-dashed border-primary/20 bg-primary/5 min-h-[300px] flex flex-col items-center justify-center p-8 text-center">
+          <FileText className="w-12 h-12 text-muted-foreground/20 mb-4" />
+          <h3 className="text-lg font-bold mb-2 text-foreground/80">{emptyTitle}</h3>
+          <p className="text-muted-foreground max-w-sm text-sm">
+            দুঃখিত, এই ক্যাটাগরিতে কোনো বই পাওয়া যায়নি।
+          </p>
+        </Card>
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {bookList.map((book) => (
+          <Card key={book.id} className="overflow-hidden hover:shadow-lg transition-shadow border-primary/10">
+            <div className="aspect-[3/4] bg-muted relative group overflow-hidden">
+              {book.coverImageUrl ? (
+                <img src={book.coverImageUrl} alt="Book Cover" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center">
+                  <FileText className="w-16 h-16 text-primary/20 mb-4" />
+                  <span className="text-sm font-bold text-primary/40 uppercase tracking-widest">
+                    {book.isGuide ? 'গাইড বই' : 'পাঠ্যবই'}
+                  </span>
+                </div>
+              )}
+              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-6">
+                <a 
+                  href={book.pdfUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="w-full"
+                >
+                  <Button className="w-full gap-2 font-bold bg-white text-primary hover:bg-white/90">
+                    <BookOpen className="w-4 h-4" /> বই পড়ুন
+                  </Button>
+                </a>
+              </div>
+            </div>
+            <CardHeader className="p-4">
+              <CardTitle className="text-sm font-bold truncate">{book.fileName || subject}</CardTitle>
+              <CardDescription className="text-[10px] truncate">{subject} | {currentClass.label} শ্রেণি</CardDescription>
+            </CardHeader>
+          </Card>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -59,94 +112,61 @@ export default function SubjectPage() {
         </Link>
       </div>
 
-      <Tabs defaultValue="read" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-8 bg-secondary/50 p-1">
-          <TabsTrigger value="read" className="gap-2 data-[state=active]:bg-white data-[state=active]:text-primary">
+      <Tabs defaultValue="textbook" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 mb-8 bg-secondary/50 p-1">
+          <TabsTrigger value="textbook" className="gap-2 data-[state=active]:bg-white data-[state=active]:text-primary font-bold">
             <FileText className="w-4 h-4" />
-            বই পড়ুন
+            পাঠ্যবই
           </TabsTrigger>
-          <TabsTrigger value="resources" className="gap-2 data-[state=active]:bg-white data-[state=active]:text-primary">
+          <TabsTrigger value="guidebook" className="gap-2 data-[state=active]:bg-white data-[state=active]:text-primary font-bold">
+            <BookCopy className="w-4 h-4" />
+            গাইড বই
+          </TabsTrigger>
+          <TabsTrigger value="resources" className="gap-2 data-[state=active]:bg-white data-[state=active]:text-primary font-bold">
             <Download className="w-4 h-4" />
             রিসোর্স
           </TabsTrigger>
         </TabsList>
         
-        <TabsContent value="read" className="animate-fade-in">
-          {loadingBooks ? (
-            <div className="flex flex-col items-center justify-center p-20 bg-secondary/5 rounded-xl border border-dashed border-primary/20">
-              <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
-              <p className="text-muted-foreground font-medium">বইটি খোঁজা হচ্ছে...</p>
-            </div>
-          ) : hasBook ? (
-            <Card className="p-8 text-center border-2 border-primary/10 bg-primary/5 shadow-sm">
-              <div className="w-40 h-56 bg-white rounded-lg flex items-center justify-center text-primary mx-auto mb-6 shadow-md border overflow-hidden relative group">
-                {books[0].coverImageUrl ? (
-                  <img src={books[0].coverImageUrl} alt="Book Cover" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
-                ) : (
-                  <div className="flex flex-col items-center justify-center p-4">
-                    <FileText className="w-12 h-12 mb-2 opacity-30" />
-                    <span className="text-xs font-bold text-muted-foreground text-center uppercase tracking-tighter">পাঠ্যবই</span>
-                  </div>
-                )}
-              </div>
-              <h3 className="text-2xl font-bold mb-8 text-primary">{subject}</h3>
-              <div className="flex flex-col items-center justify-center gap-3">
-                <a 
-                  href={books[0].pdfUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="w-full sm:w-auto"
-                >
-                  <Button className="gap-3 px-16 h-14 text-lg font-bold shadow-xl bg-primary hover:bg-primary/90 w-full sm:min-w-[240px] rounded-xl">
-                    <BookOpen className="w-6 h-6" />
-                    বই পড়ুন
-                  </Button>
-                </a>
-                <p className="text-[10px] text-muted-foreground mt-2">
-                  বড় ফাইল সরাসরি ওপেন করলে পড়া আরও সহজ হয়
-                </p>
-              </div>
-            </Card>
-          ) : (
-            <Card className="border-2 border-dashed border-primary/20 bg-primary/5 min-h-[350px] flex flex-col items-center justify-center p-12 text-center">
-              <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-muted-foreground/30 mb-6 shadow-sm border-2 border-dashed border-primary/20">
-                <BookOpen className="w-10 h-10" />
-              </div>
-              <h3 className="text-xl font-bold mb-2 text-foreground/80">বইটি এখনো নেই</h3>
-              <p className="text-muted-foreground max-w-sm mb-6 text-sm">
-                দুঃখিত, এই বইটির ডিজিটাল কপি সিস্টেমে নেই। আপনি সেটিং থেকে বইয়ের লিঙ্ক যোগ করতে পারেন।
-              </p>
-              <Link href="/settings">
-                <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-white transition-all font-bold">
-                  বই যোগ করুন
-                </Button>
-              </Link>
-            </Card>
-          )}
-        </TabsContent>
-        
-        <TabsContent value="resources">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card className="hover:shadow-md transition-shadow bg-background border-primary/10">
-              <CardHeader>
-                <CardTitle className="text-base font-bold">অধ্যায় ভিত্তিক নোট</CardTitle>
-                <CardDescription>শীঘ্রই আসছে...</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button variant="secondary" className="w-full" disabled>ডাউনলোড করুন</Button>
-              </CardContent>
-            </Card>
-            <Card className="hover:shadow-md transition-shadow bg-background border-primary/10">
-              <CardHeader>
-                <CardTitle className="text-base font-bold">বিগত বছরের প্রশ্ন</CardTitle>
-                <CardDescription>শীঘ্রই আসছে...</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button variant="secondary" className="w-full" disabled>ডাউনলোড করুন</Button>
-              </CardContent>
-            </Card>
+        {loadingBooks ? (
+          <div className="flex flex-col items-center justify-center p-20">
+            <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground font-medium">বই খোঁজা হচ্ছে...</p>
           </div>
-        </TabsContent>
+        ) : (
+          <>
+            <TabsContent value="textbook" className="animate-fade-in">
+              {renderBookList(nctbBooks, "পাঠ্যবই এখনো নেই")}
+            </TabsContent>
+            
+            <TabsContent value="guidebook" className="animate-fade-in">
+              {renderBookList(guideBooks, "গাইড বই এখনো নেই")}
+            </TabsContent>
+            
+            <TabsContent value="resources">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="hover:shadow-md transition-shadow bg-background border-primary/10">
+                  <CardHeader>
+                    <CardTitle className="text-base font-bold">অধ্যায় ভিত্তিক নোট</CardTitle>
+                    <CardDescription>শীঘ্রই আসছে...</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button variant="secondary" className="w-full" disabled>ডাউনলোড করুন</Button>
+                  </CardContent>
+                </Card>
+                <Card className="hover:shadow-md transition-shadow bg-background border-primary/10">
+                  <CardHeader>
+                    <CardTitle className="text-base font-bold">বিগত বছরের প্রশ্ন</CardTitle>
+                    <CardDescription>শীঘ্রই আসছে...</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button variant="secondary" className="w-full" disabled>ডাউনলোড করুন</Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+          </>
+        )}
       </Tabs>
     </div>
   );

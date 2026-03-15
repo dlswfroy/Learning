@@ -12,6 +12,7 @@
         "fileName": { "type": "string" },
         "pdfUrl": { "type": "string" },
         "coverImageUrl": { "type": "string", "description": "URL to the book's cover image." },
+        "isGuide": { "type": "boolean", "default": false },
         "uploadedAt": { "type": "string", "format": "date-time" },
         "userId": { "type": "string" }
       },
