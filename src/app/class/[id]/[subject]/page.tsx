@@ -77,14 +77,18 @@ export default function SubjectPage() {
                   className="w-full"
                 >
                   <Button className="w-full gap-2 font-bold bg-white text-primary hover:bg-white/90">
-                    <BookOpen className="w-4 h-4" /> বই পড়ুন
+                    <BookOpen className="w-4 h-4" /> পড়ুন
                   </Button>
                 </a>
               </div>
             </div>
             <CardHeader className="p-4">
-              <CardTitle className="text-sm font-bold truncate">{book.fileName || subject}</CardTitle>
-              <CardDescription className="text-[10px] truncate">{subject} | {currentClass.label} শ্রেণি</CardDescription>
+              <CardTitle className="text-sm font-bold truncate">
+                {book.chapterName || book.fileName || subject}
+              </CardTitle>
+              <CardDescription className="text-[10px] truncate">
+                {subject} | {currentClass.label} শ্রেণি
+              </CardDescription>
             </CardHeader>
           </Card>
         ))}

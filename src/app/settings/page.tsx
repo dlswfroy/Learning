@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { CLASSES, getSubjectsForClass } from '@/lib/constants';
+import { CLASSES, getSubjectsForClass, getChaptersForSubject } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -28,6 +28,7 @@ export default function SettingsPage() {
   
   const [classId, setClassId] = useState<string>('');
   const [subject, setSubject] = useState<string>('');
+  const [chapterName, setChapterName] = useState<string>('');
   const [file, setFile] = useState<File | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string>('');
   const [coverImageUrl, setCoverImageUrl] = useState<string>('');
@@ -85,6 +86,7 @@ export default function SettingsPage() {
   }, [uploadedBooks, viewClassId]);
 
   const subjectsList = useMemo(() => classId ? getSubjectsForClass(classId) : [], [classId]);
+  const chaptersList = useMemo(() => (classId && subject) ? getChaptersForSubject(classId, subject) : [], [classId, subject]);
 
   const handleSaveBook = async () => {
     if (!classId || !subject || !db || !isAdmin) return;
@@ -114,7 +116,7 @@ export default function SettingsPage() {
     } else {
       if (!pdfUrl) return;
       setUploading(true);
-      saveToFirestore(pdfUrl, subject);
+      saveToFirestore(pdfUrl, chapterName || subject);
     }
   };
 
@@ -122,6 +124,7 @@ export default function SettingsPage() {
     const bookData = {
       classId: classId || '',
       subject: subject || '',
+      chapterName: bookType === 'guide' ? chapterName : '',
       fileName: fileName || '',
       pdfUrl: url || '',
       coverImageUrl: coverImageUrl || '',
@@ -137,6 +140,7 @@ export default function SettingsPage() {
         setCoverImageUrl('');
         setClassId('');
         setSubject('');
+        setChapterName('');
         setProgress(0);
         toast({ title: "সফল", description: "বইটি যুক্ত করা হয়েছে।" });
       })
@@ -243,6 +247,30 @@ export default function SettingsPage() {
                 </div>
               </div>
 
+              {bookType === 'guide' && (
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold">অধ্যায়ের নাম</label>
+                  {chaptersList.length > 0 ? (
+                    <Select onValueChange={setChapterName} value={chapterName || ''}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="অধ্যায় নির্বাচন করুন" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {chaptersList.map((ch) => (
+                          <SelectItem key={ch} value={ch}>{ch}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input 
+                      placeholder="অধ্যায়ের নাম লিখুন" 
+                      value={chapterName || ''} 
+                      onChange={(e) => setChapterName(e.target.value)}
+                    />
+                  )}
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">{uploadMethod === 'file' ? 'PDF ফাইল' : 'ডাউনলোড লিঙ্ক'}</label>
@@ -345,6 +373,9 @@ export default function SettingsPage() {
                     <p className="text-[10px] text-muted-foreground">
                       {CLASSES.find(c => c.id === book.classId)?.label || 'অজানা'} শ্রেণি | {book.isGuide ? 'গাইড বই' : 'পাঠ্যবই'}
                     </p>
+                    {book.chapterName && (
+                      <p className="text-[10px] font-bold text-accent">{book.chapterName}</p>
+                    )}
                     <p className="text-[10px] text-primary hover:underline truncate max-w-[150px]">
                       {book.fileName}
                     </p>

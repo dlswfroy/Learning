@@ -9,6 +9,7 @@
         "id": { "type": "string" },
         "classId": { "type": "string" },
         "subject": { "type": "string" },
+        "chapterName": { "type": "string", "description": "Name of the specific chapter for guide books." },
         "fileName": { "type": "string" },
         "pdfUrl": { "type": "string" },
         "coverImageUrl": { "type": "string", "description": "URL to the book's cover image." },
