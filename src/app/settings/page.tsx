@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/tabs';
 import { Settings, Upload, FileText, CheckCircle, Trash2, Loader2, Link as LinkIcon, Filter, BookCopy } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -139,10 +139,10 @@ export default function SettingsPage() {
     const bookData = {
       classId: classId,
       subject: subject,
-      chapterName: bookType === 'guide' ? chapterName : '',
+      chapterName: bookType === 'guide' ? (chapterName || '') : '',
       fileName: fileName,
       pdfUrl: url,
-      coverImageUrl: coverImageUrl,
+      coverImageUrl: coverImageUrl || '',
       isGuide: bookType === 'guide',
       uploadedAt: serverTimestamp(),
       userId: user?.uid || '',
