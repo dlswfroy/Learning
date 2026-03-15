@@ -47,15 +47,17 @@ export function Navbar() {
 
   return (
     <nav className="fixed top-0 left-0 right-0 h-16 bg-primary text-primary-foreground z-50 shadow-md flex items-center px-6 no-print">
-      <Link href="/" className="flex items-center gap-2 group">
-        <div className="bg-white p-1.5 rounded-lg text-primary group-hover:scale-110 transition-transform flex items-center justify-center">
+      <Link href="/" className="flex items-center gap-3 group">
+        <div className="bg-white p-1 rounded-lg text-primary group-hover:scale-105 transition-transform flex items-center justify-center shadow-inner">
           {appLogoUrl ? (
-            <img src={appLogoUrl} alt="Logo" className="w-6 h-6 object-contain" />
+            <img src={appLogoUrl} alt="Logo" className="w-8 h-8 object-contain" />
           ) : (
-            <BookOpenText className="w-6 h-6" />
+            <BookOpenText className="w-8 h-8" />
           )}
         </div>
-        <h1 className="text-xl font-bold font-headline tracking-tight">{appName}</h1>
+        <h1 className="text-2xl font-black font-headline tracking-tighter drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
+          {appName}
+        </h1>
       </Link>
       
       <div className="ml-auto flex items-center gap-4">
