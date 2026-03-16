@@ -4,26 +4,26 @@
 
 @layer base {
   :root {
-    /* Primary: Bright Sky Blue #0C66CC -> HSL 212, 89%, 42% */
-    --background: 200 40% 94%; /* #E8F1F6 */
+    /* Brighter Primary Blue #0066FF -> HSL 212, 100%, 50% */
+    --background: 210 40% 96%;
     --foreground: 212 60% 10%;
     --card: 0 0% 100%;
     --card-foreground: 212 60% 10%;
     --popover: 0 0% 100%;
     --popover-foreground: 212 60% 10%;
-    --primary: 212 89% 42%;
+    --primary: 212 100% 45%; /* Brighter Blue */
     --primary-foreground: 0 0% 100%;
     --secondary: 212 30% 90%;
-    --secondary-foreground: 212 89% 42%;
+    --secondary-foreground: 212 100% 45%;
     --muted: 212 20% 85%;
     --muted-foreground: 212 40% 35%;
-    --accent: 165 66% 48%; /* Teal-green #2ACCA1 */
+    --accent: 165 75% 45%; /* Brighter Teal */
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     --border: 212 30% 85%;
     --input: 212 30% 85%;
-    --ring: 212 89% 42%;
+    --ring: 212 100% 45%;
     --radius: 0.75rem;
   }
   .dark {
@@ -33,19 +33,19 @@
     --card-foreground: 212 20% 95%;
     --popover: 212 60% 8%;
     --popover-foreground: 212 20% 95%;
-    --primary: 212 89% 55%;
+    --primary: 212 100% 55%;
     --primary-foreground: 212 60% 5%;
     --secondary: 212 30% 15%;
-    --secondary-foreground: 212 89% 55%;
+    --secondary-foreground: 212 100% 55%;
     --muted: 212 30% 15%;
     --muted-foreground: 212 20% 65%;
-    --accent: 165 66% 48%;
+    --accent: 165 75% 45%;
     --accent-foreground: 212 60% 5%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
     --border: 212 30% 20%;
     --input: 212 30% 20%;
-    --ring: 212 89% 55%;
+    --ring: 212 100% 55%;
   }
 }
 
@@ -58,7 +58,6 @@
   }
 }
 
-/* Print Specific Styles */
 @media print {
   .no-print {
     display: none !important;
@@ -75,22 +74,24 @@
     height: auto !important;
     min-height: 0 !important;
   }
-  .container {
-    max-width: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-  }
 }
 
 .print-only {
   display: none;
 }
 
-/* Custom styles for navigation scrolling */
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
 .hide-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out forwards;
 }

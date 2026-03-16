@@ -1,9 +1,8 @@
-
 "use client";
 
 import { useMemo } from 'react';
 import Link from 'next/link';
-import { BookOpenText, LogIn, LogOut, Settings } from 'lucide-react';
+import { BookOpenText, LogIn, LogOut, Settings as SettingsIcon } from 'lucide-react';
 import { useUser, useAuth, useFirestore, useDoc } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
@@ -46,23 +45,23 @@ export function Navbar() {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 min-h-16 h-auto py-2 bg-primary text-primary-foreground z-50 shadow-md flex items-center px-4 md:px-6 no-print">
-      <Link href="/" className="flex items-center gap-3 group">
-        <div className="bg-white p-1 rounded-lg text-primary group-hover:scale-105 transition-transform flex items-center justify-center shadow-inner shrink-0">
+    <nav className="fixed top-0 left-0 right-0 min-h-20 h-auto py-3 bg-primary text-primary-foreground z-50 shadow-xl flex items-center px-4 md:px-6 no-print">
+      <Link href="/" className="flex items-center gap-4 group">
+        <div className="bg-white p-1.5 rounded-xl text-primary group-hover:scale-105 transition-transform flex items-center justify-center shadow-lg shrink-0">
           {appLogoUrl ? (
-            <img src={appLogoUrl} alt="Logo" className="w-10 h-10 object-contain" />
+            <img src={appLogoUrl} alt="Logo" className="w-12 h-12 object-contain" />
           ) : (
-            <BookOpenText className="w-10 h-10" />
+            <BookOpenText className="w-12 h-12" />
           )}
         </div>
         <div className="flex flex-col">
-          <h1 className="text-xl md:text-3xl font-black font-headline tracking-tighter drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] leading-tight">
+          <h1 className="text-2xl md:text-4xl font-black font-headline tracking-tighter drop-shadow-[0_3px_3px_rgba(0,0,0,0.9)] leading-tight text-white">
             {appName}
           </h1>
-          <p className="text-[10px] md:text-xs font-bold text-red-500 italic leading-none mt-0.5">
+          <p className="text-[11px] md:text-sm font-black text-red-500 italic leading-none mt-1 drop-shadow-[0_1px_1px_rgba(255,255,255,0.3)]">
             Smart learning, Bright Future.
           </p>
-          <p className="text-[9px] md:text-[10px] text-white/80 font-medium leading-none mt-1">
+          <p className="text-[10px] md:text-xs text-white/90 font-bold leading-none mt-1.5 tracking-wide">
             আধুনিক প্রশ্নপত্র নির্মাতা
           </p>
         </div>
@@ -73,10 +72,10 @@ export function Navbar() {
           user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                  <Avatar className="h-10 w-10 border-2 border-white/20">
+                <Button variant="ghost" className="relative h-12 w-12 rounded-full border-2 border-white/30 hover:border-white/60 transition-colors">
+                  <Avatar className="h-11 w-11">
                     <AvatarImage src={userPhoto} alt={userName} />
-                    <AvatarFallback className="bg-secondary text-primary font-bold">
+                    <AvatarFallback className="bg-secondary text-primary font-black">
                       {userName.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
@@ -85,14 +84,14 @@ export function Navbar() {
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{userName}</p>
+                    <p className="text-sm font-bold leading-none">{userName}</p>
                     <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                    <Link href="/settings" className="cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4" />
+                    <SettingsIcon className="mr-2 h-4 w-4" />
                     <span>সেটিংস</span>
                    </Link>
                 </DropdownMenuItem>
@@ -107,7 +106,7 @@ export function Navbar() {
               <Button 
                 variant="secondary" 
                 size="sm" 
-                className="gap-2 font-bold"
+                className="gap-2 font-black shadow-lg"
               >
                 <LogIn className="w-4 h-4" />
                 লগইন
