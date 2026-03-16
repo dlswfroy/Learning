@@ -201,9 +201,27 @@ function CreateLectureSheetContent() {
       <div className="print-only">
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
-            @page { size: A4; margin: 0.5in; }
-            body { font-family: 'Inter', sans-serif; font-size: 11pt; color: black !important; line-height: 1.6 !important; background: white !important; }
-            .paper { width: 100%; text-align: justify; position: relative; min-height: 10in; background: transparent !important; z-index: 10; }
+            @page { 
+              size: A4; 
+              margin: 0.5in !important; 
+            }
+            body { 
+              font-family: 'Inter', sans-serif; 
+              font-size: 11pt; 
+              color: black !important; 
+              line-height: 1.6 !important; 
+              background: transparent !important; 
+              margin: 0 !important;
+              padding: 0 !important;
+            }
+            html { background: white !important; }
+            .paper { 
+              width: 100%; 
+              text-align: justify; 
+              position: relative; 
+              background: transparent !important; 
+              z-index: 10;
+            }
             .header { text-align: center; margin-bottom: 20px; border-bottom: 2pt solid black; padding-bottom: 10px; }
             .inst-name { font-size: 20pt; font-weight: 800; }
             .topic-title { font-size: 16pt; font-weight: bold; margin: 20px 0; text-align: center; text-decoration: underline; }
@@ -215,12 +233,11 @@ function CreateLectureSheetContent() {
               top: 50%;
               left: 50%;
               transform: translate(-50%, -50%);
-              width: 70%;
-              height: auto;
-              opacity: 0.08;
+              width: 60%;
+              opacity: 0.08 !important;
               z-index: -1;
               pointer-events: none;
-              display: flex;
+              display: flex !important;
               justify-content: center;
               align-items: center;
             }
@@ -228,6 +245,7 @@ function CreateLectureSheetContent() {
               max-width: 100%;
               max-height: 100%;
               object-fit: contain;
+              display: block !important;
             }
             
             .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
