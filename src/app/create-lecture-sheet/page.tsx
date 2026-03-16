@@ -25,6 +25,8 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 function formatMath(text: string) {
   if (!text) return '';
   let formatted = text.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
+  
+  // Basic Symbol Map
   const symbolMap: Record<string, string> = {
     '\\\\log': 'log', '\\\\triangle': '△', '\\\\angle': '∠', '\\\\circ': '°',
     '\\\\theta': 'θ', '\\\\pi': 'π', '\\\\pm': '±', '\\\\times': '×',
@@ -35,20 +37,29 @@ function formatMath(text: string) {
     '\\\\eta': 'η', '\\\\in': '∈', '\\\\mathbb\\{N\\}': 'ℕ', '\\\\mathbb\\{R\\}': 'ℝ', '\\\\mathbb\\{Z\\}': 'ℤ',
     '\\\\mathbb\\{Q\\}': 'ℚ', '\\\\subset': '⊂', '\\\\subseteq': '⊆', '\\\\cup': '∪',
     '\\\\cap': '∩', '\\\\emptyset': '∅', '\\\\forall': '∀', '\\\\exists': '∃',
-    '\\\\{': '{', '\\\\}': '}', '\\\\mid': '|', ':': ':'
+    '\\\\{': '{', '\\\\}': '}', '\\\\mid': '|', ':': ':', '\\\\\%': '%'
   };
+  
   Object.entries(symbolMap).forEach(([key, val]) => { 
     formatted = formatted.replace(new RegExp(key, 'g'), val); 
   });
   
-  // Handle fractions with optional spaces between parts
-  formatted = formatted.replace(/\\frac\{([^}]+)\}\s*\{([^}]+)\}/g, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
+  // Handle fractions with optional spaces between parts and nested curly braces support for subscripts
+  // Balanced braces regex for one level of nesting (e.g., P_{out})
+  const balancedRegex = /\\frac\{((?:[^{}]|\{[^{}]*\})+)\}\s*\{((?:[^{}]|\{[^{}]*\})+)\}/g;
+  formatted = formatted.replace(balancedRegex, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
+  
+  // Handle superscripts and subscripts
   formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
   formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
+  
+  // Roots
   formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
   formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>');
+  
+  // Cleanup
   formatted = formatted.replace(/\\/g, ''); 
   return formatted;
 }
@@ -223,6 +234,7 @@ function CreateLectureSheetContent() {
               position: relative; 
               z-index: 10;
               background: transparent !important;
+              padding: 0 !important;
             }
             .header { text-align: center; margin-bottom: 20px; border-bottom: 1.5pt solid black; padding-bottom: 10px; }
             .inst-name { font-size: 16pt; font-weight: 800; }
