@@ -103,7 +103,7 @@ function CreateLectureSheetContent() {
 
   const handleSave = () => {
     if (!user || !db) { toast({ title: "লগইন প্রয়োজন", variant: "destructive" }); return; }
-    if (!data.topic || !data.content) { toast({ title: "정보 অসম্পূর্ণ", description: "শিরোনাম ও বিষয়বস্তু অবশ্যই লিখুন।" }); return; }
+    if (!data.topic || !data.content) { toast({ title: "তথ্য অসম্পূর্ণ", description: "শিরোনাম ও বিষয়বস্তু অবশ্যই লিখুন।" }); return; }
     
     setSaving(true);
     const docId = editId || doc(collection(db, 'lecture-sheets')).id;
@@ -203,22 +203,25 @@ function CreateLectureSheetContent() {
               size: A4; 
               margin: 0.5in !important; 
             }
+            body, html { 
+              margin: 0 !important; 
+              padding: 0 !important;
+              background: white !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
             body { 
               font-family: 'Kalpurush', sans-serif !important; 
               font-size: 9pt !important; 
               color: black !important; 
               line-height: 1.5 !important; 
-              background: transparent !important; 
-              margin: 0 !important;
-              padding: 0 !important;
             }
-            html { background: white !important; }
             .paper { 
-              width: 100%; 
+              width: 100% !important; 
               text-align: justify; 
               position: relative; 
-              background: transparent !important; 
               z-index: 10;
+              background: transparent !important;
             }
             .header { text-align: center; margin-bottom: 20px; border-bottom: 1.5pt solid black; padding-bottom: 10px; }
             .inst-name { font-size: 16pt; font-weight: 800; }
@@ -227,22 +230,22 @@ function CreateLectureSheetContent() {
             .content-area { white-space: pre-wrap; font-size: 9pt; background: transparent !important; }
             
             .watermark-container {
-              position: fixed;
-              top: 50%;
-              left: 50%;
-              transform: translate(-50%, -50%);
-              width: 60%;
+              position: fixed !important;
+              top: 50% !important;
+              left: 50% !important;
+              transform: translate(-50%, -50%) !important;
+              width: 60% !important;
               opacity: 0.08 !important;
-              z-index: -1;
+              z-index: 0 !important;
               pointer-events: none;
               display: flex !important;
               justify-content: center;
               align-items: center;
             }
             .watermark-container img {
-              max-width: 100%;
-              max-height: 100%;
-              object-fit: contain;
+              max-width: 100% !important;
+              max-height: 100% !important;
+              object-fit: contain !important;
               display: block !important;
             }
             
