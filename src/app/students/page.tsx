@@ -40,7 +40,8 @@ import {
   Edit,
   MessageSquare,
   ReceiptText,
-  AlertTriangle
+  AlertTriangle,
+  ExternalLink
 } from 'lucide-react';
 import { CLASSES } from '@/lib/constants';
 import { toast } from '@/hooks/use-toast';
@@ -52,7 +53,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 /**
  * Students Management Page
- * Fixed import path and improved error handling for composite indices.
+ * Fixed Avatar import path and improved Index missing error display.
+ * Maintained all branding and UI requirements.
  */
 
 // Image processing for student photo
@@ -778,10 +780,28 @@ export default function StudentsPage() {
                 ) : reportLoading ? (
                   <div className="text-center py-10"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /></div>
                 ) : reportError ? (
-                  <div className="text-center py-10 space-y-2">
-                    <AlertTriangle className="w-8 h-8 text-destructive mx-auto" />
-                    <p className="text-destructive font-bold">রিপোর্ট লোড করতে সমস্যা হয়েছে।</p>
-                    <p className="text-[10px] text-muted-foreground">ব্রাউজার কনসোলে এরর চেক করুন এবং ইনডেক্স তৈরি করুন।</p>
+                  <div className="text-center py-10 space-y-4 max-w-md mx-auto">
+                    <AlertTriangle className="w-12 h-12 text-destructive mx-auto animate-bounce" />
+                    <div className="space-y-2">
+                      <p className="text-destructive font-black text-lg">হাজিরা রিপোর্ট লোড করতে সমস্যা হয়েছে</p>
+                      <p className="text-sm text-muted-foreground font-bold leading-relaxed">
+                        এই রিপোর্টটি দেখার জন্য ডাটাবেসে একটি "ইনডেক্স" তৈরি করতে হবে। নিচের লিঙ্কে ক্লিক করে ইনডেক্সটি তৈরি করুন:
+                      </p>
+                      <div className="p-3 bg-muted rounded-lg border text-[10px] break-all font-mono select-all text-left">
+                        https://console.firebase.google.com/v1/r/project/birganj-pouro-high-schoo-9d39d/firestore/indexes?create_composite=CmFwcm9qZWN0cy9iaXJnYW5qLXBvdXJvLWhpZ2gtc2Nob28tOWQzOWQvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2F0dGVuZGFuY2UvaW5kZXhlcy9fEAEaCwoHY2xhc3NJZBABGgoKBnVzZXJJZBABGggKBGRhdGUQARoMCghfX25hbWVfXxAB
+                      </div>
+                      <a 
+                        href="https://console.firebase.google.com/v1/r/project/birganj-pouro-high-schoo-9d39d/firestore/indexes?create_composite=CmFwcm9qZWN0cy9iaXJnYW5qLXBvdXJvLWhpZ2gtc2Nob28tOWQzOWQvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2F0dGVuZGFuY2UvaW5kZXhlcy9fEAEaCwoHY2xhc3NJZBABGgoKBnVzZXJJZBABGggKBGRhdGUQARoMCghfX25hbWVfXxAB" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg font-bold hover:bg-primary/90 transition-all mt-2"
+                      >
+                        <ExternalLink className="w-4 h-4" /> ইনডেক্স তৈরি করুন
+                      </a>
+                      <p className="text-[10px] text-red-500 font-bold italic mt-2">
+                        *লিঙ্কটি ওপেন করে "Create Index" বাটনে ক্লিক করুন। ইনডেক্স তৈরি হতে ২-৫ মিনিট সময় লাগতে পারে।
+                      </p>
+                    </div>
                   </div>
                 ) : !reportRecords || reportRecords.length === 0 ? (
                   <div className="text-center py-10 text-muted-foreground font-bold">এই সময়সীমার কোনো হাজিরা রেকর্ড পাওয়া যায়নি।</div>
