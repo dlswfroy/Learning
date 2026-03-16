@@ -177,7 +177,7 @@
     },
     "/attendance/{attendanceId}": {
       "schema": "AttendanceRecord",
-      "description": "Daily attendance records linked to user IDs."
+      "description": "Daily attendance records linked to user IDs. (Re-deployed rules to fix access issue)"
     },
     "/fees/{feeId}": {
       "schema": "FeeRecord",

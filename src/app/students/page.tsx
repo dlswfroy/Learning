@@ -48,11 +48,11 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { format, startOfMonth } from 'date-fns';
 import { bn } from 'date-fns/locale';
-import { Avatar, AvatarFallback, AvatarImage } from '@/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 /**
  * Students Management Page
- * Fixed indexing and misleading permission errors.
+ * Fixed import path and improved error handling for composite indices.
  */
 
 // Image processing for student photo
