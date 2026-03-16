@@ -74,6 +74,9 @@ function formatMath(text: string) {
   if (!text) return '';
   let formatted = text.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
   
+  // Handle \text{...}
+  formatted = formatted.replace(/\\text\{([^}]+)\}/g, '<span class="math-text">$1</span>');
+
   const symbolMap: Record<string, string> = {
     '\\\\log': 'log', '\\\\triangle': '△', '\\\\angle': '∠', '\\\\circ': '°',
     '\\\\theta': 'θ', '\\\\pi': 'π', '\\\\pm': '±', '\\\\times': '×',
@@ -90,7 +93,7 @@ function formatMath(text: string) {
     formatted = formatted.replace(new RegExp(key, 'g'), val); 
   });
   
-  // Balanced braces regex for one level of nesting (e.g., P_{out})
+  // Balanced braces regex for one level of nesting
   const balancedRegex = /\\frac\{((?:[^{}]|\{[^{}]*\})+)\}\s*\{((?:[^{}]|\{[^{}]*\})+)\}/g;
   formatted = formatted.replace(balancedRegex, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
   
@@ -450,6 +453,7 @@ function CreateQuestionContent() {
             .math-sqrt-stem { border-top: 0.5pt solid black; padding-top: 1px; }
             .math-sup { font-size: 0.7em; vertical-align: super; }
             .math-sub { font-size: 0.7em; vertical-align: sub; }
+            .math-text { font-family: 'Kalpurush', sans-serif; font-style: normal; }
             .no-print { display: none !important; }
           }
         `}} />
