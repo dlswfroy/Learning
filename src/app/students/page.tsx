@@ -23,7 +23,10 @@ import {
   CheckCircle2, 
   XCircle,
   Save,
-  Clock
+  Clock,
+  FileBarChart,
+  Calendar,
+  ClipboardList
 } from 'lucide-react';
 import { CLASSES } from '@/lib/constants';
 import { toast } from '@/hooks/use-toast';
@@ -41,10 +44,15 @@ export default function StudentsPage() {
   const [activeTab, setActiveTab] = useState('list');
 
   // Attendance states
+  const [attendanceSubTab, setAttendanceSubTab] = useState<'daily' | 'report'>('daily');
   const [attendanceDate, setAttendanceDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [attendanceClass, setAttendanceClass] = useState('');
   const [attendanceData, setAttendanceData] = useState<Record<string, 'present' | 'absent'>>({});
   const [savingAttendance, setSavingAttendance] = useState(false);
+
+  // Attendance Report states
+  const [reportDate, setReportDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [reportClass, setReportClass] = useState('');
 
   // Fees states
   const [feeStudentId, setFeeStudentId] = useState('');
@@ -81,6 +89,19 @@ export default function StudentsPage() {
     return students.filter(s => s.classId === attendanceClass)
       .sort((a, b) => (a.roll || '').localeCompare(b.roll || '', 'bn', { numeric: true }));
   }, [students, attendanceClass]);
+
+  // Report Query
+  const reportQuery = useMemo(() => {
+    if (!db || !user || !reportClass || !reportDate) return null;
+    return query(
+      collection(db, 'attendance'),
+      where('userId', '==', user.uid),
+      where('classId', '==', reportClass),
+      where('date', '==', reportDate)
+    );
+  }, [db, user, reportClass, reportDate]);
+
+  const { data: reportRecords, loading: reportLoading } = useCollection(reportQuery);
 
   const feesQuery = useMemo(() => {
     if (!db || !user) return null;
@@ -197,7 +218,7 @@ export default function StudentsPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 animate-fade-in pb-20 font-kalpurush">
-      <header className="flex items-center gap-4 border-b pb-4">
+      <header className="flex items-center gap-4 border-b pb-4 no-print">
         <div className="w-10 h-10 rounded-xl bg-green-600 text-white flex items-center justify-center shadow-sm">
           <Users className="w-6 h-6" />
         </div>
@@ -207,7 +228,7 @@ export default function StudentsPage() {
         </div>
       </header>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full no-print">
         <TabsList className="grid w-full grid-cols-3 mb-8 bg-secondary/50 p-1 h-14">
           <TabsTrigger value="list" className="gap-2 font-bold text-sm h-12">
             <Users className="w-4 h-4" /> শিক্ষার্থী তালিকা
@@ -303,68 +324,160 @@ export default function StudentsPage() {
         </TabsContent>
 
         <TabsContent value="attendance" className="space-y-6">
-          <Card className="shadow-md">
-            <CardHeader className="bg-primary/5 border-b py-4">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <CardTitle className="text-lg flex items-center gap-2 font-bold">
-                  <CalendarCheck className="w-5 h-5 text-primary" /> দৈনিক হাজিরা
-                </CardTitle>
-                <div className="flex flex-wrap gap-3">
-                  <Input type="date" value={attendanceDate} onChange={e => setAttendanceDate(e.target.value)} className="w-40 font-bold" />
-                  <Select onValueChange={setAttendanceClass} value={attendanceClass}>
-                    <SelectTrigger className="w-40 font-bold"><SelectValue placeholder="শ্রেণি নির্বাচন" /></SelectTrigger>
-                    <SelectContent>
-                      {CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-6">
-              {!attendanceClass ? (
-                <div className="text-center py-10 text-muted-foreground font-bold">শ্রেণি নির্বাচন করুন</div>
-              ) : classStudents.length === 0 ? (
-                <div className="text-center py-10 text-muted-foreground font-bold">এই শ্রেণিতে কোনো শিক্ষার্থী নেই</div>
-              ) : (
-                <div className="space-y-3">
-                  {classStudents.map(s => {
-                    const status = attendanceData[s.id] || 'present';
-                    return (
-                      <div key={s.id} className="flex items-center justify-between p-3 border rounded-lg bg-white hover:bg-muted/5 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <span className="w-8 h-8 flex items-center justify-center bg-secondary rounded-full font-bold text-xs">{s.roll}</span>
-                          <span className="font-bold">{s.name}</span>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button 
-                            variant={status === 'present' ? 'default' : 'outline'} 
-                            size="sm" 
-                            className={`gap-1 font-bold ${status === 'present' ? 'bg-green-600 hover:bg-green-700' : ''}`}
-                            onClick={() => setAttendanceData(p => ({...p, [s.id]: 'present'}))}
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5" /> উপস্থিত
-                          </Button>
-                          <Button 
-                            variant={status === 'absent' ? 'destructive' : 'outline'} 
-                            size="sm" 
-                            className="gap-1 font-bold"
-                            onClick={() => setAttendanceData(p => ({...p, [s.id]: 'absent'}))}
-                          >
-                            <XCircle className="w-3.5 h-3.5" /> অনুপস্থিত
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  <div className="pt-6 border-t flex justify-end">
-                    <Button onClick={handleSaveAttendance} disabled={savingAttendance} className="gap-2 font-bold px-10">
-                      {savingAttendance ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} হাজিরা সেভ করুন
-                    </Button>
+          <div className="flex items-center gap-4 mb-4">
+            <Button 
+              variant={attendanceSubTab === 'daily' ? 'default' : 'outline'} 
+              onClick={() => setAttendanceSubTab('daily')}
+              className="gap-2 font-bold"
+            >
+              <ClipboardList className="w-4 h-4" /> দৈনিক হাজিরা
+            </Button>
+            <Button 
+              variant={attendanceSubTab === 'report' ? 'default' : 'outline'} 
+              onClick={() => setAttendanceSubTab('report')}
+              className="gap-2 font-bold"
+            >
+              <FileBarChart className="w-4 h-4" /> রিপোর্ট
+            </Button>
+          </div>
+
+          {attendanceSubTab === 'daily' ? (
+            <Card className="shadow-md">
+              <CardHeader className="bg-primary/5 border-b py-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <CardTitle className="text-lg flex items-center gap-2 font-bold">
+                    <CalendarCheck className="w-5 h-5 text-primary" /> দৈনিক হাজিরা ইনপুট
+                  </CardTitle>
+                  <div className="flex flex-wrap gap-3">
+                    <Input type="date" value={attendanceDate} onChange={e => setAttendanceDate(e.target.value)} className="w-40 font-bold" />
+                    <Select onValueChange={setAttendanceClass} value={attendanceClass}>
+                      <SelectTrigger className="w-40 font-bold"><SelectValue placeholder="শ্রেণি নির্বাচন" /></SelectTrigger>
+                      <SelectContent>
+                        {CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent className="pt-6">
+                {!attendanceClass ? (
+                  <div className="text-center py-10 text-muted-foreground font-bold">শ্রেণি নির্বাচন করুন</div>
+                ) : classStudents.length === 0 ? (
+                  <div className="text-center py-10 text-muted-foreground font-bold">এই শ্রেণিতে কোনো শিক্ষার্থী নেই</div>
+                ) : (
+                  <div className="space-y-3">
+                    {classStudents.map(s => {
+                      const status = attendanceData[s.id] || 'present';
+                      return (
+                        <div key={s.id} className="flex items-center justify-between p-3 border rounded-lg bg-white hover:bg-muted/5 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <span className="w-8 h-8 flex items-center justify-center bg-secondary rounded-full font-bold text-xs">{s.roll}</span>
+                            <span className="font-bold">{s.name}</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button 
+                              variant={status === 'present' ? 'default' : 'outline'} 
+                              size="sm" 
+                              className={`gap-1 font-bold ${status === 'present' ? 'bg-green-600 hover:bg-green-700' : ''}`}
+                              onClick={() => setAttendanceData(p => ({...p, [s.id]: 'present'}))}
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" /> উপস্থিত
+                            </Button>
+                            <Button 
+                              variant={status === 'absent' ? 'destructive' : 'outline'} 
+                              size="sm" 
+                              className="gap-1 font-bold"
+                              onClick={() => setAttendanceData(p => ({...p, [s.id]: 'absent'}))}
+                            >
+                              <XCircle className="w-3.5 h-3.5" /> অনুপস্থিত
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <div className="pt-6 border-t flex justify-end">
+                      <Button onClick={handleSaveAttendance} disabled={savingAttendance} className="gap-2 font-bold px-10">
+                        {savingAttendance ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} হাজিরা সেভ করুন
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="shadow-md">
+              <CardHeader className="bg-orange-50/50 border-b py-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <CardTitle className="text-lg flex items-center gap-2 font-bold text-orange-700">
+                    <FileBarChart className="w-5 h-5" /> হাজিরা রিপোর্ট
+                  </CardTitle>
+                  <div className="flex flex-wrap gap-3">
+                    <Input type="date" value={reportDate} onChange={e => setReportDate(e.target.value)} className="w-40 font-bold" />
+                    <Select onValueChange={setReportClass} value={reportClass}>
+                      <SelectTrigger className="w-40 font-bold"><SelectValue placeholder="শ্রেণি নির্বাচন" /></SelectTrigger>
+                      <SelectContent>
+                        {CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6">
+                {!reportClass ? (
+                  <div className="text-center py-10 text-muted-foreground font-bold">রিপোর্ট দেখতে শ্রেণি নির্বাচন করুন</div>
+                ) : reportLoading ? (
+                  <div className="text-center py-10"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /></div>
+                ) : !reportRecords || reportRecords.length === 0 ? (
+                  <div className="text-center py-10 text-muted-foreground font-bold">এই তারিখের কোনো হাজিরা রেকর্ড পাওয়া যায়নি।</div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-3 gap-4 mb-6">
+                      <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 text-center">
+                        <p className="text-[10px] font-bold text-blue-600 uppercase">মোট শিক্ষার্থী</p>
+                        <p className="text-2xl font-black text-blue-700">{reportRecords.length}</p>
+                      </div>
+                      <div className="p-4 bg-green-50 rounded-xl border border-green-100 text-center">
+                        <p className="text-[10px] font-bold text-green-600 uppercase">উপস্থিত</p>
+                        <p className="text-2xl font-black text-green-700">{reportRecords.filter(r => r.status === 'present').length}</p>
+                      </div>
+                      <div className="p-4 bg-red-50 rounded-xl border border-red-100 text-center">
+                        <p className="text-[10px] font-bold text-red-600 uppercase">অনুপস্থিত</p>
+                        <p className="text-2xl font-black text-red-700">{reportRecords.filter(r => r.status === 'absent').length}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="border rounded-lg overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead className="bg-muted/50 border-b">
+                          <tr>
+                            <th className="p-3 text-left font-bold">রোল</th>
+                            <th className="p-3 text-left font-bold">নাম</th>
+                            <th className="p-3 text-center font-bold">অবস্থা</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {reportRecords.map(record => {
+                            const student = students?.find(s => s.id === record.studentId);
+                            return (
+                              <tr key={record.id} className="hover:bg-muted/5">
+                                <td className="p-3 font-bold">{student?.roll || '-'}</td>
+                                <td className="p-3 font-bold">{student?.name || 'অজানা'}</td>
+                                <td className="p-3 text-center">
+                                  <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${record.status === 'present' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                    {record.status === 'present' ? 'উপস্থিত' : 'অনুপস্থিত'}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="fees" className="space-y-6">
