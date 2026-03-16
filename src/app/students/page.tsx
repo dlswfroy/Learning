@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "@/dialog";
+} from "@/components/ui/dialog";
 import { 
   Users, 
   UserPlus, 
@@ -177,11 +177,24 @@ export default function StudentsPage() {
       .sort((a, b) => (a.roll || '').localeCompare(b.roll || '', 'bn', { numeric: true }));
   }, [students, attendanceClass]);
 
+  // Attendance Report records
+  const attendanceReportQuery = useMemo(() => {
+    if (!db || !user || !reportClass) return null;
+    return query(
+      collection(db, 'attendance'),
+      where('userId', '==', user.uid),
+      where('classId', '==', reportClass),
+      where('date', '>=', reportStartDate),
+      where('date', '<=', reportEndDate)
+    );
+  }, [db, user, reportClass, reportStartDate, reportEndDate]);
+
+  const { data: reportRecords, loading: reportLoading } = useCollection(attendanceReportQuery);
+
   // Fee report records
   const feesReportQuery = useMemo(() => {
     if (!db || !user) return null;
-    let q = query(collection(db, 'fees'), where('userId', '==', user.uid));
-    return q;
+    return query(collection(db, 'fees'), where('userId', '==', user.uid));
   }, [db, user]);
 
   const { data: allFees, loading: feesLoading } = useCollection(feesReportQuery);
@@ -192,7 +205,6 @@ export default function StudentsPage() {
     if (feeReportMonth !== 'all') result = result.filter(f => f.month === feeReportMonth);
     if (feeReportYear !== 'all') result = result.filter(f => f.year === feeReportYear);
     
-    // Filter by class needs joining with student data
     if (feeReportClass !== 'all') {
       result = result.filter(f => {
         const student = students?.find(s => s.id === f.studentId);
