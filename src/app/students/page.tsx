@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useFirestore, useUser, useCollection } from '@/firebase';
 import { collection, query, where, addDoc, deleteDoc, doc, serverTimestamp, getDocs, setDoc, limit, orderBy } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
@@ -27,7 +27,9 @@ import {
   FileBarChart,
   Calendar,
   ClipboardList,
-  PlusCircle
+  PlusCircle,
+  Camera,
+  User as UserIcon
 } from 'lucide-react';
 import { CLASSES } from '@/lib/constants';
 import { toast } from '@/hooks/use-toast';
@@ -35,6 +37,49 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { format, startOfMonth } from 'date-fns';
 import { bn } from 'date-fns/locale';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
+// Image processing for student photo
+async function processImage(file: File): Promise<string> {
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error('ফাইল সাইজ ৫ মেগাবাইটের বেশি হতে পারবে না।');
+  }
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const maxSide = 400; // Smaller side for student photo
+
+        if (width > height) {
+          if (width > maxSide) {
+            height *= maxSide / width;
+            width = maxSide;
+          }
+        } else {
+          if (height > maxSide) {
+            width *= maxSide / height;
+            height = maxSide;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.7)); // 70% quality for students
+      };
+      img.onerror = () => reject(new Error('ছবি লোড করা সম্ভব হয়নি।'));
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => reject(new Error('ফাইল পড়া সম্ভব হয়নি।'));
+    reader.readAsDataURL(file);
+  });
+}
 
 export default function StudentsPage() {
   const db = useFirestore();
@@ -43,6 +88,7 @@ export default function StudentsPage() {
   const [search, setSearch] = useState('');
   const [filterClass, setFilterClass] = useState('all');
   const [activeTab, setActiveTab] = useState('list');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Sub-tabs states
   const [listSubTab, setListSubTab] = useState<'view' | 'add'>('view');
@@ -68,6 +114,8 @@ export default function StudentsPage() {
 
   const [formData, setFormData] = useState({
     name: '',
+    fatherName: '',
+    photo: '',
     classId: '',
     roll: '',
     phone: ''
@@ -83,7 +131,10 @@ export default function StudentsPage() {
   const filteredStudents = useMemo(() => {
     if (!students) return [];
     return students.filter(s => {
-      const matchSearch = s.name?.toLowerCase().includes(search.toLowerCase()) || s.roll?.includes(search) || s.phone?.includes(search);
+      const matchSearch = s.name?.toLowerCase().includes(search.toLowerCase()) || 
+                          s.fatherName?.toLowerCase().includes(search.toLowerCase()) ||
+                          s.roll?.includes(search) || 
+                          s.phone?.includes(search);
       const matchClass = filterClass === 'all' || s.classId === filterClass;
       return matchSearch && matchClass;
     }).sort((a, b) => (a.roll || '').localeCompare(b.roll || '', 'bn', { numeric: true }));
@@ -120,6 +171,18 @@ export default function StudentsPage() {
   }, [db, user]);
   const { data: recentFees, loading: feesLoading } = useCollection(feesQuery);
 
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const base64 = await processImage(file);
+      setFormData(prev => ({ ...prev, photo: base64 }));
+      toast({ title: "সফল", description: "ছবি প্রসেস করা হয়েছে।" });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "ত্রুটি", description: err.message });
+    }
+  };
+
   const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !db) return;
@@ -138,7 +201,7 @@ export default function StudentsPage() {
     addDoc(collection(db, 'students'), studentData)
       .then(() => {
         toast({ title: "সফল", description: "শিক্ষার্থীর তথ্য যুক্ত হয়েছে।" });
-        setFormData({ name: '', classId: '', roll: '', phone: '' });
+        setFormData({ name: '', fatherName: '', photo: '', classId: '', roll: '', phone: '' });
         setListSubTab('view');
       })
       .catch(async () => {
@@ -276,7 +339,7 @@ export default function StudentsPage() {
                   <div className="flex flex-col sm:flex-row gap-3">
                     <div className="relative flex-1">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input placeholder="খুঁজুন..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 font-bold w-full sm:w-64 h-9" />
+                      <Input placeholder="নাম, পিতার নাম বা রোল দিয়ে খুঁজুন..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 font-bold w-full sm:w-80 h-9" />
                     </div>
                     <Select value={filterClass} onValueChange={setFilterClass}>
                       <SelectTrigger className="w-full sm:w-40 font-bold h-9">
@@ -297,18 +360,22 @@ export default function StudentsPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {filteredStudents.map(s => (
                       <div key={s.id} className="p-4 border rounded-xl flex items-center gap-4 bg-white hover:border-green-400 transition-all shadow-sm">
-                        <div className="w-12 h-12 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-black text-lg shrink-0">
-                          {s.name?.charAt(0)}
-                        </div>
+                        <Avatar className="h-14 w-14 border-2 border-green-100 shadow-sm">
+                          <AvatarImage src={s.photo || ''} alt={s.name} />
+                          <AvatarFallback className="bg-green-50 text-green-700 font-black text-xl">
+                            {s.name?.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
                         <div className="flex-1 min-w-0">
                           <h4 className="font-bold text-base truncate">{s.name}</h4>
+                          <p className="text-[10px] font-bold text-muted-foreground -mt-1 truncate">পিতা: {s.fatherName || 'উল্লেখ নেই'}</p>
                           <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-[10px] font-bold text-muted-foreground">
                             <span className="flex items-center gap-1"><GraduationCap className="w-3 h-3 text-green-600" /> {CLASSES.find(c => c.id === s.classId)?.label} শ্রেণি</span>
                             <span className="flex items-center gap-1"><Hash className="w-3 h-3 text-green-600" /> রোল: {s.roll}</span>
                             {s.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3 text-green-600" /> {s.phone}</span>}
                           </div>
                         </div>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(s.id)} className="text-destructive">
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(s.id)} className="text-destructive shrink-0">
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
@@ -318,40 +385,68 @@ export default function StudentsPage() {
               </CardContent>
             </Card>
           ) : (
-            <Card className="shadow-md border-green-100 max-w-2xl mx-auto">
+            <Card className="shadow-md border-green-100 max-w-3xl mx-auto">
               <CardHeader className="bg-green-50/50 border-b py-4 text-center">
                 <CardTitle className="text-lg flex items-center justify-center gap-2 font-bold text-green-700">
                   <UserPlus className="w-5 h-5" /> নতুন শিক্ষার্থী যুক্ত করুন
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-6">
-                <form onSubmit={handleAddStudent} className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold">শিক্ষার্থীর নাম</label>
-                    <Input value={formData.name} onChange={e => setFormData(p => ({...p, name: e.target.value}))} placeholder="পুরো নাম" className="font-bold" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-bold">শ্রেণি নির্বাচন করুন</label>
-                      <Select onValueChange={v => setFormData(p => ({...p, classId: v}))} value={formData.classId}>
-                        <SelectTrigger className="font-bold"><SelectValue placeholder="শ্রেণি" /></SelectTrigger>
-                        <SelectContent>
-                          {CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                <form onSubmit={handleAddStudent} className="space-y-6">
+                  <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
+                    <div className="flex flex-col items-center gap-3 shrink-0">
+                      <div className="relative group">
+                        <Avatar className="h-32 w-32 border-4 border-green-100 shadow-lg">
+                          <AvatarImage src={formData.photo || ''} />
+                          <AvatarFallback className="bg-secondary text-primary font-black text-4xl">
+                            <UserIcon className="w-16 h-16 opacity-20" />
+                          </AvatarFallback>
+                        </Avatar>
+                        <button 
+                          type="button" 
+                          onClick={() => fileInputRef.current?.click()} 
+                          className="absolute -bottom-1 -right-1 bg-green-600 text-white p-2.5 rounded-full shadow-lg hover:bg-green-700 transition-colors"
+                        >
+                          <Camera className="w-5 h-5" />
+                        </button>
+                        <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handlePhotoUpload} />
+                      </div>
+                      <span className="text-[10px] font-bold text-muted-foreground">ছবি যুক্ত করুন</span>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-bold">রোল নম্বর</label>
-                      <Input value={formData.roll} onChange={e => setFormData(p => ({...p, roll: e.target.value}))} placeholder="রোল" className="font-bold" />
+
+                    <div className="flex-1 w-full space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold">শিক্ষার্থীর নাম</label>
+                        <Input value={formData.name} onChange={e => setFormData(p => ({...p, name: e.target.value}))} placeholder="পুরো নাম" className="font-bold" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold">পিতার নাম</label>
+                        <Input value={formData.fatherName} onChange={e => setFormData(p => ({...p, fatherName: e.target.value}))} placeholder="পিতার নাম লিখুন" className="font-bold" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-bold">শ্রেণি নির্বাচন করুন</label>
+                          <Select onValueChange={v => setFormData(p => ({...p, classId: v}))} value={formData.classId}>
+                            <SelectTrigger className="font-bold"><SelectValue placeholder="শ্রেণি" /></SelectTrigger>
+                            <SelectContent>
+                              {CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-bold">রোল নম্বর</label>
+                          <Input value={formData.roll} onChange={e => setFormData(p => ({...p, roll: e.target.value}))} placeholder="রোল" className="font-bold" />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold">মোবাইল নম্বর (পিতামাতা)</label>
+                        <Input value={formData.phone} onChange={e => setFormData(p => ({...p, phone: e.target.value}))} placeholder="০১৭XXXXXXXX" className="font-bold" />
+                      </div>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold">মোবাইল নম্বর (পিতামাতা)</label>
-                    <Input value={formData.phone} onChange={e => setFormData(p => ({...p, phone: e.target.value}))} placeholder="০১৭XXXXXXXX" className="font-bold" />
-                  </div>
-                  <div className="pt-4">
-                    <Button type="submit" disabled={adding} className="w-full font-bold bg-green-600 hover:bg-green-700 h-11 text-white shadow-lg">
-                      {adding ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />} সংরক্ষণ করুন
+                  <div className="pt-4 border-t">
+                    <Button type="submit" disabled={adding} className="w-full font-bold bg-green-600 hover:bg-green-700 h-11 text-white shadow-lg text-lg">
+                      {adding ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />} শিক্ষার্থী তথ্য সংরক্ষণ করুন
                     </Button>
                   </div>
                 </form>
@@ -409,6 +504,10 @@ export default function StudentsPage() {
                         <div key={s.id} className="flex items-center justify-between p-3 border rounded-lg bg-white hover:bg-muted/5 transition-colors">
                           <div className="flex items-center gap-3">
                             <span className="w-8 h-8 flex items-center justify-center bg-secondary rounded-full font-bold text-xs">{s.roll}</span>
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={s.photo || ''} />
+                              <AvatarFallback className="bg-muted text-[10px] font-bold">{s.name?.charAt(0)}</AvatarFallback>
+                            </Avatar>
                             <span className="font-bold">{s.name}</span>
                           </div>
                           <div className="flex gap-2">

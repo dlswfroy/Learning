@@ -88,6 +88,8 @@
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
+        "fatherName": { "type": "string" },
+        "photo": { "type": "string", "description": "Base64 encoded student photo." },
         "classId": { "type": "string" },
         "roll": { "type": "string" },
         "phone": { "type": "string" },
