@@ -3,7 +3,7 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { useFirestore, useUser, useCollection } from '@/firebase';
-import { collection, query, where, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, where, deleteDoc, doc, orderBy } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,7 +19,8 @@ import {
   PlusCircle,
   AlertTriangle,
   CheckSquare,
-  Filter
+  Filter,
+  Library
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -39,7 +40,7 @@ import { bn } from 'date-fns/locale';
 import { CLASSES } from '@/lib/constants';
 import { toast } from '@/hooks/use-toast';
 
-export default function MyQuestionsPage() {
+export default function MyLibraryPage() {
   const db = useFirestore();
   const { user, loading: userLoading } = useUser();
   const router = useRouter();
@@ -52,6 +53,7 @@ export default function MyQuestionsPage() {
     }
   }, [user, userLoading, router]);
 
+  // Query for Questions
   const questionsQuery = useMemo(() => {
     if (!db || !user) return null;
     return query(
@@ -60,7 +62,17 @@ export default function MyQuestionsPage() {
     );
   }, [db, user]);
 
+  // Query for Lecture Sheets
+  const sheetsQuery = useMemo(() => {
+    if (!db || !user) return null;
+    return query(
+      collection(db, 'lecture-sheets'),
+      where('userId', '==', user.uid)
+    );
+  }, [db, user]);
+
   const { data: rawQuestions, loading: questionsLoading } = useCollection(questionsQuery);
+  const { data: rawSheets, loading: sheetsLoading } = useCollection(sheetsQuery);
 
   const sortedQuestions = useMemo(() => {
     if (!rawQuestions) return [];
@@ -71,19 +83,30 @@ export default function MyQuestionsPage() {
     });
   }, [rawQuestions]);
 
+  const sortedSheets = useMemo(() => {
+    if (!rawSheets) return [];
+    return [...rawSheets].sort((a, b) => {
+      const dateA = (a.updatedAt as any)?.toDate?.() || (a.createdAt as any)?.toDate?.() || new Date(0);
+      const dateB = (b.updatedAt as any)?.toDate?.() || (b.createdAt as any)?.toDate?.() || new Date(0);
+      return dateB.getTime() - dateA.getTime();
+    });
+  }, [rawSheets]);
+
   const filteredQuestions = useMemo(() => {
     if (filterClassId === 'all') return sortedQuestions;
     return sortedQuestions.filter(q => q.classId === filterClassId);
   }, [sortedQuestions, filterClassId]);
 
-  const writtenQuestions = useMemo(() => filteredQuestions.filter(q => !q.isMcq), [filteredQuestions]);
-  const mcqQuestions = useMemo(() => filteredQuestions.filter(q => q.isMcq), [filteredQuestions]);
+  const filteredSheets = useMemo(() => {
+    if (filterClassId === 'all') return sortedSheets;
+    return sortedSheets.filter(s => s.classId === filterClassId);
+  }, [sortedSheets, filterClassId]);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, type: 'questions' | 'lecture-sheets') => {
     setDeleting(id);
     try {
-      await deleteDoc(doc(db!, 'questions', id));
-      toast({ title: "সফল", description: "প্রশ্নপত্রটি মুছে ফেলা হয়েছে।" });
+      await deleteDoc(doc(db!, type, id));
+      toast({ title: "সফল", description: "আইটেমটি মুছে ফেলা হয়েছে।" });
     } catch (e) {
       toast({ variant: "destructive", title: "ত্রুটি", description: "মুছে ফেলা সম্ভব হয়নি।" });
     } finally {
@@ -115,7 +138,7 @@ export default function MyQuestionsPage() {
           {q.institution || 'শিক্ষা প্রতিষ্ঠানের নাম নেই'}
         </p>
         <p className="text-[10px] text-muted-foreground mt-1">
-          মোট প্রশ্ন: {q.questions?.length || 0} টি
+          মোট প্রশ্ন: {q.questions?.length || 0} টি ({q.isMcq ? 'এমসিকিউ' : 'লিখিত'})
         </p>
       </CardContent>
       <CardFooter className="border-t bg-muted/10 flex justify-end gap-2 p-3">
@@ -136,13 +159,13 @@ export default function MyQuestionsPage() {
                 <AlertTriangle className="text-destructive w-5 h-5" /> আপনি কি নিশ্চিত?
               </AlertDialogTitle>
               <AlertDialogDescription>
-                এই প্রশ্নপত্রটি স্থায়ীভাবে মুছে ফেলা হবে। এটি আর ফিরে পাওয়া সম্ভব নয়।
+                এই প্রশ্নপত্রটি স্থায়ীভাবে মুছে ফেলা হবে।
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>বাতিল</AlertDialogCancel>
               <AlertDialogAction 
-                onClick={() => handleDelete(q.id)}
+                onClick={() => handleDelete(q.id, 'questions')}
                 className="bg-destructive hover:bg-destructive/90"
               >
                 হ্যাঁ, মুছে ফেলুন
@@ -152,19 +175,85 @@ export default function MyQuestionsPage() {
         </AlertDialog>
 
         <Link href={`/create-question?id=${q.id}`}>
-          <Button variant="outline" size="sm" className="gap-2 border-primary text-primary hover:bg-primary/5">
-            <Edit className="w-3 h-3" /> এডিট করুন
+          <Button variant="outline" size="sm" className="gap-2 border-primary text-primary hover:bg-primary/5 font-bold">
+            <Edit className="w-3 h-3" /> এডিট
           </Button>
         </Link>
       </CardFooter>
     </Card>
   );
 
-  if (userLoading || questionsLoading) {
+  const renderSheetCard = (s: any) => (
+    <Card key={s.id} className="hover:border-orange-400/40 transition-all group shadow-sm">
+      <CardHeader className="pb-3">
+        <div className="flex justify-between items-start mb-2">
+          <div className="px-2 py-0.5 bg-orange-100 text-orange-600 text-[10px] font-bold rounded-full uppercase">
+            {CLASSES.find(c => c.id === s.classId)?.label || 'অজানা'} শ্রেণি
+          </div>
+          <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+            <Calendar className="w-3 h-3" />
+            {s.updatedAt?.toDate ? format(s.updatedAt.toDate(), 'dd MMMM, yyyy', { locale: bn }) : 'অজানা তারিখ'}
+          </div>
+        </div>
+        <CardTitle className="text-lg font-bold group-hover:text-orange-600 transition-colors truncate">
+          {s.topic || 'শিরোনাম নেই'}
+        </CardTitle>
+        <CardDescription className="flex items-center gap-1">
+          <BookOpen className="w-3 h-3 text-orange-500" /> {s.subject}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="pb-4">
+        <p className="text-sm text-muted-foreground truncate font-medium">
+          {s.institution || 'শিক্ষা প্রতিষ্ঠানের নাম নেই'}
+        </p>
+      </CardContent>
+      <CardFooter className="border-t bg-muted/10 flex justify-end gap-2 p-3">
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-destructive hover:bg-destructive/10"
+              disabled={deleting === s.id}
+            >
+              {deleting === s.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="text-destructive w-5 h-5" /> আপনি কি নিশ্চিত?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                এই লেকচার শিটটি স্থায়ীভাবে মুছে ফেলা হবে।
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>বাতিল</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={() => handleDelete(s.id, 'lecture-sheets')}
+                className="bg-destructive hover:bg-destructive/90"
+              >
+                হ্যাঁ, মুছে ফেলুন
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <Link href={`/create-lecture-sheet?id=${s.id}`}>
+          <Button variant="outline" size="sm" className="gap-2 border-orange-500 text-orange-600 hover:bg-orange-50 font-bold">
+            <Edit className="w-3 h-3" /> এডিট
+          </Button>
+        </Link>
+      </CardFooter>
+    </Card>
+  );
+
+  if (userLoading || questionsLoading || sheetsLoading) {
     return (
       <div className="flex flex-col items-center justify-center p-20 min-h-[50vh]">
         <Loader2 className="w-10 h-10 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground font-medium">অ্যাক্সেস চেক করা হচ্ছে...</p>
+        <p className="mt-4 text-muted-foreground font-medium">লাইব্রেরি লোড হচ্ছে...</p>
       </div>
     );
   }
@@ -175,25 +264,19 @@ export default function MyQuestionsPage() {
     <div className="max-w-5xl mx-auto space-y-8 animate-fade-in pb-10">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-6">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-sm">
-            <BookOpen className="w-7 h-7" />
+          <div className="w-12 h-12 rounded-xl bg-primary text-white flex items-center justify-center shadow-sm">
+            <Library className="w-7 h-7" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold">আমার প্রশ্নসমূহ</h2>
+            <h2 className="text-2xl font-bold">আমার লাইব্রেরি</h2>
+            <p className="text-xs text-muted-foreground font-medium">আপনার তৈরি করা সকল প্রশ্ন ও শিট এখানে পাবেন</p>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link href="/create-question">
-            <Button className="gap-2 shadow-lg">
-              <PlusCircle className="w-4 h-4" /> নতুন প্রশ্ন তৈরি করুন
-            </Button>
-          </Link>
         </div>
       </header>
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-primary/5 p-4 rounded-xl border border-primary/10">
         <div className="flex items-center gap-2 text-sm font-bold text-primary">
-          <Filter className="w-4 h-4" /> শ্রেণি অনুযায়ী দেখুন:
+          <Filter className="w-4 h-4" /> শ্রেণি অনুযায়ী ফিল্টার:
         </div>
         <Select value={filterClassId} onValueChange={setFilterClassId}>
           <SelectTrigger className="w-full sm:w-[180px] bg-white">
@@ -206,45 +289,48 @@ export default function MyQuestionsPage() {
             ))}
           </SelectContent>
         </Select>
-        <div className="ml-auto text-xs font-medium text-muted-foreground">
-          মোট প্রশ্নপত্র: {filteredQuestions.length} টি
-        </div>
       </div>
 
-      <Tabs defaultValue="written" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-8 bg-secondary/50 p-1">
-          <TabsTrigger value="written" className="gap-2 font-bold py-3">
-            <FileText className="w-4 h-4" />
-            লিখিত প্রশ্ন
+      <Tabs defaultValue="questions" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-8 bg-secondary/50 p-1 h-14">
+          <TabsTrigger value="questions" className="gap-2 font-bold py-3 text-base">
+            <FileText className="w-5 h-5" />
+            আমার প্রশ্ন ({filteredQuestions.length})
           </TabsTrigger>
-          <TabsTrigger value="mcq" className="gap-2 font-bold py-3">
-            <CheckSquare className="w-4 h-4" />
-            বহুনির্বাচনি প্রশ্ন
+          <TabsTrigger value="sheets" className="gap-2 font-bold py-3 text-base">
+            <BookOpen className="w-5 h-5" />
+            লেকচার শিট ({filteredSheets.length})
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="written" className="animate-fade-in">
-          {writtenQuestions.length > 0 ? (
+        <TabsContent value="questions" className="animate-fade-in space-y-4">
+          {filteredQuestions.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {writtenQuestions.map(renderQuestionCard)}
+              {filteredQuestions.map(renderQuestionCard)}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center p-20 bg-secondary/5 rounded-3xl border-2 border-dashed border-primary/20 text-center">
               <FileText className="w-10 h-10 text-muted-foreground/30 mb-4" />
-              <p className="text-muted-foreground">কোনো লিখিত প্রশ্নপত্র পাওয়া যায়নি।</p>
+              <p className="text-muted-foreground">কোনো প্রশ্নপত্র পাওয়া যায়নি।</p>
+              <Link href="/create-question" className="mt-4">
+                <Button variant="outline" className="gap-2"><PlusCircle className="w-4 h-4" /> তৈরি করুন</Button>
+              </Link>
             </div>
           )}
         </TabsContent>
 
-        <TabsContent value="mcq" className="animate-fade-in">
-          {mcqQuestions.length > 0 ? (
+        <TabsContent value="sheets" className="animate-fade-in space-y-4">
+          {filteredSheets.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {mcqQuestions.map(renderQuestionCard)}
+              {filteredSheets.map(renderSheetCard)}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center p-20 bg-secondary/5 rounded-3xl border-2 border-dashed border-primary/20 text-center">
-              <CheckSquare className="w-10 h-10 text-muted-foreground/30 mb-4" />
-              <p className="text-muted-foreground">কোনো বহুনির্বাচনি প্রশ্নপত্র পাওয়া যায়নি।</p>
+            <div className="flex flex-col items-center justify-center p-20 bg-secondary/5 rounded-3xl border-2 border-dashed border-orange-500/20 text-center">
+              <BookOpen className="w-10 h-10 text-muted-foreground/30 mb-4" />
+              <p className="text-muted-foreground">কোনো লেকচার শিট পাওয়া যায়নি।</p>
+              <Link href="/create-lecture-sheet" className="mt-4">
+                <Button variant="outline" className="gap-2 border-orange-500 text-orange-600"><PlusCircle className="w-4 h-4" /> তৈরি করুন</Button>
+              </Link>
             </div>
           )}
         </TabsContent>

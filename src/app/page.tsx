@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect } from 'react';
@@ -5,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useUser } from '@/firebase';
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { GraduationCap, ArrowRight, BookMarked, BrainCircuit, Loader2, BookOpen } from 'lucide-react';
+import { GraduationCap, ArrowRight, BookMarked, BrainCircuit, Loader2, BookOpen, Library } from 'lucide-react';
 import { CLASSES } from '@/lib/constants';
 
 export default function Home() {
@@ -30,43 +31,49 @@ export default function Home() {
   return (
     <div className="space-y-8 animate-fade-in">
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-primary/5 border-primary/30 shadow-md overflow-hidden group hover:shadow-lg transition-all border-l-4 border-l-primary">
-          <CardHeader className="pb-2 p-4">
-            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white mb-2 shadow-inner group-hover:scale-110 transition-transform">
-              <BookMarked className="w-5 h-5" />
-            </div>
-            <CardTitle className="text-primary font-black text-base">পাঠ্যবই</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <p className="text-[10px] font-bold text-muted-foreground">ষষ্ঠ থেকে দশম শ্রেণি পর্যন্ত সকল বোর্ড বই।</p>
-          </CardContent>
-        </Card>
+        <Link href="/create-question">
+          <Card className="bg-primary/5 border-primary/30 shadow-md overflow-hidden group hover:shadow-lg transition-all border-l-4 border-l-primary h-full">
+            <CardHeader className="pb-2 p-4">
+              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white mb-2 shadow-inner group-hover:scale-110 transition-transform">
+                <BrainCircuit className="w-5 h-5" />
+              </div>
+              <CardTitle className="text-primary font-black text-base">প্রশ্ন ব্যাংক</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <p className="text-[10px] font-bold text-muted-foreground">বোর্ড স্ট্যান্ডার্ড সৃজনশীল ও এমসিকিউ প্রশ্ন তৈরি করুন।</p>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card className="bg-accent/10 border-accent/30 shadow-md overflow-hidden group hover:shadow-lg transition-all border-l-4 border-l-accent">
-          <CardHeader className="pb-2 p-4">
-            <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center text-white mb-2 shadow-inner group-hover:scale-110 transition-transform">
-              <BrainCircuit className="w-5 h-5" />
-            </div>
-            <CardTitle className="text-accent-foreground font-black text-base">প্রশ্ন ব্যাংক</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <p className="text-[10px] font-bold text-muted-foreground">বোর্ড স্ট্যান্ডার্ড সৃজনশীল ও এমসিকিউ প্রশ্ন।</p>
-          </CardContent>
-        </Card>
+        <Link href="/create-lecture-sheet">
+          <Card className="bg-orange-50 border-orange-200 shadow-md overflow-hidden group hover:shadow-lg transition-all border-l-4 border-l-orange-500 h-full">
+            <CardHeader className="pb-2 p-4">
+              <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center text-white mb-2 shadow-inner group-hover:scale-110 transition-transform">
+                <BookOpen className="w-5 h-5" />
+              </div>
+              <CardTitle className="text-orange-600 font-black text-base">লেকচার শিট</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <p className="text-[10px] font-bold text-muted-foreground">অধ্যায় ভিত্তিক লেকচার নোট তৈরি ও প্রিন্ট করুন।</p>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card className="bg-orange-50 border-orange-200 shadow-md overflow-hidden group hover:shadow-lg transition-all border-l-4 border-l-orange-500">
-          <CardHeader className="pb-2 p-4">
-            <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center text-white mb-2 shadow-inner group-hover:scale-110 transition-transform">
-              <BookOpen className="w-5 h-5" />
-            </div>
-            <CardTitle className="text-orange-600 font-black text-base">লেকচার শিট</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <p className="text-[10px] font-bold text-muted-foreground">অধ্যায় ভিত্তিক লেকচার নোট তৈরি ও প্রিন্ট।</p>
-          </CardContent>
-        </Card>
+        <Link href="/my-questions">
+          <Card className="bg-accent/10 border-accent/30 shadow-md overflow-hidden group hover:shadow-lg transition-all border-l-4 border-l-accent h-full">
+            <CardHeader className="pb-2 p-4">
+              <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center text-white mb-2 shadow-inner group-hover:scale-110 transition-transform">
+                <Library className="w-5 h-5" />
+              </div>
+              <CardTitle className="text-accent-foreground font-black text-base">আমার লাইব্রেরি</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <p className="text-[10px] font-bold text-muted-foreground">আপনার তৈরি করা প্রশ্ন ও শিটগুলো এখানে পাবেন।</p>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card className="bg-white border-dashed border-2 border-primary/30 text-center shadow-md hover:border-primary transition-colors p-4 flex flex-col justify-center">
+        <Card className="bg-white border-dashed border-2 border-primary/30 text-center shadow-md hover:border-primary transition-colors p-4 flex flex-col justify-center h-full">
           <h3 className="font-black text-xs mb-2 text-primary">সেটিংস</h3>
           <p className="text-[9px] text-muted-foreground mb-3 font-bold">ব্র্যান্ডিং ও প্রোফাইল আপডেট</p>
           <Link href="/settings" className="inline-block px-4 py-1.5 bg-primary text-white rounded-lg text-[10px] font-black hover:bg-primary/90 transition-all">

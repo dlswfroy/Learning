@@ -1,8 +1,9 @@
+
 "use client";
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, PlusCircle, Settings, FileText, BookOpen } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, Settings, FileText, BookOpen, Library } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/firebase';
 
@@ -18,7 +19,7 @@ export function BottomNav() {
     { label: 'হোম', icon: LayoutDashboard, href: '/' },
     { label: 'প্রশ্ন তৈরি', icon: PlusCircle, href: '/create-question' },
     { label: 'শিট তৈরি', icon: BookOpen, href: '/create-lecture-sheet' },
-    { label: 'আমার প্রশ্ন', icon: FileText, href: '/my-questions' },
+    { label: 'লাইব্রেরি', icon: Library, href: '/my-questions' }, // Renamed from My Questions
     { label: 'সেটিং', icon: Settings, href: '/settings' },
   ];
 
