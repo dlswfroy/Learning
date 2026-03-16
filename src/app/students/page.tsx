@@ -177,7 +177,6 @@ export default function StudentsPage() {
       .sort((a, b) => (a.roll || '').localeCompare(b.roll || '', 'bn', { numeric: true }));
   }, [students, attendanceClass]);
 
-  // Attendance Report records
   const attendanceReportQuery = useMemo(() => {
     if (!db || !user || !reportClass) return null;
     return query(
@@ -191,7 +190,6 @@ export default function StudentsPage() {
 
   const { data: reportRecords, loading: reportLoading } = useCollection(attendanceReportQuery);
 
-  // Fee report records
   const feesReportQuery = useMemo(() => {
     if (!db || !user) return null;
     return query(collection(db, 'fees'), where('userId', '==', user.uid));
