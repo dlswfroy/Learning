@@ -30,7 +30,7 @@ export default function RootLayout({
             {children}
           </main>
           <footer className="py-6 text-center text-[10px] text-muted-foreground border-t bg-muted/5 mb-20 no-print">
-            © ২০২৪-২৫ টপ গ্রেড টিউটোরিয়ালস। সর্বস্বত্ব সংরক্ষিত।
+            © ২০২৪-২৬ টপ গ্রেড টিউটোরিয়ালস। সর্বস্বত্ব সংরক্ষিত।
           </footer>
           <BottomNav />
           <Toaster />
