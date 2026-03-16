@@ -22,7 +22,6 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
-// Utility to process images: resize (max 512x512) and compress (80% quality) to Base64
 async function processImage(file: File): Promise<string> {
   if (file.size > 5 * 1024 * 1024) {
     throw new Error('ফাইল সাইজ ৫ মেগাবাইটের বেশি হতে পারবে না।');
@@ -206,7 +205,7 @@ export default function SettingsPage() {
       try {
         await updateProfile(user, { displayName });
       } catch (authErr) {
-        // Auth profile error can be ignored if storage is in Firestore
+        // Ignored
       }
       toast({ title: "সফল", description: "প্রোফাইল আপডেট করা হয়েছে।" });
     } catch (e) {

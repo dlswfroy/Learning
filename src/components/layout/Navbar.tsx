@@ -46,21 +46,29 @@ export function Navbar() {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 h-16 bg-primary text-primary-foreground z-50 shadow-md flex items-center px-6 no-print">
+    <nav className="fixed top-0 left-0 right-0 min-h-16 h-auto py-2 bg-primary text-primary-foreground z-50 shadow-md flex items-center px-4 md:px-6 no-print">
       <Link href="/" className="flex items-center gap-3 group">
-        <div className="bg-white p-1 rounded-lg text-primary group-hover:scale-105 transition-transform flex items-center justify-center shadow-inner">
+        <div className="bg-white p-1 rounded-lg text-primary group-hover:scale-105 transition-transform flex items-center justify-center shadow-inner shrink-0">
           {appLogoUrl ? (
-            <img src={appLogoUrl} alt="Logo" className="w-8 h-8 object-contain" />
+            <img src={appLogoUrl} alt="Logo" className="w-10 h-10 object-contain" />
           ) : (
-            <BookOpenText className="w-8 h-8" />
+            <BookOpenText className="w-10 h-10" />
           )}
         </div>
-        <h1 className="text-xl md:text-2xl font-black font-headline tracking-tighter drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
-          {appName}
-        </h1>
+        <div className="flex flex-col">
+          <h1 className="text-xl md:text-3xl font-black font-headline tracking-tighter drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] leading-tight">
+            {appName}
+          </h1>
+          <p className="text-[10px] md:text-xs font-bold text-red-500 italic leading-none mt-0.5">
+            Smart learning, Bright Future.
+          </p>
+          <p className="text-[9px] md:text-[10px] text-white/80 font-medium leading-none mt-1">
+            আধুনিক প্রশ্নপত্র নির্মাতা
+          </p>
+        </div>
       </Link>
       
-      <div className="ml-auto flex items-center gap-4">
+      <div className="ml-auto flex items-center gap-2 md:gap-4">
         {!loading && (
           user ? (
             <DropdownMenu>
