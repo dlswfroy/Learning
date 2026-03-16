@@ -22,6 +22,32 @@ function toBengaliNumber(n: number | string | undefined | null): string {
   return n.toString().replace(/\d/g, (digit) => bengaliDigits[parseInt(digit)]);
 }
 
+function formatMath(text: string) {
+  if (!text) return '';
+  let formatted = text.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
+  const symbolMap: Record<string, string> = {
+    '\\\\log': 'log', '\\\\triangle': '△', '\\\\angle': '∠', '\\\\circ': '°',
+    '\\\\theta': 'θ', '\\\\pi': 'π', '\\\\pm': '±', '\\\\times': '×',
+    '\\\\neq': '≠', '\\\\ne': '≠', '\\\\leq': '≤', '\\\\geq': '≥',
+    '\\\\degree': '°', '\\\\cdot': '·', '\\\\infty': '∞', '\\\\approx': '≈',
+    '\\\\sum': '∑', '\\\\prod': '∏', '\\\\alpha': 'α', '\\\\beta': 'β',
+    '\\\\gamma': 'γ', '\\\\delta': 'δ', '\\\\sigma': 'σ', '\\\\phi': 'φ', '\\\\omega': 'ω',
+    '\\\\in': '∈', '\\\\mathbb\\{N\\}': 'ℕ', '\\\\mathbb\\{R\\}': 'ℝ', '\\\\mathbb\\{Z\\}': 'ℤ',
+    '\\\\mathbb\\{Q\\}': 'ℚ', '\\\\subset': '⊂', '\\\\subseteq': '⊆', '\\\\cup': '∪',
+    '\\\\cap': '∩', '\\\\emptyset': '∅', '\\\\forall': '∀', '\\\\exists': '∃'
+  };
+  Object.entries(symbolMap).forEach(([key, val]) => { formatted = formatted.replace(new RegExp(key, 'g'), val); });
+  formatted = formatted.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
+  formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
+  formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
+  formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
+  formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
+  formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
+  formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>');
+  formatted = formatted.replace(/\\/g, '');
+  return formatted;
+}
+
 function CreateLectureSheetContent() {
   const db = useFirestore();
   const { user, loading: userLoading } = useUser();
@@ -172,6 +198,13 @@ function CreateLectureSheetContent() {
             .content-area { white-space: pre-wrap; font-size: 12pt; z-index: 10; position: relative; }
             .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80%; opacity: 0.08; z-index: -1; pointer-events: none; }
             .watermark img { width: 100%; height: auto; }
+            .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
+            .math-num { border-bottom: 0.5pt solid black; padding: 0 1px; }
+            .math-den { padding: 0 1px; }
+            .math-sqrt { display: inline-flex; align-items: center; }
+            .math-sqrt-stem { border-top: 0.5pt solid black; padding-top: 1px; }
+            .math-sup { font-size: 0.7em; vertical-align: super; }
+            .math-sub { font-size: 0.7em; vertical-align: sub; }
             .no-print { display: none !important; }
           }
         `}} />
@@ -189,7 +222,7 @@ function CreateLectureSheetContent() {
             </div>
           </div>
           <div className="topic-title">{data.topic || 'লেকচার শিট'}</div>
-          <div className="content-area">{data.content}</div>
+          <div className="content-area" dangerouslySetInnerHTML={{ __html: formatMath(data.content) }} />
         </div>
       </div>
     </div>
