@@ -114,6 +114,8 @@ export default function StudentsPage() {
   const [attendanceClass, setAttendanceClass] = useState('');
   const [attendanceData, setAttendanceData] = useState<Record<string, 'present' | 'absent'>>({});
   const [savingAttendance, setSavingAttendance] = useState(false);
+  const [attendanceExists, setAttendanceExists] = useState(false);
+  const [checkingAttendance, setCheckingAttendance] = useState(false);
 
   // Attendance Report states
   const [reportStartDate, setReportStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
@@ -178,6 +180,53 @@ export default function StudentsPage() {
     return students.filter(s => s.classId === attendanceClass)
       .sort((a, b) => (a.roll || '').localeCompare(b.roll || '', 'bn', { numeric: true }));
   }, [students, attendanceClass]);
+
+  // Effect to check if attendance for class/date already exists
+  useEffect(() => {
+    async function checkExisting() {
+      if (!db || !user || !attendanceClass || !attendanceDate) {
+        setAttendanceExists(false);
+        setAttendanceData({});
+        return;
+      }
+      setCheckingAttendance(true);
+      try {
+        const q = query(
+          collection(db, 'attendance'),
+          where('userId', '==', user.uid),
+          where('classId', '==', attendanceClass),
+          where('date', '==', attendanceDate),
+          limit(1)
+        );
+        const snap = await getDocs(q);
+        const exists = !snap.empty;
+        setAttendanceExists(exists);
+        
+        if (exists) {
+          const fullQ = query(
+            collection(db, 'attendance'),
+            where('userId', '==', user.uid),
+            where('classId', '==', attendanceClass),
+            where('date', '==', attendanceDate)
+          );
+          const fullSnap = await getDocs(fullQ);
+          const records: Record<string, 'present' | 'absent'> = {};
+          fullSnap.docs.forEach(doc => {
+            const d = doc.data();
+            records[d.studentId] = d.status;
+          });
+          setAttendanceData(records);
+        } else {
+          setAttendanceData({});
+        }
+      } catch (e) {
+        console.error("Error checking attendance:", e);
+      } finally {
+        setCheckingAttendance(false);
+      }
+    }
+    checkExisting();
+  }, [db, user, attendanceClass, attendanceDate]);
 
   const attendanceReportQuery = useMemo(() => {
     if (!db || !user || !reportClass) return null;
@@ -304,6 +353,10 @@ export default function StudentsPage() {
 
   const handleSaveAttendance = async () => {
     if (!db || !user || !attendanceClass) return;
+    if (attendanceExists) {
+      toast({ variant: "destructive", title: "এক্সেস ডিনাইড", description: "আজকের হাজিরা ইতিপূর্বে নেওয়া হয়েছে।" });
+      return;
+    }
     setSavingAttendance(true);
     
     try {
@@ -320,6 +373,7 @@ export default function StudentsPage() {
       });
       
       await Promise.all(batchPromises);
+      setAttendanceExists(true);
       toast({ title: "সফল", description: "হাজিরা সংরক্ষিত হয়েছে।" });
     } catch (e) {
       toast({ variant: "destructive", title: "ত্রুটি", description: "হাজিরা সেভ করা সম্ভব হয়নি।" });
@@ -614,10 +668,18 @@ export default function StudentsPage() {
               <CardContent className="pt-6">
                 {!attendanceClass ? (
                   <div className="text-center py-10 text-muted-foreground font-bold">শ্রেণি নির্বাচন করুন</div>
+                ) : checkingAttendance ? (
+                  <div className="text-center py-10"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /></div>
                 ) : classStudents.length === 0 ? (
                   <div className="text-center py-10 text-muted-foreground font-bold">এই শ্রেণিতে কোনো শিক্ষার্থী নেই</div>
                 ) : (
                   <div className="space-y-3">
+                    {attendanceExists && (
+                      <div className="p-4 mb-4 bg-orange-50 border border-orange-200 rounded-xl flex items-center gap-3 text-orange-700 font-bold">
+                        <AlertTriangle className="w-5 h-5 shrink-0" />
+                        <span>সতর্কবার্তা: এই শ্রেণির আজকের হাজিরা ইতিপূর্বে নেওয়া হয়েছে। পুনরায় হাজিরা সেভ করা যাবে না।</span>
+                      </div>
+                    )}
                     {classStudents.map(s => {
                       const status = attendanceData[s.id] || 'present';
                       return (
@@ -644,6 +706,7 @@ export default function StudentsPage() {
                             <Button 
                               variant={status === 'present' ? 'default' : 'outline'} 
                               size="sm" 
+                              disabled={attendanceExists}
                               className={`gap-1 font-bold ${status === 'present' ? 'bg-green-600 hover:bg-green-700' : ''}`}
                               onClick={() => setAttendanceData(p => ({...p, [s.id]: 'present'}))}
                             >
@@ -652,6 +715,7 @@ export default function StudentsPage() {
                             <Button 
                               variant={status === 'absent' ? 'destructive' : 'outline'} 
                               size="sm" 
+                              disabled={attendanceExists}
                               className="gap-1 font-bold"
                               onClick={() => setAttendanceData(p => ({...p, [s.id]: 'absent'}))}
                             >
@@ -662,8 +726,13 @@ export default function StudentsPage() {
                       );
                     })}
                     <div className="pt-6 border-t flex justify-end">
-                      <Button onClick={handleSaveAttendance} disabled={savingAttendance} className="gap-2 font-bold px-10">
-                        {savingAttendance ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} হাজিরা সেভ করুন
+                      <Button 
+                        onClick={handleSaveAttendance} 
+                        disabled={savingAttendance || attendanceExists || checkingAttendance} 
+                        className="gap-2 font-bold px-10"
+                      >
+                        {savingAttendance ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} 
+                        {attendanceExists ? 'হাজিরা ইতিপূর্বে নেওয়া হয়েছে' : 'হাজিরা সেভ করুন'}
                       </Button>
                     </div>
                   </div>
