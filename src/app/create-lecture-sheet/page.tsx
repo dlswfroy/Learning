@@ -24,7 +24,6 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 
 function formatMath(text: string) {
   if (!text) return '';
-  // Support for {x \in \mathbb{N} : x < 4} style math and LaTeX symbols
   let formatted = text.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
   const symbolMap: Record<string, string> = {
     '\\\\log': 'log', '\\\\triangle': '△', '\\\\angle': '∠', '\\\\circ': '°',
@@ -42,7 +41,6 @@ function formatMath(text: string) {
     formatted = formatted.replace(new RegExp(key, 'g'), val); 
   });
   
-  // Format fractions, roots, etc.
   formatted = formatted.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
   formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
@@ -105,7 +103,7 @@ function CreateLectureSheetContent() {
 
   const handleSave = () => {
     if (!user || !db) { toast({ title: "লগইন প্রয়োজন", variant: "destructive" }); return; }
-    if (!data.topic || !data.content) { toast({ title: "তথ্য অসম্পূর্ণ", description: "শিরোনাম ও বিষয়বস্তু অবশ্যই লিখুন।" }); return; }
+    if (!data.topic || !data.content) { toast({ title: "정보 অসম্পূর্ণ", description: "শিরোনাম ও বিষয়বস্তু অবশ্যই লিখুন।" }); return; }
     
     setSaving(true);
     const docId = editId || doc(collection(db, 'lecture-sheets')).id;
@@ -206,10 +204,10 @@ function CreateLectureSheetContent() {
               margin: 0.5in !important; 
             }
             body { 
-              font-family: 'Inter', sans-serif; 
-              font-size: 11pt; 
+              font-family: 'Kalpurush', sans-serif !important; 
+              font-size: 9pt !important; 
               color: black !important; 
-              line-height: 1.6 !important; 
+              line-height: 1.5 !important; 
               background: transparent !important; 
               margin: 0 !important;
               padding: 0 !important;
@@ -222,11 +220,11 @@ function CreateLectureSheetContent() {
               background: transparent !important; 
               z-index: 10;
             }
-            .header { text-align: center; margin-bottom: 20px; border-bottom: 2pt solid black; padding-bottom: 10px; }
-            .inst-name { font-size: 20pt; font-weight: 800; }
-            .topic-title { font-size: 16pt; font-weight: bold; margin: 20px 0; text-align: center; text-decoration: underline; }
-            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 4px; font-size: 11pt; border-top: 1px solid #ddd; padding-top: 5px; }
-            .content-area { white-space: pre-wrap; font-size: 12pt; background: transparent !important; }
+            .header { text-align: center; margin-bottom: 20px; border-bottom: 1.5pt solid black; padding-bottom: 10px; }
+            .inst-name { font-size: 16pt; font-weight: 800; }
+            .topic-title { font-size: 13pt; font-weight: bold; margin: 15px 0; text-align: center; text-decoration: underline; }
+            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 4px; font-size: 9.5pt; border-top: 0.5pt solid #ddd; padding-top: 5px; }
+            .content-area { white-space: pre-wrap; font-size: 9pt; background: transparent !important; }
             
             .watermark-container {
               position: fixed;

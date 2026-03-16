@@ -54,7 +54,8 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-body overflow-x-hidden;
+    @apply bg-background text-foreground overflow-x-hidden;
+    font-family: 'Kalpurush', 'Inter', sans-serif;
   }
 }
 
@@ -73,6 +74,8 @@
     padding: 0 !important;
     height: auto !important;
     min-height: 0 !important;
+    font-family: 'Kalpurush', sans-serif !important;
+    font-size: 9pt !important;
   }
 }
 
@@ -95,3 +98,11 @@
 .animate-fade-in {
   animation: fade-in 0.3s ease-out forwards;
 }
+
+.math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
+.math-num { border-bottom: 0.5pt solid black; padding: 0 1px; }
+.math-den { padding: 0 1px; }
+.math-sqrt { display: inline-flex; align-items: center; }
+.math-sqrt-stem { border-top: 0.5pt solid black; padding-top: 1px; }
+.math-sup { font-size: 0.7em; vertical-align: super; }
+.math-sub { font-size: 0.7em; vertical-align: sub; }

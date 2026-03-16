@@ -408,22 +408,30 @@ function CreateQuestionContent() {
       <div className="print-only">
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
-            @page { size: A4; margin: 0.5in; }
-            body { font-family: 'Inter', sans-serif; font-size: 11pt; color: black !important; line-height: 1.3 !important; background: white !important; }
+            @page { size: A4; margin: 0.5in !important; }
+            body { 
+              font-family: 'Kalpurush', sans-serif !important; 
+              font-size: 9pt !important; 
+              color: black !important; 
+              line-height: 1.4 !important; 
+              background: white !important; 
+              margin: 0 !important;
+              padding: 0 !important;
+            }
             .paper { width: 100%; text-align: justify; }
-            .header { text-align: center; margin-bottom: 8px; border-bottom: 1pt solid black; padding-bottom: 6px; }
-            .inst-name { font-size: 16pt; font-weight: 800; }
-            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 4px; font-size: 10pt; }
+            .header { text-align: center; margin-bottom: 8px; border-bottom: 1.5pt solid black; padding-bottom: 6px; }
+            .inst-name { font-size: 15pt; font-weight: 800; }
+            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 4px; font-size: 9.5pt; }
             .section { margin-top: 10px; }
             .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 15px; margin: 5px auto; text-transform: uppercase; }
             .instruction { font-style: italic; font-size: 9.5pt; text-align: center; margin-bottom: 8px; display: block; }
             .q-block { margin-bottom: 15px; page-break-inside: avoid; clear: both; display: block; }
-            .stimulus { margin-bottom: 5px; white-space: pre-wrap; display: block; text-align: justify; }
+            .stimulus { margin-bottom: 5px; white-space: pre-wrap; display: block; text-align: justify; font-size: 9pt; }
             .q-image { max-width: 400px; margin: 10px auto; display: block; border: 0.5pt solid #eee; }
-            .sub-q { display: flex; justify-content: space-between; width: 100%; margin-bottom: 1px; }
+            .sub-q { display: flex; justify-content: space-between; width: 100%; margin-bottom: 1px; font-size: 9pt; }
             .q-text-part { flex: 1; padding-right: 15px; }
             .mark { font-weight: bold; width: 35px; text-align: right; }
-            .mcq-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px 10px; margin-top: 3px; padding-left: 20px; }
+            .mcq-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px 10px; margin-top: 3px; padding-left: 20px; font-size: 9pt; }
             .mcq-opt { display: flex; gap: 4px; align-items: flex-start; }
             .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
             .math-num { border-bottom: 0.5pt solid black; padding: 0 1px; }
