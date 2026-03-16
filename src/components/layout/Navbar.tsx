@@ -56,7 +56,7 @@ export function Navbar() {
           )}
         </div>
         <div className="flex flex-col">
-          <h1 className="text-xl md:text-3xl font-black font-headline tracking-tighter drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] leading-tight text-white uppercase">
+          <h1 className="text-xl md:text-4xl font-black font-headline tracking-tighter drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] leading-tight text-white uppercase">
             {appName}
           </h1>
           <p className="text-[10px] md:text-xs font-black text-red-500 italic leading-none mt-0.5 drop-shadow-[0_1px_1px_rgba(0,0,0,0.2)]">

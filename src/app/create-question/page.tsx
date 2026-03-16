@@ -127,7 +127,8 @@ function CreateQuestionContent() {
           setMeta({
             institution: data.institution || '', exam: data.exam || '', classId: data.classId || '',
             subject: data.subject || '', time: data.time || '', totalMarks: data.totalMarks || '',
-            creativeInstruction: data.creativeInstruction || '', shortInstruction: data.shortInstruction || '',
+            creativeInstruction: data.creativeInstruction || '', 
+            shortInstruction: data.shortInstruction || 'সকল প্রশ্নের উত্তর দাও',
             mcqInstruction: data.mcqInstruction || 'সঠিক উত্তরের বৃত্তটি ভরাট করো',
             marksA: data.marksA || 1, marksB: data.marksB || 2, marksC: data.marksC || 3, marksD: data.marksD || 4,
             shortMarks: data.shortMarks || 2, mcqMarks: data.mcqMarks || 1
@@ -316,6 +317,7 @@ function CreateQuestionContent() {
                   </div>
                 </div>
                 <div className="space-y-4">
+                  <div className="space-y-2"><label className="text-xs font-semibold">সংক্ষিপ্ত নির্দেশিকা</label><Input value={meta.shortInstruction || ''} onChange={e => setMeta(prev => ({...prev, shortInstruction: e.target.value}))} /></div>
                   <div className="space-y-2"><label className="text-xs font-semibold">এমসিকিউ নির্দেশিকা</label><Input value={meta.mcqInstruction || ''} onChange={e => setMeta(prev => ({...prev, mcqInstruction: e.target.value}))} /></div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1"><label className="text-[10px] font-bold">সংক্ষিপ্ত মার্কস</label><Input type="number" value={meta.shortMarks || ''} onChange={e => setMeta(prev => ({...prev, shortMarks: parseInt(e.target.value) || 0}))} className="h-8" /></div>
