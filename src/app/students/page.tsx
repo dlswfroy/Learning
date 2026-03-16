@@ -32,7 +32,7 @@ import { CLASSES } from '@/lib/constants';
 import { toast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import { format } from 'date-fns';
+import { format, startOfMonth } from 'date-fns';
 import { bn } from 'date-fns/locale';
 
 export default function StudentsPage() {
@@ -51,7 +51,8 @@ export default function StudentsPage() {
   const [savingAttendance, setSavingAttendance] = useState(false);
 
   // Attendance Report states
-  const [reportDate, setReportDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [reportStartDate, setReportStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
+  const [reportEndDate, setReportEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [reportClass, setReportClass] = useState('');
 
   // Fees states
@@ -90,16 +91,18 @@ export default function StudentsPage() {
       .sort((a, b) => (a.roll || '').localeCompare(b.roll || '', 'bn', { numeric: true }));
   }, [students, attendanceClass]);
 
-  // Report Query
+  // Report Query with Date Range
   const reportQuery = useMemo(() => {
-    if (!db || !user || !reportClass || !reportDate) return null;
+    if (!db || !user || !reportClass || !reportStartDate || !reportEndDate) return null;
     return query(
       collection(db, 'attendance'),
       where('userId', '==', user.uid),
       where('classId', '==', reportClass),
-      where('date', '==', reportDate)
+      where('date', '>=', reportStartDate),
+      where('date', '<=', reportEndDate),
+      orderBy('date', 'desc')
     );
-  }, [db, user, reportClass, reportDate]);
+  }, [db, user, reportClass, reportStartDate, reportEndDate]);
 
   const { data: reportRecords, loading: reportLoading } = useCollection(reportQuery);
 
@@ -412,13 +415,23 @@ export default function StudentsPage() {
                     <FileBarChart className="w-5 h-5" /> হাজিরা রিপোর্ট
                   </CardTitle>
                   <div className="flex flex-wrap gap-3">
-                    <Input type="date" value={reportDate} onChange={e => setReportDate(e.target.value)} className="w-40 font-bold" />
-                    <Select onValueChange={setReportClass} value={reportClass}>
-                      <SelectTrigger className="w-40 font-bold"><SelectValue placeholder="শ্রেণি নির্বাচন" /></SelectTrigger>
-                      <SelectContent>
-                        {CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase px-1">শুরু</span>
+                      <Input type="date" value={reportStartDate} onChange={e => setReportStartDate(e.target.value)} className="w-40 font-bold" />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase px-1">শেষ</span>
+                      <Input type="date" value={reportEndDate} onChange={e => setReportEndDate(e.target.value)} className="w-40 font-bold" />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase px-1">শ্রেণি</span>
+                      <Select onValueChange={setReportClass} value={reportClass}>
+                        <SelectTrigger className="w-40 font-bold"><SelectValue placeholder="নির্বাচন" /></SelectTrigger>
+                        <SelectContent>
+                          {CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
               </CardHeader>
@@ -433,15 +446,15 @@ export default function StudentsPage() {
                   <div className="space-y-4">
                     <div className="grid grid-cols-3 gap-4 mb-6">
                       <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 text-center">
-                        <p className="text-[10px] font-bold text-blue-600 uppercase">মোট শিক্ষার্থী</p>
+                        <p className="text-[10px] font-bold text-blue-600 uppercase">মোট রেকর্ড</p>
                         <p className="text-2xl font-black text-blue-700">{reportRecords.length}</p>
                       </div>
                       <div className="p-4 bg-green-50 rounded-xl border border-green-100 text-center">
-                        <p className="text-[10px] font-bold text-green-600 uppercase">উপস্থিত</p>
+                        <p className="text-[10px] font-bold text-green-600 uppercase">মোট উপস্থিত</p>
                         <p className="text-2xl font-black text-green-700">{reportRecords.filter(r => r.status === 'present').length}</p>
                       </div>
                       <div className="p-4 bg-red-50 rounded-xl border border-red-100 text-center">
-                        <p className="text-[10px] font-bold text-red-600 uppercase">অনুপস্থিত</p>
+                        <p className="text-[10px] font-bold text-red-600 uppercase">মোট অনুপস্থিত</p>
                         <p className="text-2xl font-black text-red-700">{reportRecords.filter(r => r.status === 'absent').length}</p>
                       </div>
                     </div>
@@ -450,6 +463,7 @@ export default function StudentsPage() {
                       <table className="w-full text-sm">
                         <thead className="bg-muted/50 border-b">
                           <tr>
+                            <th className="p-3 text-left font-bold">তারিখ</th>
                             <th className="p-3 text-left font-bold">রোল</th>
                             <th className="p-3 text-left font-bold">নাম</th>
                             <th className="p-3 text-center font-bold">অবস্থা</th>
@@ -460,6 +474,9 @@ export default function StudentsPage() {
                             const student = students?.find(s => s.id === record.studentId);
                             return (
                               <tr key={record.id} className="hover:bg-muted/5">
+                                <td className="p-3 font-bold text-muted-foreground text-xs whitespace-nowrap">
+                                  {format(new Date(record.date), 'dd MMM, yy', { locale: bn })}
+                                </td>
                                 <td className="p-3 font-bold">{student?.roll || '-'}</td>
                                 <td className="p-3 font-bold">{student?.name || 'অজানা'}</td>
                                 <td className="p-3 text-center">
