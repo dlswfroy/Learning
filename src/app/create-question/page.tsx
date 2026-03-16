@@ -104,7 +104,7 @@ function CreateQuestionContent() {
   const [saving, setSaving] = useState(false);
   
   const [meta, setMeta] = useState({
-    institution: '', exam: '', classId: '', subject: '', time: '২ ঘণ্টা ৩০ মিনিট', totalMarks: '১০০',
+    institution: 'টপ গ্রেড টিউটোরিয়ালস', exam: '', classId: '', subject: '', time: '২ ঘণ্টা ৩০ মিনিট', totalMarks: '১০০',
     creativeInstruction: 'যেকোনো ৭টি প্রশ্নের উত্তর দাও', shortInstruction: 'সকল প্রশ্নের উত্তর দাও',
     mcqInstruction: 'সঠিক উত্তরের বৃত্তটি ভরাট করো', marksA: 1, marksB: 2, marksC: 3, marksD: 4, shortMarks: 2, mcqMarks: 1
   });
@@ -125,7 +125,7 @@ function CreateQuestionContent() {
           const data = docSnap.data();
           if (data.userId !== user.uid) { router.push('/my-questions'); return; }
           setMeta({
-            institution: data.institution || '', exam: data.exam || '', classId: data.classId || '',
+            institution: data.institution || 'টপ গ্রেড টিউটোরিয়ালস', exam: data.exam || '', classId: data.classId || '',
             subject: data.subject || '', time: data.time || '', totalMarks: data.totalMarks || '',
             creativeInstruction: data.creativeInstruction || '', 
             shortInstruction: data.shortInstruction || 'সকল প্রশ্নের উত্তর দাও',
@@ -237,7 +237,7 @@ function CreateQuestionContent() {
     const docId = editId || doc(collection(db, 'questions')).id;
     
     const data: any = {
-      institution: meta.institution || '',
+      institution: meta.institution || 'টপ গ্রেড টিউটোরিয়ালস',
       exam: meta.exam || '',
       classId: meta.classId || '',
       subject: meta.subject || '',
@@ -297,7 +297,20 @@ function CreateQuestionContent() {
           <CardContent className="pt-6 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div className="space-y-2"><label className="text-sm font-semibold">প্রতিষ্ঠানের নাম</label><Input value={meta.institution || ''} onChange={e => setMeta(prev => ({...prev, institution: e.target.value}))} /></div>
-              <div className="space-y-2"><label className="text-sm font-semibold">পরীক্ষার নাম</label><Input value={meta.exam || ''} onChange={e => setMeta(prev => ({...prev, exam: e.target.value}))} /></div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold">পরীক্ষার নাম</label>
+                <Select onValueChange={v => setMeta(prev => ({...prev, exam: v}))} value={meta.exam || ''}>
+                  <SelectTrigger><SelectValue placeholder="পরীক্ষা নির্বাচন করুন" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="সাপ্তাহিক পরীক্ষা">সাপ্তাহিক পরীক্ষা</SelectItem>
+                    <SelectItem value="মাসিক পরীক্ষা">মাসিক পরীক্ষা</SelectItem>
+                    <SelectItem value="অর্ধ-বার্ষিক পরীক্ষা">অর্ধ-বার্ষিক পরীক্ষা</SelectItem>
+                    <SelectItem value="বার্ষিক পরীক্ষা">বার্ষিক পরীক্ষা</SelectItem>
+                    <SelectItem value="প্রাক-নির্বাচনী পরীক্ষা">প্রাক-নির্বাচনী পরীক্ষা</SelectItem>
+                    <SelectItem value="নির্বাচনী পরীক্ষা">নির্বাচনী পরীক্ষা</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-2"><label className="text-sm font-semibold">সময়</label><Input value={meta.time || ''} onChange={e => setMeta(prev => ({...prev, time: e.target.value}))} /></div>
               <div className="space-y-2"><label className="text-sm font-semibold">পূর্ণমান</label><Input value={meta.totalMarks || ''} onChange={e => setMeta(prev => ({...prev, totalMarks: e.target.value}))} /></div>
               <div className="space-y-2"><label className="text-sm font-semibold">শ্রেণি</label><Select onValueChange={v => setMeta(prev => ({...prev, classId: v}))} value={meta.classId || ''}><SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger><SelectContent>{CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}</SelectContent></Select></div>
