@@ -184,6 +184,7 @@ export default function StudentsPage() {
 
   const feesQuery = useMemo(() => {
     if (!db || !user) return null;
+    // Security re-deployment trigger: ensuring the userId field is correctly mapped in the rules.
     return query(
       collection(db, 'fees'), 
       where('userId', '==', user.uid),

@@ -17,7 +17,7 @@
         "uploadedAt": { "type": "string", "format": "date-time" },
         "userId": { "type": "string" }
       },
-      "required": ["classId", "subject", "fileName", "pdfUrl"]
+      "required": ["classId", "subject", "fileName", "pdfUrl", "userId"]
     },
     "QuestionSet": {
       "title": "Question Set",
@@ -96,7 +96,7 @@
         "userId": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["name", "classId"]
+      "required": ["name", "classId", "userId"]
     },
     "AttendanceRecord": {
       "title": "Attendance Record",
@@ -112,7 +112,7 @@
     },
     "FeeRecord": {
       "title": "Fee Record",
-      "description": "Payment record for student fees.",
+      "description": "Payment record for student fees collected by teachers.",
       "type": "object",
       "properties": {
         "studentId": { "type": "string" },
@@ -177,7 +177,7 @@
     },
     "/fees/{feeId}": {
       "schema": "FeeRecord",
-      "description": "Payment records for student fees."
+      "description": "Payment records for student fees managed by users."
     },
     "/config/admin": {
       "schema": "AdminConfig",
