@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect } from 'react';
@@ -6,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useUser } from '@/firebase';
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { GraduationCap, ArrowRight, BookMarked, BrainCircuit, Loader2 } from 'lucide-react';
+import { GraduationCap, ArrowRight, BookMarked, BrainCircuit, Loader2, BookOpen } from 'lucide-react';
 import { CLASSES } from '@/lib/constants';
 
 export default function Home() {
@@ -30,50 +29,56 @@ export default function Home() {
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-primary/5 border-primary/30 shadow-md overflow-hidden group hover:shadow-lg transition-all border-l-4 border-l-primary">
           <CardHeader className="pb-2 p-4">
-            <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center text-white mb-2 shadow-inner group-hover:scale-110 transition-transform">
-              <BookMarked className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white mb-2 shadow-inner group-hover:scale-110 transition-transform">
+              <BookMarked className="w-5 h-5" />
             </div>
-            <CardTitle className="text-primary font-black text-lg">পাঠ্যবই</CardTitle>
+            <CardTitle className="text-primary font-black text-base">পাঠ্যবই</CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            <ul className="space-y-1.5 text-[11px] font-bold text-muted-foreground">
-              <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-primary rounded-full"/> ষষ্ঠ থেকে দশম শ্রেণি</li>
-              <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-primary rounded-full"/> সকল গুরুত্বপূর্ণ বিষয়</li>
-            </ul>
+            <p className="text-[10px] font-bold text-muted-foreground">ষষ্ঠ থেকে দশম শ্রেণি পর্যন্ত সকল বোর্ড বই।</p>
           </CardContent>
         </Card>
 
         <Card className="bg-accent/10 border-accent/30 shadow-md overflow-hidden group hover:shadow-lg transition-all border-l-4 border-l-accent">
           <CardHeader className="pb-2 p-4">
-            <div className="w-12 h-12 rounded-2xl bg-accent flex items-center justify-center text-white mb-2 shadow-inner group-hover:scale-110 transition-transform">
-              <BrainCircuit className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center text-white mb-2 shadow-inner group-hover:scale-110 transition-transform">
+              <BrainCircuit className="w-5 h-5" />
             </div>
-            <CardTitle className="text-accent-foreground font-black text-lg">প্রশ্ন ব্যাংক</CardTitle>
+            <CardTitle className="text-accent-foreground font-black text-base">প্রশ্ন ব্যাংক</CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            <ul className="space-y-1.5 text-[11px] font-bold text-muted-foreground">
-              <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-accent rounded-full"/> বোর্ড স্ট্যান্ডার্ড প্রশ্ন</li>
-              <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-accent rounded-full"/> সৃজনশীল ও সংক্ষিপ্ত</li>
-            </ul>
+            <p className="text-[10px] font-bold text-muted-foreground">বোর্ড স্ট্যান্ডার্ড সৃজনশীল ও এমসিকিউ প্রশ্ন।</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-white border-dashed border-2 border-primary/30 text-center shadow-md hover:border-primary transition-colors p-6">
-          <h3 className="font-black text-sm mb-3 text-primary">রিসোর্স ব্যবস্থাপনা</h3>
-          <p className="text-[10px] text-muted-foreground mb-4 font-bold">নতুন বই বা গাইড যুক্ত করতে সেটিংস-এ যান</p>
-          <Link href="/settings" className="inline-block px-8 py-2 bg-primary text-white rounded-xl text-xs font-black hover:bg-primary/90 transition-all shadow-lg">
-            সেটিং
+        <Card className="bg-orange-50 border-orange-200 shadow-md overflow-hidden group hover:shadow-lg transition-all border-l-4 border-l-orange-500">
+          <CardHeader className="pb-2 p-4">
+            <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center text-white mb-2 shadow-inner group-hover:scale-110 transition-transform">
+              <BookOpen className="w-5 h-5" />
+            </div>
+            <CardTitle className="text-orange-600 font-black text-base">লেকচার শিট</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
+            <p className="text-[10px] font-bold text-muted-foreground">অধ্যায় ভিত্তিক লেকচার নোট তৈরি ও প্রিন্ট।</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-dashed border-2 border-primary/30 text-center shadow-md hover:border-primary transition-colors p-4 flex flex-col justify-center">
+          <h3 className="font-black text-xs mb-2 text-primary">সেটিংস</h3>
+          <p className="text-[9px] text-muted-foreground mb-3 font-bold">ব্র্যান্ডিং ও প্রোফাইল আপডেট</p>
+          <Link href="/settings" className="inline-block px-4 py-1.5 bg-primary text-white rounded-lg text-[10px] font-black hover:bg-primary/90 transition-all">
+            প্রবেশ করুন
           </Link>
         </Card>
       </section>
 
       <section>
         <div className="flex items-center justify-between mb-6 border-b-2 border-primary/10 pb-2">
-          <h3 className="text-xl font-black text-foreground flex items-center gap-2">
-            <GraduationCap className="w-6 h-6 text-primary" />
+          <h3 className="text-lg font-black text-foreground flex items-center gap-2">
+            <GraduationCap className="w-5 h-5 text-primary" />
             শ্রেণি নির্বাচন করুন
           </h3>
         </div>
@@ -81,15 +86,15 @@ export default function Home() {
           {CLASSES.map((cls) => (
             <Link key={cls.id} href={`/class/${cls.id}`}>
               <Card className="hover:border-primary hover:shadow-xl transition-all group overflow-hidden border-2 shadow-sm bg-white">
-                <CardContent className="p-6 flex flex-col items-center text-center space-y-3">
-                  <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all shadow-inner">
-                    <GraduationCap className="w-6 h-6" />
+                <CardContent className="p-4 flex flex-col items-center text-center space-y-2">
+                  <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all shadow-inner">
+                    <GraduationCap className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="font-black text-lg group-hover:text-primary transition-colors">{cls.label} শ্রেণি</p>
+                    <p className="font-black text-base group-hover:text-primary transition-colors">{cls.label} শ্রেণি</p>
                   </div>
-                  <div className="flex items-center gap-1 text-[9px] font-black text-primary opacity-60 group-hover:opacity-100 transition-all">
-                    প্রবেশ করুন <ArrowRight className="w-2.5 h-2.5 transition-transform group-hover:translate-x-1" />
+                  <div className="flex items-center gap-1 text-[8px] font-black text-primary opacity-60 group-hover:opacity-100 transition-all">
+                    প্রবেশ করুন <ArrowRight className="w-2 h-2 transition-transform group-hover:translate-x-1" />
                   </div>
                 </CardContent>
               </Card>

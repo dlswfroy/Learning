@@ -1,9 +1,8 @@
-
 "use client";
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, PlusCircle, Settings, FileText } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, Settings, FileText, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/firebase';
 
@@ -18,6 +17,7 @@ export function BottomNav() {
   const navItems = [
     { label: 'হোম', icon: LayoutDashboard, href: '/' },
     { label: 'প্রশ্ন তৈরি', icon: PlusCircle, href: '/create-question' },
+    { label: 'শিট তৈরি', icon: BookOpen, href: '/create-lecture-sheet' },
     { label: 'আমার প্রশ্ন', icon: FileText, href: '/my-questions' },
     { label: 'সেটিং', icon: Settings, href: '/settings' },
   ];
@@ -32,14 +32,14 @@ export function BottomNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center justify-center min-w-[60px] h-12 rounded-lg transition-all relative shrink-0",
+                "flex flex-col items-center justify-center min-w-[50px] h-12 rounded-lg transition-all relative shrink-0",
                 isActive 
                   ? "bg-white/20 text-white" 
                   : "text-white/70 hover:bg-white/10 hover:text-white"
               )}
             >
               <item.icon className={cn("w-5 h-5", isActive && "animate-pulse")} />
-              <span className="text-[9px] mt-0.5 font-bold whitespace-nowrap">{item.label}</span>
+              <span className="text-[8px] mt-0.5 font-bold whitespace-nowrap">{item.label}</span>
               {isActive && (
                 <div className="absolute -bottom-0.5 w-1 h-1 bg-white rounded-full" />
               )}

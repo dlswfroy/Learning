@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "Book": {
@@ -30,13 +29,15 @@
         "subject": { "type": "string" },
         "time": { "type": "string" },
         "totalMarks": { "type": "string" },
-        "isMcq": { "type": "boolean" },
+        "creativeInstruction": { "type": "string" },
+        "shortInstruction": { "type": "string" },
+        "mcqInstruction": { "type": "string" },
         "marksA": { "type": "number" },
         "marksB": { "type": "number" },
         "marksC": { "type": "number" },
         "marksD": { "type": "number" },
-        "creativeInstruction": { "type": "string" },
-        "shortInstruction": { "type": "string" },
+        "shortMarks": { "type": "number" },
+        "mcqMarks": { "type": "number" },
         "questions": {
           "type": "array",
           "items": {
@@ -54,10 +55,26 @@
               "optB": { "type": "string" },
               "optC": { "type": "string" },
               "optD": { "type": "string" },
-              "correctOpt": { "type": "string" }
+              "imageUrl": { "type": "string" }
             }
           }
         },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "userId": { "type": "string" },
+        "isMcq": { "type": "boolean" }
+      }
+    },
+    "LectureSheet": {
+      "title": "Lecture Sheet",
+      "description": "A study sheet or lecture note.",
+      "type": "object",
+      "properties": {
+        "institution": { "type": "string" },
+        "classId": { "type": "string" },
+        "subject": { "type": "string" },
+        "topic": { "type": "string" },
+        "content": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" },
         "userId": { "type": "string" }
@@ -102,6 +119,10 @@
     "/questions/{questionId}": {
       "schema": "QuestionSet",
       "description": "Stored question sets created by users."
+    },
+    "/lecture-sheets/{sheetId}": {
+      "schema": "LectureSheet",
+      "description": "Collection of study materials and lecture notes."
     },
     "/config/admin": {
       "schema": "AdminConfig",
