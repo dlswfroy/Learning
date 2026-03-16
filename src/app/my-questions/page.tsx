@@ -3,7 +3,7 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { useFirestore, useUser, useCollection } from '@/firebase';
-import { collection, query, where, deleteDoc, doc, orderBy } from 'firebase/firestore';
+import { collection, query, where, deleteDoc, doc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -18,9 +18,9 @@ import {
   GraduationCap, 
   PlusCircle,
   AlertTriangle,
-  CheckSquare,
   Filter,
-  Library
+  Library,
+  Book
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -37,7 +37,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
-import { CLASSES } from '@/lib/constants';
+import { CLASSES, getSubjectsForClass } from '@/lib/constants';
 import { toast } from '@/hooks/use-toast';
 
 export default function MyLibraryPage() {
@@ -45,13 +45,27 @@ export default function MyLibraryPage() {
   const { user, loading: userLoading } = useUser();
   const router = useRouter();
   const [deleting, setDeleting] = useState<string | null>(null);
+  
+  // Filtering states
   const [filterClassId, setFilterClassId] = useState<string>('all');
+  const [filterSubject, setFilterSubject] = useState<string>('all');
 
   useEffect(() => {
     if (!userLoading && !user) {
       router.push('/auth');
     }
   }, [user, userLoading, router]);
+
+  // Available subjects based on selected class
+  const availableSubjects = useMemo(() => {
+    if (filterClassId === 'all') return [];
+    return getSubjectsForClass(filterClassId);
+  }, [filterClassId]);
+
+  // Reset subject filter when class changes
+  useEffect(() => {
+    setFilterSubject('all');
+  }, [filterClassId]);
 
   // Query for Questions
   const questionsQuery = useMemo(() => {
@@ -93,14 +107,26 @@ export default function MyLibraryPage() {
   }, [rawSheets]);
 
   const filteredQuestions = useMemo(() => {
-    if (filterClassId === 'all') return sortedQuestions;
-    return sortedQuestions.filter(q => q.classId === filterClassId);
-  }, [sortedQuestions, filterClassId]);
+    let result = sortedQuestions;
+    if (filterClassId !== 'all') {
+      result = result.filter(q => q.classId === filterClassId);
+    }
+    if (filterSubject !== 'all') {
+      result = result.filter(q => q.subject === filterSubject);
+    }
+    return result;
+  }, [sortedQuestions, filterClassId, filterSubject]);
 
   const filteredSheets = useMemo(() => {
-    if (filterClassId === 'all') return sortedSheets;
-    return sortedSheets.filter(s => s.classId === filterClassId);
-  }, [sortedSheets, filterClassId]);
+    let result = sortedSheets;
+    if (filterClassId !== 'all') {
+      result = result.filter(s => s.classId === filterClassId);
+    }
+    if (filterSubject !== 'all') {
+      result = result.filter(s => s.subject === filterSubject);
+    }
+    return result;
+  }, [sortedSheets, filterClassId, filterSubject]);
 
   const handleDelete = async (id: string, type: 'questions' | 'lecture-sheets') => {
     setDeleting(id);
@@ -115,7 +141,7 @@ export default function MyLibraryPage() {
   };
 
   const renderQuestionCard = (q: any) => (
-    <Card key={q.id} className="hover:border-primary/40 transition-all group shadow-sm">
+    <Card key={q.id} className="hover:border-primary/40 transition-all group shadow-sm bg-white">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start mb-2">
           <div className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded-full uppercase">
@@ -155,18 +181,18 @@ export default function MyLibraryPage() {
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle className="flex items-center gap-2">
+              <AlertDialogTitle className="flex items-center gap-2 font-bold">
                 <AlertTriangle className="text-destructive w-5 h-5" /> আপনি কি নিশ্চিত?
               </AlertDialogTitle>
-              <AlertDialogDescription>
+              <AlertDialogDescription className="font-medium">
                 এই প্রশ্নপত্রটি স্থায়ীভাবে মুছে ফেলা হবে।
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>বাতিল</AlertDialogCancel>
+              <AlertDialogCancel className="font-bold">বাতিল</AlertDialogCancel>
               <AlertDialogAction 
                 onClick={() => handleDelete(q.id, 'questions')}
-                className="bg-destructive hover:bg-destructive/90"
+                className="bg-destructive hover:bg-destructive/90 font-bold text-white"
               >
                 হ্যাঁ, মুছে ফেলুন
               </AlertDialogAction>
@@ -184,7 +210,7 @@ export default function MyLibraryPage() {
   );
 
   const renderSheetCard = (s: any) => (
-    <Card key={s.id} className="hover:border-orange-400/40 transition-all group shadow-sm">
+    <Card key={s.id} className="hover:border-orange-400/40 transition-all group shadow-sm bg-white">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start mb-2">
           <div className="px-2 py-0.5 bg-orange-100 text-orange-600 text-[10px] font-bold rounded-full uppercase">
@@ -221,18 +247,18 @@ export default function MyLibraryPage() {
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle className="flex items-center gap-2">
+              <AlertDialogTitle className="flex items-center gap-2 font-bold">
                 <AlertTriangle className="text-destructive w-5 h-5" /> আপনি কি নিশ্চিত?
               </AlertDialogTitle>
-              <AlertDialogDescription>
+              <AlertDialogDescription className="font-medium">
                 এই লেকচার শিটটি স্থায়ীভাবে মুছে ফেলা হবে।
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>বাতিল</AlertDialogCancel>
+              <AlertDialogCancel className="font-bold">বাতিল</AlertDialogCancel>
               <AlertDialogAction 
                 onClick={() => handleDelete(s.id, 'lecture-sheets')}
-                className="bg-destructive hover:bg-destructive/90"
+                className="bg-destructive hover:bg-destructive/90 font-bold text-white"
               >
                 হ্যাঁ, মুছে ফেলুন
               </AlertDialogAction>
@@ -253,7 +279,7 @@ export default function MyLibraryPage() {
     return (
       <div className="flex flex-col items-center justify-center p-20 min-h-[50vh]">
         <Loader2 className="w-10 h-10 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground font-medium">লাইব্রেরি লোড হচ্ছে...</p>
+        <p className="mt-4 text-muted-foreground font-bold">লাইব্রেরি লোড হচ্ছে...</p>
       </div>
     );
   }
@@ -269,35 +295,58 @@ export default function MyLibraryPage() {
           </div>
           <div>
             <h2 className="text-2xl font-bold">আমার লাইব্রেরি</h2>
-            <p className="text-xs text-muted-foreground font-medium">আপনার তৈরি করা সকল প্রশ্ন ও শিট এখানে পাবেন</p>
+            <p className="text-xs text-muted-foreground font-bold">আপনার তৈরি করা সকল প্রশ্ন ও শিট এখানে পাবেন</p>
           </div>
         </div>
       </header>
 
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-primary/5 p-4 rounded-xl border border-primary/10">
-        <div className="flex items-center gap-2 text-sm font-bold text-primary">
-          <Filter className="w-4 h-4" /> শ্রেণি অনুযায়ী ফিল্টার:
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-primary/5 p-4 rounded-xl border border-primary/10">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm font-bold text-primary">
+            <GraduationCap className="w-4 h-4" /> শ্রেণি অনুযায়ী ফিল্টার:
+          </div>
+          <Select value={filterClassId} onValueChange={setFilterClassId}>
+            <SelectTrigger className="w-full bg-white font-bold">
+              <SelectValue placeholder="সব শ্রেণি" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" className="font-bold">সব শ্রেণি</SelectItem>
+              {CLASSES.map(c => (
+                <SelectItem key={c.id} value={c.id} className="font-bold">{c.label} শ্রেণি</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <Select value={filterClassId} onValueChange={setFilterClassId}>
-          <SelectTrigger className="w-full sm:w-[180px] bg-white">
-            <SelectValue placeholder="সব শ্রেণি" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">সব শ্রেণি</SelectItem>
-            {CLASSES.map(c => (
-              <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm font-bold text-primary">
+            <Book className="w-4 h-4" /> বিষয় অনুযায়ী ফিল্টার:
+          </div>
+          <Select 
+            value={filterSubject} 
+            onValueChange={setFilterSubject}
+            disabled={filterClassId === 'all'}
+          >
+            <SelectTrigger className="w-full bg-white font-bold">
+              <SelectValue placeholder={filterClassId === 'all' ? "আগে শ্রেণি নির্বাচন করুন" : "সব বিষয়"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" className="font-bold">সব বিষয়</SelectItem>
+              {availableSubjects.map(s => (
+                <SelectItem key={s} value={s} className="font-bold">{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <Tabs defaultValue="questions" className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-8 bg-secondary/50 p-1 h-14">
-          <TabsTrigger value="questions" className="gap-2 font-bold py-3 text-base">
+          <TabsTrigger value="questions" className="gap-2 font-bold py-3 text-base data-[state=active]:bg-white data-[state=active]:text-primary transition-all">
             <FileText className="w-5 h-5" />
             আমার প্রশ্ন ({filteredQuestions.length})
           </TabsTrigger>
-          <TabsTrigger value="sheets" className="gap-2 font-bold py-3 text-base">
+          <TabsTrigger value="sheets" className="gap-2 font-bold py-3 text-base data-[state=active]:bg-white data-[state=active]:text-primary transition-all">
             <BookOpen className="w-5 h-5" />
             লেকচার শিট ({filteredSheets.length})
           </TabsTrigger>
@@ -311,9 +360,11 @@ export default function MyLibraryPage() {
           ) : (
             <div className="flex flex-col items-center justify-center p-20 bg-secondary/5 rounded-3xl border-2 border-dashed border-primary/20 text-center">
               <FileText className="w-10 h-10 text-muted-foreground/30 mb-4" />
-              <p className="text-muted-foreground">কোনো প্রশ্নপত্র পাওয়া যায়নি।</p>
+              <p className="text-muted-foreground font-bold">কোনো প্রশ্নপত্র পাওয়া যায়নি।</p>
               <Link href="/create-question" className="mt-4">
-                <Button variant="outline" className="gap-2"><PlusCircle className="w-4 h-4" /> তৈরি করুন</Button>
+                <Button variant="outline" className="gap-2 font-bold border-primary text-primary hover:bg-primary/5">
+                  <PlusCircle className="w-4 h-4" /> তৈরি করুন
+                </Button>
               </Link>
             </div>
           )}
@@ -327,9 +378,11 @@ export default function MyLibraryPage() {
           ) : (
             <div className="flex flex-col items-center justify-center p-20 bg-secondary/5 rounded-3xl border-2 border-dashed border-orange-500/20 text-center">
               <BookOpen className="w-10 h-10 text-muted-foreground/30 mb-4" />
-              <p className="text-muted-foreground">কোনো লেকচার শিট পাওয়া যায়নি।</p>
+              <p className="text-muted-foreground font-bold">কোনো লেকচার শিট পাওয়া যায়নি।</p>
               <Link href="/create-lecture-sheet" className="mt-4">
-                <Button variant="outline" className="gap-2 border-orange-500 text-orange-600"><PlusCircle className="w-4 h-4" /> তৈরি করুন</Button>
+                <Button variant="outline" className="gap-2 border-orange-500 text-orange-600 hover:bg-orange-50 font-bold">
+                  <PlusCircle className="w-4 h-4" /> তৈরি করুন
+                </Button>
               </Link>
             </div>
           )}
