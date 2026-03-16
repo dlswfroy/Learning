@@ -96,6 +96,31 @@
       },
       "required": ["name", "classId"]
     },
+    "AttendanceRecord": {
+      "title": "Attendance Record",
+      "description": "Daily attendance status for a student.",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["present", "absent"] },
+        "classId": { "type": "string" },
+        "userId": { "type": "string" }
+      }
+    },
+    "FeeRecord": {
+      "title": "Fee Record",
+      "description": "Payment record for student fees.",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string" },
+        "month": { "type": "string" },
+        "year": { "type": "string" },
+        "amount": { "type": "number" },
+        "date": { "type": "string", "format": "date-time" },
+        "userId": { "type": "string" }
+      }
+    },
     "AdminConfig": {
       "title": "Admin Config",
       "description": "Stores the UID of the first registered admin.",
@@ -115,7 +140,7 @@
     },
     "UserProfile": {
       "title": "User Profile",
-      "description": "Stores extended user profile information including large Base64 images.",
+      "description": "Stores extended user profile information.",
       "type": "object",
       "properties": {
         "displayName": { "type": "string" },
@@ -143,6 +168,14 @@
     "/students/{studentId}": {
       "schema": "Student",
       "description": "Collection of students managed by the teacher."
+    },
+    "/attendance/{attendanceId}": {
+      "schema": "AttendanceRecord",
+      "description": "Daily attendance records."
+    },
+    "/fees/{feeId}": {
+      "schema": "FeeRecord",
+      "description": "Payment records for student fees."
     },
     "/config/admin": {
       "schema": "AdminConfig",
