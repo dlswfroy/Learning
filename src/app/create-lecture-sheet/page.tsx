@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, Suspense, useMemo } from 'react';
@@ -10,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Printer, Save, FileText, ArrowLeft, Loader2, BookOpen } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { useFirestore, useUser } from '@/firebase';
+import { useFirestore, useUser, useDoc } from '@/firebase';
 import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -30,6 +31,10 @@ function CreateLectureSheetContent() {
   const [loading, setLoading] = useState(!!editId);
   const [saving, setSaving] = useState(false);
   
+  const softwareDocRef = useMemo(() => doc(db, 'config', 'software'), [db]);
+  const { data: softwareConfig } = useDoc(softwareDocRef);
+  const appLogoUrl = softwareConfig?.appLogoUrl || '';
+
   const [data, setData] = useState({
     institution: 'টপ গ্রেড টিউটোরিয়ালস',
     classId: '',
@@ -100,7 +105,7 @@ function CreateLectureSheetContent() {
       <div className="no-print space-y-8">
         <header className="flex items-center justify-between border-b pb-4">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-accent text-white flex items-center justify-center shadow-sm"><BookOpen className="w-7 h-7" /></div>
+            <div className="w-12 h-12 rounded-xl bg-orange-500 text-white flex items-center justify-center shadow-sm"><BookOpen className="w-7 h-7" /></div>
             <h2 className="text-2xl font-bold text-primary">লেকচার শিট নির্মাতা</h2>
           </div>
           <Button variant="ghost" onClick={() => router.back()} className="gap-2"><ArrowLeft className="w-4 h-4" /> ফিরে যান</Button>
@@ -159,20 +164,27 @@ function CreateLectureSheetContent() {
           @media print {
             @page { size: A4; margin: 0.5in; }
             body { font-family: 'Inter', sans-serif; font-size: 11pt; color: black !important; line-height: 1.6 !important; background: white !important; }
-            .paper { width: 100%; text-align: justify; }
-            .header { text-align: center; margin-bottom: 20px; border-bottom: 2pt solid black; padding-bottom: 10px; }
+            .paper { width: 100%; text-align: justify; position: relative; min-height: 10in; }
+            .header { text-align: center; margin-bottom: 20px; border-bottom: 2pt solid black; padding-bottom: 10px; z-index: 10; position: relative; }
             .inst-name { font-size: 20pt; font-weight: 800; }
-            .topic-title { font-size: 16pt; font-weight: bold; margin: 20px 0; text-align: center; text-decoration: underline; }
+            .topic-title { font-size: 16pt; font-weight: bold; margin: 20px 0; text-align: center; text-decoration: underline; z-index: 10; position: relative; }
             .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 4px; font-size: 11pt; border-top: 1px solid #ddd; padding-top: 5px; }
-            .content-area { white-space: pre-wrap; font-size: 12pt; }
+            .content-area { white-space: pre-wrap; font-size: 12pt; z-index: 10; position: relative; }
+            .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80%; opacity: 0.08; z-index: -1; pointer-events: none; }
+            .watermark img { width: 100%; height: auto; }
             .no-print { display: none !important; }
           }
         `}} />
         <div className="paper">
+          {appLogoUrl && (
+            <div className="watermark">
+              <img src={appLogoUrl} alt="watermark" />
+            </div>
+          )}
           <div className="header">
             <div className="inst-name">{data.institution || 'শিক্ষা প্রতিষ্ঠানের নাম'}</div>
             <div className="meta-info">
-              <div>শ্রেণি: {CLASSES.find(c => c.id === data.classId)?.label || ''}</div>
+              <div>শ্রেণি: {CLASSES.find(c => c.id === data.classId)?.label || ''} শ্রেণি</div>
               <div>বিষয়: {data.subject}</div>
             </div>
           </div>
