@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "@/components/ui/dialog";
+} from "@/dialog";
 import { 
   Users, 
   UserPlus, 
@@ -38,7 +38,8 @@ import {
   Camera,
   User as UserIcon,
   Edit,
-  MessageSquare
+  MessageSquare,
+  ReceiptText
 } from 'lucide-react';
 import { CLASSES } from '@/lib/constants';
 import { toast } from '@/hooks/use-toast';
@@ -90,6 +91,8 @@ async function processImage(file: File): Promise<string> {
   });
 }
 
+const MONTHS = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
+
 export default function StudentsPage() {
   const db = useFirestore();
   const { user, loading: userLoading } = useUser();
@@ -103,6 +106,7 @@ export default function StudentsPage() {
   // Sub-tabs states
   const [listSubTab, setListSubTab] = useState<'view' | 'add'>('view');
   const [attendanceSubTab, setAttendanceSubTab] = useState<'daily' | 'report'>('daily');
+  const [feesSubTab, setFeesSubTab] = useState<'record' | 'report'>('record');
 
   // Attendance states
   const [attendanceDate, setAttendanceDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -118,9 +122,14 @@ export default function StudentsPage() {
   // Fees states
   const [feeStudentId, setFeeStudentId] = useState('');
   const [feeAmount, setFeeAmount] = useState('');
-  const [feeMonth, setFeeMonth] = useState(format(new Date(), 'MMMM'));
+  const [feeMonth, setFeeMonth] = useState(MONTHS[new Date().getMonth()]);
   const [feeYear, setFeeYear] = useState(new Date().getFullYear().toString());
   const [savingFee, setSavingFee] = useState(false);
+
+  // Fees Report states
+  const [feeReportMonth, setFeeReportMonth] = useState('all');
+  const [feeReportYear, setFeeReportYear] = useState(new Date().getFullYear().toString());
+  const [feeReportClass, setFeeReportClass] = useState('all');
 
   // Edit states
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -168,31 +177,39 @@ export default function StudentsPage() {
       .sort((a, b) => (a.roll || '').localeCompare(b.roll || '', 'bn', { numeric: true }));
   }, [students, attendanceClass]);
 
-  const reportQuery = useMemo(() => {
-    if (!db || !user || !reportClass || !reportStartDate || !reportEndDate) return null;
-    return query(
-      collection(db, 'attendance'),
-      where('userId', '==', user.uid),
-      where('classId', '==', reportClass),
-      where('date', '>=', reportStartDate),
-      where('date', '<=', reportEndDate),
-      orderBy('date', 'desc')
-    );
-  }, [db, user, reportClass, reportStartDate, reportEndDate]);
-
-  const { data: reportRecords, loading: reportLoading } = useCollection(reportQuery);
-
-  const feesQuery = useMemo(() => {
+  // Fee report records
+  const feesReportQuery = useMemo(() => {
     if (!db || !user) return null;
-    // Security re-deployment trigger: ensuring the userId field is correctly mapped in the rules.
-    return query(
-      collection(db, 'fees'), 
-      where('userId', '==', user.uid),
-      orderBy('date', 'desc'),
-      limit(10)
-    );
+    let q = query(collection(db, 'fees'), where('userId', '==', user.uid));
+    return q;
   }, [db, user]);
-  const { data: recentFees, loading: feesLoading } = useCollection(feesQuery);
+
+  const { data: allFees, loading: feesLoading } = useCollection(feesReportQuery);
+
+  const filteredFeesReport = useMemo(() => {
+    if (!allFees) return [];
+    let result = [...allFees];
+    if (feeReportMonth !== 'all') result = result.filter(f => f.month === feeReportMonth);
+    if (feeReportYear !== 'all') result = result.filter(f => f.year === feeReportYear);
+    
+    // Filter by class needs joining with student data
+    if (feeReportClass !== 'all') {
+      result = result.filter(f => {
+        const student = students?.find(s => s.id === f.studentId);
+        return student?.classId === feeReportClass;
+      });
+    }
+
+    return result.sort((a, b) => {
+      const dateA = (a.date as any)?.toDate?.() || new Date(0);
+      const dateB = (b.date as any)?.toDate?.() || new Date(0);
+      return dateB.getTime() - dateA.getTime();
+    });
+  }, [allFees, feeReportMonth, feeReportYear, feeReportClass, students]);
+
+  const totalFeeCollected = useMemo(() => {
+    return filteredFeesReport.reduce((sum, f) => sum + (Number(f.amount) || 0), 0);
+  }, [filteredFeesReport]);
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>, isEdit = false) => {
     const file = e.target.files?.[0];
@@ -318,6 +335,7 @@ export default function StudentsPage() {
         toast({ title: "সফল", description: "বেতন আদায় রেকর্ড করা হয়েছে।" });
         setFeeStudentId('');
         setFeeAmount('');
+        setFeesSubTab('report');
       })
       .catch(async () => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -729,85 +747,197 @@ export default function StudentsPage() {
         </TabsContent>
 
         <TabsContent value="fees" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card className="lg:col-span-1 shadow-md border-orange-100">
-              <CardHeader className="bg-orange-50 border-b py-3">
-                <CardTitle className="text-base flex items-center gap-2 font-bold text-orange-700">
-                  <Banknote className="w-4 h-4" /> বেতন আদায় রেকর্ড
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <form onSubmit={handleSaveFee} className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold">শিক্ষার্থী</label>
-                    <Select onValueChange={setFeeStudentId} value={feeStudentId}>
-                      <SelectTrigger className="font-bold"><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
-                      <SelectContent>
-                        {students?.map(s => <SelectItem key={s.id} value={s.id}>{s.name} (রোল: {s.roll}, {CLASSES.find(c => c.id === s.classId)?.label})</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold">টাকার পরিমাণ</label>
-                    <Input type="number" value={feeAmount} onChange={e => setFeeAmount(e.target.value)} placeholder="০০০" className="font-bold" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
+          <div className="flex items-center gap-4 mb-4">
+            <Button 
+              variant={feesSubTab === 'record' ? 'default' : 'outline'} 
+              onClick={() => setFeesSubTab('record')}
+              className="gap-2 font-bold"
+            >
+              <ReceiptText className="w-4 h-4" /> বেতন আদায় রেকর্ড
+            </Button>
+            <Button 
+              variant={feesSubTab === 'report' ? 'default' : 'outline'} 
+              onClick={() => setFeesSubTab('report')}
+              className="gap-2 font-bold"
+            >
+              <FileBarChart className="w-4 h-4" /> আদায় রিপোর্ট
+            </Button>
+          </div>
+
+          {feesSubTab === 'record' ? (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <Card className="lg:col-span-1 shadow-md border-orange-100">
+                <CardHeader className="bg-orange-50 border-b py-3">
+                  <CardTitle className="text-base flex items-center gap-2 font-bold text-orange-700">
+                    <Banknote className="w-4 h-4" /> নতুন পেমেন্ট রেকর্ড
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <form onSubmit={handleSaveFee} className="space-y-4">
                     <div className="space-y-2">
-                      <label className="text-sm font-bold">মাস</label>
-                      <Select onValueChange={setFeeMonth} value={feeMonth}>
-                        <SelectTrigger className="font-bold"><SelectValue placeholder="মাস" /></SelectTrigger>
+                      <label className="text-sm font-bold">শিক্ষার্থী</label>
+                      <Select onValueChange={setFeeStudentId} value={feeStudentId}>
+                        <SelectTrigger className="font-bold"><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
                         <SelectContent>
-                          {['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'].map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                          {students?.map(s => <SelectItem key={s.id} value={s.id}>{s.name} (রোল: {s.roll}, {CLASSES.find(c => c.id === s.classId)?.label})</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-bold">বছর</label>
-                      <Input value={feeYear} onChange={e => setFeeYear(e.target.value)} className="font-bold" />
+                      <label className="text-sm font-bold">টাকার পরিমাণ</label>
+                      <Input type="number" value={feeAmount} onChange={e => setFeeAmount(e.target.value)} placeholder="০০০" className="font-bold" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold">মাস</label>
+                        <Select onValueChange={setFeeMonth} value={feeMonth}>
+                          <SelectTrigger className="font-bold"><SelectValue placeholder="মাস" /></SelectTrigger>
+                          <SelectContent>
+                            {MONTHS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold">বছর</label>
+                        <Input value={feeYear} onChange={e => setFeeYear(e.target.value)} className="font-bold" />
+                      </div>
+                    </div>
+                    <Button type="submit" disabled={savingFee} className="w-full font-bold bg-orange-600 hover:bg-orange-700 h-10">
+                      {savingFee ? <Loader2 className="w-4 h-4 animate-spin" /> : 'আদায় রেকর্ড করুন'}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+
+              <Card className="lg:col-span-2 shadow-md">
+                <CardHeader className="bg-muted/30 border-b py-3">
+                  <CardTitle className="text-base flex items-center gap-2 font-bold">
+                    <Clock className="w-4 h-4" /> সাম্প্রতিক পেমেন্ট
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {feesLoading ? (
+                    <div className="p-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
+                  ) : filteredFeesReport && filteredFeesReport.length > 0 ? (
+                    <div className="divide-y">
+                      {filteredFeesReport.slice(0, 10).map(f => {
+                        const student = students?.find(s => s.id === f.studentId);
+                        return (
+                          <div key={f.id} className="p-4 flex items-center justify-between hover:bg-muted/5">
+                            <div className="space-y-1">
+                              <p className="font-bold text-sm text-primary">{student?.name || 'অজানা শিক্ষার্থী'}</p>
+                              <p className="text-[10px] text-muted-foreground font-bold">
+                                {f.month} {f.year} | {f.date?.toDate ? format(f.date.toDate(), 'dd MMM, hh:mm a', { locale: bn }) : ''}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-black text-orange-600">৳{f.amount}</p>
+                              <p className="text-[8px] font-bold text-muted-foreground uppercase">সংগৃহীত</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="p-10 text-center text-muted-foreground font-bold">কোনো রেকর্ড পাওয়া যায়নি</div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <Card className="shadow-md">
+              <CardHeader className="bg-orange-50/50 border-b py-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <CardTitle className="text-lg flex items-center gap-2 font-bold text-orange-700">
+                    <FileBarChart className="w-5 h-5" /> আদায় রিপোর্ট ও সামারি
+                  </CardTitle>
+                  <div className="flex flex-wrap gap-3">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase px-1">মাস</span>
+                      <Select value={feeReportMonth} onValueChange={setFeeReportMonth}>
+                        <SelectTrigger className="w-32 h-9 font-bold"><SelectValue placeholder="সব মাস" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">সব মাস</SelectItem>
+                          {MONTHS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase px-1">বছর</span>
+                      <Input value={feeReportYear} onChange={e => setFeeReportYear(e.target.value)} className="w-24 h-9 font-bold" />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase px-1">শ্রেণি</span>
+                      <Select value={feeReportClass} onValueChange={setFeeReportClass}>
+                        <SelectTrigger className="w-32 h-9 font-bold"><SelectValue placeholder="সব শ্রেণি" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">সব শ্রেণি</SelectItem>
+                          {CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
-                  <Button type="submit" disabled={savingFee} className="w-full font-bold bg-orange-600 hover:bg-orange-700 h-10">
-                    {savingFee ? <Loader2 className="w-4 h-4 animate-spin" /> : 'আদায় রেকর্ড করুন'}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-
-            <Card className="lg:col-span-2 shadow-md">
-              <CardHeader className="bg-muted/30 border-b py-3">
-                <CardTitle className="text-base flex items-center gap-2 font-bold">
-                  <Clock className="w-4 h-4" /> সাম্প্রতিক পেমেন্ট
-                </CardTitle>
+                </div>
               </CardHeader>
-              <CardContent className="p-0">
-                {feesLoading ? (
-                  <div className="p-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
-                ) : recentFees && recentFees.length > 0 ? (
-                  <div className="divide-y">
-                    {recentFees.map(f => {
-                      const student = students?.find(s => s.id === f.studentId);
-                      return (
-                        <div key={f.id} className="p-4 flex items-center justify-between hover:bg-muted/5">
-                          <div className="space-y-1">
-                            <p className="font-bold text-sm text-primary">{student?.name || 'অজানা শিক্ষার্থী'}</p>
-                            <p className="text-[10px] text-muted-foreground font-bold">
-                              {f.month} {f.year} | {f.date?.toDate ? format(f.date.toDate(), 'dd MMM, hh:mm a', { locale: bn }) : ''}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-black text-orange-600">৳{f.amount}</p>
-                            <p className="text-[8px] font-bold text-muted-foreground">সংগৃহীত</p>
-                          </div>
-                        </div>
-                      );
-                    })}
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                  <div className="p-6 bg-orange-50 rounded-2xl border border-orange-100 flex flex-col items-center justify-center shadow-inner">
+                    <p className="text-[10px] font-bold text-orange-600 uppercase tracking-widest mb-1">মোট আদায়কৃত অর্থ</p>
+                    <p className="text-4xl font-black text-orange-700">৳ {toBengaliNumber(totalFeeCollected)}</p>
                   </div>
-                ) : (
-                  <div className="p-10 text-center text-muted-foreground font-bold">কোনো রেকর্ড পাওয়া যায়নি</div>
-                )}
+                  <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100 flex flex-col items-center justify-center shadow-inner">
+                    <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-1">মোট পেমেন্ট সংখ্যা</p>
+                    <p className="text-4xl font-black text-blue-700">{toBengaliNumber(filteredFeesReport.length)} টি</p>
+                  </div>
+                </div>
+
+                <div className="border rounded-xl overflow-hidden overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50 border-b">
+                      <tr>
+                        <th className="p-3 text-left font-bold">তারিখ</th>
+                        <th className="p-3 text-left font-bold">রোল</th>
+                        <th className="p-3 text-left font-bold">শিক্ষার্থীর নাম</th>
+                        <th className="p-3 text-left font-bold">শ্রেণি</th>
+                        <th className="p-3 text-left font-bold">মাস/বছর</th>
+                        <th className="p-3 text-right font-bold">টাকার পরিমাণ</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {filteredFeesReport.map(fee => {
+                        const student = students?.find(s => s.id === fee.studentId);
+                        return (
+                          <tr key={fee.id} className="hover:bg-muted/5">
+                            <td className="p-3 font-bold text-muted-foreground text-xs">
+                              {fee.date?.toDate ? format(fee.date.toDate(), 'dd MMM, yy', { locale: bn }) : '-'}
+                            </td>
+                            <td className="p-3 font-bold">{student?.roll || '-'}</td>
+                            <td className="p-3 font-bold">{student?.name || 'অজানা'}</td>
+                            <td className="p-3 font-bold">{CLASSES.find(c => c.id === student?.classId)?.label || '-'} শ্রেণি</td>
+                            <td className="p-3 font-bold text-xs">{fee.month} {fee.year}</td>
+                            <td className="p-3 text-right font-black text-orange-600">৳{fee.amount}</td>
+                          </tr>
+                        );
+                      })}
+                      {filteredFeesReport.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="p-10 text-center text-muted-foreground font-bold italic">কোনো রেকর্ড পাওয়া যায়নি</td>
+                        </tr>
+                      )}
+                    </tbody>
+                    {filteredFeesReport.length > 0 && (
+                      <tfoot className="bg-orange-50/30 border-t">
+                        <tr>
+                          <td colSpan={5} className="p-4 text-right font-black text-foreground">সর্বমোট:</td>
+                          <td className="p-4 text-right font-black text-orange-700">৳{totalFeeCollected}</td>
+                        </tr>
+                      </tfoot>
+                    )}
+                  </table>
+                </div>
               </CardContent>
             </Card>
-          </div>
+          )}
         </TabsContent>
       </Tabs>
 
@@ -838,7 +968,7 @@ export default function StudentsPage() {
                   </button>
                   <input type="file" ref={editFileInputRef} className="hidden" accept="image/*" onChange={(e) => handlePhotoUpload(e, true)} />
                 </div>
-                <span className="text-[10px] font-bold text-muted-foreground">ছবি পরিবর্তন করুন</span>
+                <span className="text-[10px] font-bold text-muted-foreground uppercase">ছবি পরিবর্তন করুন</span>
               </div>
 
               <div className="flex-1 w-full space-y-4">
@@ -882,4 +1012,10 @@ export default function StudentsPage() {
       </Dialog>
     </div>
   );
+}
+
+function toBengaliNumber(n: number | string | undefined | null): string {
+  if (n === undefined || n === null || n === '') return '';
+  const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+  return n.toString().replace(/\d/g, (digit) => bengaliDigits[parseInt(digit)]);
 }
