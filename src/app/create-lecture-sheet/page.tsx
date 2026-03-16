@@ -35,7 +35,8 @@ function formatMath(text: string) {
     '\\\\gamma': 'γ', '\\\\delta': 'δ', '\\\\sigma': 'σ', '\\\\phi': 'φ', '\\\\omega': 'ω',
     '\\\\in': '∈', '\\\\mathbb\\{N\\}': 'ℕ', '\\\\mathbb\\{R\\}': 'ℝ', '\\\\mathbb\\{Z\\}': 'ℤ',
     '\\\\mathbb\\{Q\\}': 'ℚ', '\\\\subset': '⊂', '\\\\subseteq': '⊆', '\\\\cup': '∪',
-    '\\\\cap': '∩', '\\\\emptyset': '∅', '\\\\forall': '∀', '\\\\exists': '∃'
+    '\\\\cap': '∩', '\\\\emptyset': '∅', '\\\\forall': '∀', '\\\\exists': '∃',
+    '\\\\{': '{', '\\\\}': '}'
   };
   Object.entries(symbolMap).forEach(([key, val]) => { formatted = formatted.replace(new RegExp(key, 'g'), val); });
   formatted = formatted.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
@@ -110,7 +111,7 @@ function CreateLectureSheetContent() {
       updatedAt: serverTimestamp(),
     };
 
-    // Only set createdAt if this is a new document to avoid Firestore errors and overwriting original date
+    // Only set createdAt if this is a new document to avoid Firestore errors
     if (!editId) {
       payload.createdAt = serverTimestamp();
     }
@@ -195,14 +196,30 @@ function CreateLectureSheetContent() {
           @media print {
             @page { size: A4; margin: 0.5in; }
             body { font-family: 'Inter', sans-serif; font-size: 11pt; color: black !important; line-height: 1.6 !important; background: white !important; }
-            .paper { width: 100%; text-align: justify; position: relative; min-height: 10in; }
+            .paper { width: 100%; text-align: justify; position: relative; min-height: 10in; background: white !important; }
             .header { text-align: center; margin-bottom: 20px; border-bottom: 2pt solid black; padding-bottom: 10px; z-index: 10; position: relative; }
             .inst-name { font-size: 20pt; font-weight: 800; }
             .topic-title { font-size: 16pt; font-weight: bold; margin: 20px 0; text-align: center; text-decoration: underline; z-index: 10; position: relative; }
             .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 4px; font-size: 11pt; border-top: 1px solid #ddd; padding-top: 5px; }
-            .content-area { white-space: pre-wrap; font-size: 12pt; z-index: 10; position: relative; }
-            .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80%; opacity: 0.08; z-index: -1; pointer-events: none; }
-            .watermark img { width: 100%; height: auto; }
+            .content-area { white-space: pre-wrap; font-size: 12pt; z-index: 10; position: relative; background: transparent !important; }
+            .watermark { 
+              position: absolute; 
+              top: 50%; 
+              left: 50%; 
+              transform: translate(-50%, -50%); 
+              width: 70%; 
+              opacity: 0.1; 
+              z-index: 0; 
+              pointer-events: none; 
+              display: flex;
+              justify-content: center;
+              align-items: center;
+            }
+            .watermark img { 
+              max-width: 100%; 
+              max-height: 100%; 
+              object-fit: contain; 
+            }
             .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
             .math-num { border-bottom: 0.5pt solid black; padding: 0 1px; }
             .math-den { padding: 0 1px; }
