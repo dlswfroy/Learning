@@ -152,8 +152,8 @@ function CreateQuestionContent() {
     setQuestions(prev => [...prev, { id: Math.random().toString(36).substr(2, 9), type, content: '', imageUrl: '' }]);
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (!file || !activeQuestionId) return;
 
     try {
@@ -301,6 +301,28 @@ function CreateQuestionContent() {
               <div className="space-y-2"><label className="text-sm font-semibold">পূর্ণমান</label><Input value={meta.totalMarks || ''} onChange={e => setMeta(prev => ({...prev, totalMarks: e.target.value}))} /></div>
               <div className="space-y-2"><label className="text-sm font-semibold">শ্রেণি</label><Select onValueChange={v => setMeta(prev => ({...prev, classId: v}))} value={meta.classId || ''}><SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger><SelectContent>{CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}</SelectContent></Select></div>
               <div className="space-y-2"><label className="text-sm font-semibold">বিষয়</label><Select onValueChange={v => setMeta(prev => ({...prev, subject: v}))} value={meta.subject || ''} disabled={!meta.classId}><SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger><SelectContent>{subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
+            </div>
+            
+            <div className="pt-4 border-t">
+              <h4 className="text-sm font-bold mb-4 text-primary">মান বণ্টন ও নির্দেশনা</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="space-y-2"><label className="text-xs font-semibold">সৃজনশীল নির্দেশিকা</label><Input value={meta.creativeInstruction || ''} onChange={e => setMeta(prev => ({...prev, creativeInstruction: e.target.value}))} /></div>
+                  <div className="grid grid-cols-4 gap-2">
+                    <div className="space-y-1"><label className="text-[10px] font-bold">ক</label><Input type="number" value={meta.marksA || ''} onChange={e => setMeta(prev => ({...prev, marksA: parseInt(e.target.value) || 0}))} className="h-8" /></div>
+                    <div className="space-y-1"><label className="text-[10px] font-bold">খ</label><Input type="number" value={meta.marksB || ''} onChange={e => setMeta(prev => ({...prev, marksB: parseInt(e.target.value) || 0}))} className="h-8" /></div>
+                    <div className="space-y-1"><label className="text-[10px] font-bold">গ</label><Input type="number" value={meta.marksC || ''} onChange={e => setMeta(prev => ({...prev, marksC: parseInt(e.target.value) || 0}))} className="h-8" /></div>
+                    <div className="space-y-1"><label className="text-[10px] font-bold">ঘ</label><Input type="number" value={meta.marksD || ''} onChange={e => setMeta(prev => ({...prev, marksD: parseInt(e.target.value) || 0}))} className="h-8" /></div>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div className="space-y-2"><label className="text-xs font-semibold">এমসিকিউ নির্দেশিকা</label><Input value={meta.mcqInstruction || ''} onChange={e => setMeta(prev => ({...prev, mcqInstruction: e.target.value}))} /></div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1"><label className="text-[10px] font-bold">সংক্ষিপ্ত মার্কস</label><Input type="number" value={meta.shortMarks || ''} onChange={e => setMeta(prev => ({...prev, shortMarks: parseInt(e.target.value) || 0}))} className="h-8" /></div>
+                    <div className="space-y-1"><label className="text-[10px] font-bold">এমসিকিউ মার্কস</label><Input type="number" value={meta.mcqMarks || ''} onChange={e => setMeta(prev => ({...prev, mcqMarks: parseInt(e.target.value) || 0}))} className="h-8" /></div>
+                  </div>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
