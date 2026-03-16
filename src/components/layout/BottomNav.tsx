@@ -11,7 +11,6 @@ export function BottomNav() {
   const pathname = usePathname();
   const { user, loading } = useUser();
 
-  // Hide BottomNav if user is not logged in or it's the auth page
   if (loading || !user || pathname === '/auth') {
     return null;
   }
@@ -24,8 +23,8 @@ export function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-primary border-t border-primary/20 text-primary-foreground z-50 h-20 shadow-lg no-print">
-      <div className="h-full max-w-5xl mx-auto flex items-center justify-around overflow-x-auto hide-scrollbar px-4 gap-2">
+    <nav className="fixed bottom-0 left-0 right-0 bg-primary border-t border-primary/20 text-primary-foreground z-50 h-14 shadow-lg no-print">
+      <div className="h-full max-w-5xl mx-auto flex items-center justify-around px-4 gap-1">
         {navItems.map((item) => {
           const isActive = pathname === item.href || (item.href !== '/' && pathname?.startsWith(item.href));
           return (
@@ -33,16 +32,16 @@ export function BottomNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center justify-center min-w-[70px] h-16 rounded-xl transition-all relative shrink-0",
+                "flex flex-col items-center justify-center min-w-[60px] h-12 rounded-lg transition-all relative shrink-0",
                 isActive 
                   ? "bg-white/20 text-white" 
                   : "text-white/70 hover:bg-white/10 hover:text-white"
               )}
             >
-              <item.icon className={cn("w-6 h-6", isActive && "animate-pulse")} />
-              <span className="text-[10px] mt-1 font-medium whitespace-nowrap">{item.label}</span>
+              <item.icon className={cn("w-5 h-5", isActive && "animate-pulse")} />
+              <span className="text-[9px] mt-0.5 font-bold whitespace-nowrap">{item.label}</span>
               {isActive && (
-                <div className="absolute -bottom-1 w-1 h-1 bg-white rounded-full" />
+                <div className="absolute -bottom-0.5 w-1 h-1 bg-white rounded-full" />
               )}
             </Link>
           );

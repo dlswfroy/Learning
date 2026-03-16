@@ -1,3 +1,4 @@
+
 import type {Metadata} from 'next';
 import './globals.css';
 import { Navbar } from '@/components/layout/Navbar';
@@ -25,10 +26,10 @@ export default function RootLayout({
       <body className="font-body antialiased min-h-screen flex flex-col bg-background">
         <FirebaseClientProvider>
           <Navbar />
-          <main className="flex-1 pt-24 pb-12 container mx-auto px-4">
+          <main className="flex-1 pt-20 pb-12 container mx-auto px-4">
             {children}
           </main>
-          <footer className="py-8 text-center text-[11px] text-muted-foreground border-t bg-muted/5 mb-24 no-print font-bold">
+          <footer className="py-6 text-center text-[10px] text-muted-foreground border-t bg-muted/5 mb-20 no-print font-bold">
             <p className="tracking-widest uppercase">© ২০২৪-২৬ টপ গ্রেড টিউটোরিয়ালস।</p>
             <p className="mt-1 text-primary/60">সর্বস্বত্ব সংরক্ষিত।</p>
           </footer>
