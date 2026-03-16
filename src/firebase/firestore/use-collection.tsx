@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -33,12 +34,17 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
         setData(docs as any);
         setLoading(false);
       },
-      async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-          path: (query as any)._query?.path?.toString() || 'unknown',
-          operation: 'list',
-        });
-        errorEmitter.emit('permission-error', permissionError);
+      async (serverError: FirestoreError) => {
+        // Only emit permission error if it's actually a permission issue
+        if (serverError.code === 'permission-denied') {
+          const permissionError = new FirestorePermissionError({
+            path: (query as any)._query?.path?.toString() || 'unknown',
+            operation: 'list',
+          });
+          errorEmitter.emit('permission-error', permissionError);
+        } else {
+          console.error("Firestore useCollection Error:", serverError);
+        }
         setError(serverError);
         setLoading(false);
       }

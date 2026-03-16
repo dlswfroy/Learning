@@ -48,12 +48,11 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { format, startOfMonth } from 'date-fns';
 import { bn } from 'date-fns/locale';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/avatar';
 
 /**
  * Students Management Page
- * Handles Student List, Attendance (Daily/Report), and Fees (Record/Report)
- * Optimized for NCTB curriculum schools in Bangladesh.
+ * Fixed indexing and misleading permission errors.
  */
 
 // Image processing for student photo
@@ -245,7 +244,7 @@ export default function StudentsPage() {
     );
   }, [db, user, reportClass, reportStartDate, reportEndDate]);
 
-  const { data: reportRecords, loading: reportLoading } = useCollection(attendanceReportQuery);
+  const { data: reportRecords, loading: reportLoading, error: reportError } = useCollection(attendanceReportQuery);
 
   const feesReportQuery = useMemo(() => {
     if (!db || !user) return null;
@@ -778,6 +777,12 @@ export default function StudentsPage() {
                   <div className="text-center py-10 text-muted-foreground font-bold">রিপোর্ট দেখতে শ্রেণি নির্বাচন করুন</div>
                 ) : reportLoading ? (
                   <div className="text-center py-10"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /></div>
+                ) : reportError ? (
+                  <div className="text-center py-10 space-y-2">
+                    <AlertTriangle className="w-8 h-8 text-destructive mx-auto" />
+                    <p className="text-destructive font-bold">রিপোর্ট লোড করতে সমস্যা হয়েছে।</p>
+                    <p className="text-[10px] text-muted-foreground">ব্রাউজার কনসোলে এরর চেক করুন এবং ইনডেক্স তৈরি করুন।</p>
+                  </div>
                 ) : !reportRecords || reportRecords.length === 0 ? (
                   <div className="text-center py-10 text-muted-foreground font-bold">এই সময়সীমার কোনো হাজিরা রেকর্ড পাওয়া যায়নি।</div>
                 ) : (

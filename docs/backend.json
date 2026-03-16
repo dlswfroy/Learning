@@ -64,7 +64,8 @@
         "updatedAt": { "type": "string", "format": "date-time" },
         "userId": { "type": "string" },
         "isMcq": { "type": "boolean" }
-      }
+      },
+      "required": ["userId", "classId", "subject"]
     },
     "LectureSheet": {
       "title": "Lecture Sheet",
@@ -79,7 +80,8 @@
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" },
         "userId": { "type": "string" }
-      }
+      },
+      "required": ["userId", "classId", "subject", "topic"]
     },
     "Student": {
       "title": "Student",
@@ -108,7 +110,8 @@
         "status": { "type": "string", "enum": ["present", "absent"] },
         "classId": { "type": "string" },
         "userId": { "type": "string" }
-      }
+      },
+      "required": ["userId", "studentId", "date", "status", "classId"]
     },
     "FeeRecord": {
       "title": "Fee Record",
@@ -121,7 +124,8 @@
         "amount": { "type": "number" },
         "date": { "type": "string", "format": "date-time" },
         "userId": { "type": "string" }
-      }
+      },
+      "required": ["userId", "studentId", "amount", "month", "year"]
     },
     "AdminConfig": {
       "title": "Admin Config",
