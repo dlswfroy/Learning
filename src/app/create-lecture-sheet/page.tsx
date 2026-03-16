@@ -24,7 +24,7 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 
 function formatMath(text: string) {
   if (!text) return '';
-  // Support for ((math)) or [[math]] wrappers, plus raw LaTeX symbols
+  // Support for {x \in \mathbb{N} : x < 4} style math and LaTeX symbols
   let formatted = text.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
   const symbolMap: Record<string, string> = {
     '\\\\log': 'log', '\\\\triangle': '△', '\\\\angle': '∠', '\\\\circ': '°',
@@ -36,9 +36,13 @@ function formatMath(text: string) {
     '\\\\in': '∈', '\\\\mathbb\\{N\\}': 'ℕ', '\\\\mathbb\\{R\\}': 'ℝ', '\\\\mathbb\\{Z\\}': 'ℤ',
     '\\\\mathbb\\{Q\\}': 'ℚ', '\\\\subset': '⊂', '\\\\subseteq': '⊆', '\\\\cup': '∪',
     '\\\\cap': '∩', '\\\\emptyset': '∅', '\\\\forall': '∀', '\\\\exists': '∃',
-    '\\\\{': '{', '\\\\}': '}'
+    '\\\\{': '{', '\\\\}': '}', '\\\\mid': '|', ':': ':'
   };
-  Object.entries(symbolMap).forEach(([key, val]) => { formatted = formatted.replace(new RegExp(key, 'g'), val); });
+  Object.entries(symbolMap).forEach(([key, val]) => { 
+    formatted = formatted.replace(new RegExp(key, 'g'), val); 
+  });
+  
+  // Format fractions, roots, etc.
   formatted = formatted.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
   formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
@@ -46,7 +50,7 @@ function formatMath(text: string) {
   formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
   formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
   formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>');
-  formatted = formatted.replace(/\\/g, ''); // Clean up remaining backslashes
+  formatted = formatted.replace(/\\/g, ''); 
   return formatted;
 }
 
@@ -58,6 +62,7 @@ function CreateLectureSheetContent() {
   const editId = searchParams.get('id');
   const [loading, setLoading] = useState(!!editId);
   const [saving, setSaving] = useState(false);
+  const [existingData, setExistingData] = useState<any>(null);
   
   const softwareDocRef = useMemo(() => doc(db, 'config', 'software'), [db]);
   const { data: softwareConfig } = useDoc(softwareDocRef);
@@ -82,6 +87,7 @@ function CreateLectureSheetContent() {
         if (docSnap.exists()) {
           const docData = docSnap.data();
           if (docData.userId !== user.uid) { router.push('/'); return; }
+          setExistingData(docData);
           setData({
             institution: docData.institution || 'টপ গ্রেড টিউটোরিয়ালস',
             classId: docData.classId || '',
@@ -111,9 +117,10 @@ function CreateLectureSheetContent() {
       updatedAt: serverTimestamp(),
     };
 
-    // Only set createdAt if this is a new document to avoid Firestore errors
     if (!editId) {
       payload.createdAt = serverTimestamp();
+    } else if (existingData?.createdAt) {
+      payload.createdAt = existingData.createdAt;
     }
 
     setDoc(ref, payload, { merge: true })
@@ -168,7 +175,7 @@ function CreateLectureSheetContent() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-semibold">টপিক / শিরোনাম</label>
-              <Input value={data.topic || ''} onChange={e => setData(prev => ({...prev, topic: e.target.value}))} placeholder="যেমন: গাণিতিক সূত্রাবলী বা ব্যাকরণ আলোচনা" />
+              <Input value={data.topic || ''} onChange={e => setData(prev => ({...prev, topic: e.target.value}))} placeholder="যেমন: গাণিতিক সূত্রাবলী বা সেট থিওরি আলোচনা" />
             </div>
           </CardContent>
         </Card>
@@ -177,7 +184,7 @@ function CreateLectureSheetContent() {
           <CardContent className="pt-6">
             <label className="text-sm font-bold mb-2 block">লেকচার কন্টেন্ট</label>
             <Textarea 
-              placeholder="এখানে আপনার লেকচার নোট বা শিটের বিস্তারিত কন্টেন্ট লিখুন..." 
+              placeholder="এখানে আপনার লেকচার নোট লিখুন... সেট লিখতে {x \in \mathbb{N} : x < 4} এভাবে টাইপ করুন।" 
               value={data.content || ''} 
               onChange={e => setData(prev => ({...prev, content: e.target.value}))} 
               className="min-h-[400px] text-base leading-relaxed" 
@@ -196,30 +203,33 @@ function CreateLectureSheetContent() {
           @media print {
             @page { size: A4; margin: 0.5in; }
             body { font-family: 'Inter', sans-serif; font-size: 11pt; color: black !important; line-height: 1.6 !important; background: white !important; }
-            .paper { width: 100%; text-align: justify; position: relative; min-height: 10in; background: white !important; }
-            .header { text-align: center; margin-bottom: 20px; border-bottom: 2pt solid black; padding-bottom: 10px; z-index: 10; position: relative; }
+            .paper { width: 100%; text-align: justify; position: relative; min-height: 10in; background: transparent !important; z-index: 10; }
+            .header { text-align: center; margin-bottom: 20px; border-bottom: 2pt solid black; padding-bottom: 10px; }
             .inst-name { font-size: 20pt; font-weight: 800; }
-            .topic-title { font-size: 16pt; font-weight: bold; margin: 20px 0; text-align: center; text-decoration: underline; z-index: 10; position: relative; }
+            .topic-title { font-size: 16pt; font-weight: bold; margin: 20px 0; text-align: center; text-decoration: underline; }
             .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 4px; font-size: 11pt; border-top: 1px solid #ddd; padding-top: 5px; }
-            .content-area { white-space: pre-wrap; font-size: 12pt; z-index: 10; position: relative; background: transparent !important; }
-            .watermark { 
-              position: fixed; 
-              top: 50%; 
-              left: 50%; 
-              transform: translate(-50%, -50%); 
-              width: 65%; 
-              opacity: 0.08; 
-              z-index: -1; 
-              pointer-events: none; 
+            .content-area { white-space: pre-wrap; font-size: 12pt; background: transparent !important; }
+            
+            .watermark-container {
+              position: fixed;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              width: 70%;
+              height: auto;
+              opacity: 0.08;
+              z-index: -1;
+              pointer-events: none;
               display: flex;
               justify-content: center;
               align-items: center;
             }
-            .watermark img { 
-              max-width: 100%; 
-              max-height: 100%; 
-              object-fit: contain; 
+            .watermark-container img {
+              max-width: 100%;
+              max-height: 100%;
+              object-fit: contain;
             }
+            
             .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
             .math-num { border-bottom: 0.5pt solid black; padding: 0 1px; }
             .math-den { padding: 0 1px; }
@@ -230,12 +240,14 @@ function CreateLectureSheetContent() {
             .no-print { display: none !important; }
           }
         `}} />
+        
+        {appLogoUrl && (
+          <div className="watermark-container">
+            <img src={appLogoUrl} alt="watermark" />
+          </div>
+        )}
+
         <div className="paper">
-          {appLogoUrl && (
-            <div className="watermark">
-              <img src={appLogoUrl} alt="watermark" />
-            </div>
-          )}
           <div className="header">
             <div className="inst-name">{data.institution || 'শিক্ষা প্রতিষ্ঠানের নাম'}</div>
             <div className="meta-info">
