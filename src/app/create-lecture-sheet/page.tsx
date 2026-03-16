@@ -203,13 +203,13 @@ function CreateLectureSheetContent() {
             .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 4px; font-size: 11pt; border-top: 1px solid #ddd; padding-top: 5px; }
             .content-area { white-space: pre-wrap; font-size: 12pt; z-index: 10; position: relative; background: transparent !important; }
             .watermark { 
-              position: absolute; 
+              position: fixed; 
               top: 50%; 
               left: 50%; 
               transform: translate(-50%, -50%); 
-              width: 70%; 
-              opacity: 0.1; 
-              z-index: 0; 
+              width: 65%; 
+              opacity: 0.08; 
+              z-index: -1; 
               pointer-events: none; 
               display: flex;
               justify-content: center;
