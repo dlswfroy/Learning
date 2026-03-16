@@ -26,7 +26,8 @@ import {
   Clock,
   FileBarChart,
   Calendar,
-  ClipboardList
+  ClipboardList,
+  PlusCircle
 } from 'lucide-react';
 import { CLASSES } from '@/lib/constants';
 import { toast } from '@/hooks/use-toast';
@@ -43,8 +44,11 @@ export default function StudentsPage() {
   const [filterClass, setFilterClass] = useState('all');
   const [activeTab, setActiveTab] = useState('list');
 
-  // Attendance states
+  // Sub-tabs states
+  const [listSubTab, setListSubTab] = useState<'view' | 'add'>('view');
   const [attendanceSubTab, setAttendanceSubTab] = useState<'daily' | 'report'>('daily');
+
+  // Attendance states
   const [attendanceDate, setAttendanceDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [attendanceClass, setAttendanceClass] = useState('');
   const [attendanceData, setAttendanceData] = useState<Record<string, 'present' | 'absent'>>({});
@@ -91,7 +95,6 @@ export default function StudentsPage() {
       .sort((a, b) => (a.roll || '').localeCompare(b.roll || '', 'bn', { numeric: true }));
   }, [students, attendanceClass]);
 
-  // Report Query with Date Range
   const reportQuery = useMemo(() => {
     if (!db || !user || !reportClass || !reportStartDate || !reportEndDate) return null;
     return query(
@@ -136,6 +139,7 @@ export default function StudentsPage() {
       .then(() => {
         toast({ title: "সফল", description: "শিক্ষার্থীর তথ্য যুক্ত হয়েছে।" });
         setFormData({ name: '', classId: '', roll: '', phone: '' });
+        setListSubTab('view');
       })
       .catch(async () => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -245,85 +249,115 @@ export default function StudentsPage() {
         </TabsList>
 
         <TabsContent value="list" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card className="lg:col-span-1 h-fit shadow-md border-green-100">
-              <CardHeader className="bg-green-50/50 border-b py-3">
-                <CardTitle className="text-base flex items-center gap-2 font-bold text-green-700">
-                  <UserPlus className="w-4 h-4" /> নতুন শিক্ষার্থী
+          <div className="flex items-center gap-4 mb-4">
+            <Button 
+              variant={listSubTab === 'view' ? 'default' : 'outline'} 
+              onClick={() => setListSubTab('view')}
+              className="gap-2 font-bold"
+            >
+              <ClipboardList className="w-4 h-4" /> শিক্ষার্থীর তালিকা
+            </Button>
+            <Button 
+              variant={listSubTab === 'add' ? 'default' : 'outline'} 
+              onClick={() => setListSubTab('add')}
+              className="gap-2 font-bold"
+            >
+              <PlusCircle className="w-4 h-4" /> নতুন শিক্ষার্থী
+            </Button>
+          </div>
+
+          {listSubTab === 'view' ? (
+            <Card className="shadow-md border-green-100">
+              <CardHeader className="bg-green-50/50 border-b py-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <CardTitle className="text-lg flex items-center gap-2 font-bold text-green-700">
+                    <Users className="w-5 h-5" /> শিক্ষার্থীর তালিকা
+                  </CardTitle>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input placeholder="খুঁজুন..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 font-bold w-full sm:w-64 h-9" />
+                    </div>
+                    <Select value={filterClass} onValueChange={setFilterClass}>
+                      <SelectTrigger className="w-full sm:w-40 font-bold h-9">
+                        <SelectValue placeholder="সব শ্রেণি" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">সব শ্রেণি</SelectItem>
+                        {CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6">
+                {filteredStudents.length === 0 ? (
+                  <div className="text-center py-10 text-muted-foreground font-bold">কোনো শিক্ষার্থী পাওয়া যায়নি</div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filteredStudents.map(s => (
+                      <div key={s.id} className="p-4 border rounded-xl flex items-center gap-4 bg-white hover:border-green-400 transition-all shadow-sm">
+                        <div className="w-12 h-12 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-black text-lg shrink-0">
+                          {s.name?.charAt(0)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-bold text-base truncate">{s.name}</h4>
+                          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-[10px] font-bold text-muted-foreground">
+                            <span className="flex items-center gap-1"><GraduationCap className="w-3 h-3 text-green-600" /> {CLASSES.find(c => c.id === s.classId)?.label} শ্রেণি</span>
+                            <span className="flex items-center gap-1"><Hash className="w-3 h-3 text-green-600" /> রোল: {s.roll}</span>
+                            {s.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3 text-green-600" /> {s.phone}</span>}
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(s.id)} className="text-destructive">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="shadow-md border-green-100 max-w-2xl mx-auto">
+              <CardHeader className="bg-green-50/50 border-b py-4 text-center">
+                <CardTitle className="text-lg flex items-center justify-center gap-2 font-bold text-green-700">
+                  <UserPlus className="w-5 h-5" /> নতুন শিক্ষার্থী যুক্ত করুন
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-6">
                 <form onSubmit={handleAddStudent} className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-bold">নাম</label>
-                    <Input value={formData.name} onChange={e => setFormData(p => ({...p, name: e.target.value}))} placeholder="পুরো নাম" />
+                    <label className="text-sm font-bold">শিক্ষার্থীর নাম</label>
+                    <Input value={formData.name} onChange={e => setFormData(p => ({...p, name: e.target.value}))} placeholder="পুরো নাম" className="font-bold" />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-sm font-bold">শ্রেণি</label>
+                      <label className="text-sm font-bold">শ্রেণি নির্বাচন করুন</label>
                       <Select onValueChange={v => setFormData(p => ({...p, classId: v}))} value={formData.classId}>
-                        <SelectTrigger><SelectValue placeholder="নির্বাচন" /></SelectTrigger>
+                        <SelectTrigger className="font-bold"><SelectValue placeholder="শ্রেণি" /></SelectTrigger>
                         <SelectContent>
-                          {CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
+                          {CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-bold">রোল</label>
-                      <Input value={formData.roll} onChange={e => setFormData(p => ({...p, roll: e.target.value}))} placeholder="রোল" />
+                      <label className="text-sm font-bold">রোল নম্বর</label>
+                      <Input value={formData.roll} onChange={e => setFormData(p => ({...p, roll: e.target.value}))} placeholder="রোল" className="font-bold" />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-bold">ফোন</label>
-                    <Input value={formData.phone} onChange={e => setFormData(p => ({...p, phone: e.target.value}))} placeholder="০১৭XXXXXXXX" />
+                    <label className="text-sm font-bold">মোবাইল নম্বর (পিতামাতা)</label>
+                    <Input value={formData.phone} onChange={e => setFormData(p => ({...p, phone: e.target.value}))} placeholder="০১৭XXXXXXXX" className="font-bold" />
                   </div>
-                  <Button type="submit" disabled={adding} className="w-full font-bold bg-green-600 h-10">
-                    {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : 'সংরক্ষণ করুন'}
-                  </Button>
+                  <div className="pt-4">
+                    <Button type="submit" disabled={adding} className="w-full font-bold bg-green-600 hover:bg-green-700 h-11 text-white shadow-lg">
+                      {adding ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />} সংরক্ষণ করুন
+                    </Button>
+                  </div>
                 </form>
               </CardContent>
             </Card>
-
-            <div className="lg:col-span-2 space-y-4">
-              <div className="flex flex-col sm:flex-row gap-3 bg-white p-3 rounded-xl border shadow-sm">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input placeholder="খুঁজুন..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 font-bold" />
-                </div>
-                <Select value={filterClass} onValueChange={setFilterClass}>
-                  <SelectTrigger className="w-full sm:w-40 font-bold">
-                    <SelectValue placeholder="সব শ্রেণি" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">সব শ্রেণি</SelectItem>
-                    {CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {filteredStudents.map(s => (
-                  <Card key={s.id} className="hover:border-green-400 transition-all shadow-sm overflow-hidden">
-                    <CardContent className="p-4 flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-black text-lg shrink-0">
-                        {s.name?.charAt(0)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-base truncate">{s.name}</h4>
-                        <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-[10px] font-bold text-muted-foreground">
-                          <span className="flex items-center gap-1"><GraduationCap className="w-3 h-3 text-green-600" /> {CLASSES.find(c => c.id === s.classId)?.label} শ্রেণি</span>
-                          <span className="flex items-center gap-1"><Hash className="w-3 h-3 text-green-600" /> রোল: {s.roll}</span>
-                        </div>
-                      </div>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(s.id)} className="text-destructive">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          </div>
+          )}
         </TabsContent>
 
         <TabsContent value="attendance" className="space-y-6">
@@ -426,7 +460,7 @@ export default function StudentsPage() {
                     <div className="flex flex-col gap-1">
                       <span className="text-[10px] font-bold text-muted-foreground uppercase px-1">শ্রেণি</span>
                       <Select onValueChange={setReportClass} value={reportClass}>
-                        <SelectTrigger className="w-40 font-bold"><SelectValue placeholder="নির্বাচন" /></SelectTrigger>
+                        <SelectTrigger className="w-40 font-bold h-9"><SelectValue placeholder="নির্বাচন" /></SelectTrigger>
                         <SelectContent>
                           {CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}
                         </SelectContent>
@@ -441,7 +475,7 @@ export default function StudentsPage() {
                 ) : reportLoading ? (
                   <div className="text-center py-10"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /></div>
                 ) : !reportRecords || reportRecords.length === 0 ? (
-                  <div className="text-center py-10 text-muted-foreground font-bold">এই তারিখের কোনো হাজিরা রেকর্ড পাওয়া যায়নি।</div>
+                  <div className="text-center py-10 text-muted-foreground font-bold">এই সময়সীমার কোনো হাজিরা রেকর্ড পাওয়া যায়নি।</div>
                 ) : (
                   <div className="space-y-4">
                     <div className="grid grid-cols-3 gap-4 mb-6">
@@ -459,7 +493,7 @@ export default function StudentsPage() {
                       </div>
                     </div>
                     
-                    <div className="border rounded-lg overflow-hidden">
+                    <div className="border rounded-lg overflow-hidden overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead className="bg-muted/50 border-b">
                           <tr>
