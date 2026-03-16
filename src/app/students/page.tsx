@@ -39,7 +39,8 @@ import {
   User as UserIcon,
   Edit,
   MessageSquare,
-  ReceiptText
+  ReceiptText,
+  AlertTriangle
 } from 'lucide-react';
 import { CLASSES } from '@/lib/constants';
 import { toast } from '@/hooks/use-toast';
@@ -125,6 +126,7 @@ export default function StudentsPage() {
   const [feeMonth, setFeeMonth] = useState(MONTHS[new Date().getMonth()]);
   const [feeYear, setFeeYear] = useState(new Date().getFullYear().toString());
   const [savingFee, setSavingFee] = useState(false);
+  const [deletingFee, setDeletingFee] = useState<string | null>(null);
 
   // Fees Report states
   const [feeReportMonth, setFeeReportMonth] = useState('all');
@@ -364,6 +366,21 @@ export default function StudentsPage() {
           path: `students/${id}`, operation: 'delete'
         }));
       });
+  };
+
+  const handleDeleteFee = (id: string) => {
+    if (!db || !confirm("আপনি কি এই পেমেন্ট রেকর্ডটি মুছে ফেলতে চান?")) return;
+    setDeletingFee(id);
+    deleteDoc(doc(db, 'fees', id))
+      .then(() => {
+        toast({ title: "সফল", description: "পেমেন্ট রেকর্ড মুছে ফেলা হয়েছে।" });
+      })
+      .catch(async () => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: `fees/${id}`, operation: 'delete'
+        }));
+      })
+      .finally(() => setDeletingFee(null));
   };
 
   if (userLoading || studentsLoading) {
@@ -832,17 +849,40 @@ export default function StudentsPage() {
                     <div className="divide-y">
                       {filteredFeesReport.slice(0, 10).map(f => {
                         const student = students?.find(s => s.id === f.studentId);
+                        const studentClass = student ? CLASSES.find(c => c.id === student.classId)?.label : 'অজানা';
+                        
                         return (
-                          <div key={f.id} className="p-4 flex items-center justify-between hover:bg-muted/5">
-                            <div className="space-y-1">
-                              <p className="font-bold text-sm text-primary">{student?.name || 'অজানা শিক্ষার্থী'}</p>
-                              <p className="text-[10px] text-muted-foreground font-bold">
-                                {f.month} {f.year} | {f.date?.toDate ? format(f.date.toDate(), 'dd MMM, hh:mm a', { locale: bn }) : ''}
-                              </p>
+                          <div key={f.id} className="p-4 flex items-center justify-between hover:bg-muted/5 group">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center text-orange-600 shrink-0">
+                                <ReceiptText className="w-5 h-5" />
+                              </div>
+                              <div className="space-y-1">
+                                <p className="font-bold text-sm text-primary flex items-center gap-2">
+                                  {student?.name || 'অজানা শিক্ষার্থী'}
+                                  <span className="text-[10px] px-1.5 py-0.5 bg-muted rounded font-bold text-muted-foreground uppercase">
+                                    রোল: {student?.roll || '-'} | {studentClass} শ্রেণি
+                                  </span>
+                                </p>
+                                <p className="text-[10px] text-muted-foreground font-bold">
+                                  {f.month} {f.year} | {f.date?.toDate ? format(f.date.toDate(), 'dd MMM, hh:mm a', { locale: bn }) : ''}
+                                </p>
+                              </div>
                             </div>
-                            <div className="text-right">
-                              <p className="font-black text-orange-600">৳{f.amount}</p>
-                              <p className="text-[8px] font-bold text-muted-foreground uppercase">সংগৃহীত</p>
+                            <div className="flex items-center gap-4">
+                              <div className="text-right">
+                                <p className="font-black text-orange-600">৳{f.amount}</p>
+                                <p className="text-[8px] font-bold text-muted-foreground uppercase">সংগৃহীত</p>
+                              </div>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => handleDeleteFee(f.id)}
+                                disabled={deletingFee === f.id}
+                              >
+                                {deletingFee === f.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                              </Button>
                             </div>
                           </div>
                         );
