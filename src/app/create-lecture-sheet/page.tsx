@@ -24,6 +24,7 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 
 function formatMath(text: string) {
   if (!text) return '';
+  // Support for ((math)) or [[math]] wrappers, plus raw LaTeX symbols
   let formatted = text.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
   const symbolMap: Record<string, string> = {
     '\\\\log': 'log', '\\\\triangle': '△', '\\\\angle': '∠', '\\\\circ': '°',
@@ -44,7 +45,7 @@ function formatMath(text: string) {
   formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
   formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
   formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>');
-  formatted = formatted.replace(/\\/g, '');
+  formatted = formatted.replace(/\\/g, ''); // Clean up remaining backslashes
   return formatted;
 }
 
@@ -103,12 +104,16 @@ function CreateLectureSheetContent() {
     const docId = editId || doc(collection(db, 'lecture-sheets')).id;
     const ref = doc(db, 'lecture-sheets', docId);
     
-    const payload = {
+    const payload: any = {
       ...data,
       userId: user.uid,
       updatedAt: serverTimestamp(),
-      createdAt: editId ? undefined : serverTimestamp()
     };
+
+    // Only set createdAt if this is a new document to avoid Firestore errors and overwriting original date
+    if (!editId) {
+      payload.createdAt = serverTimestamp();
+    }
 
     setDoc(ref, payload, { merge: true })
       .then(() => { 
@@ -116,7 +121,7 @@ function CreateLectureSheetContent() {
         toast({ title: "সফল!", description: "লেকচার শিট সেভ হয়েছে।" }); 
         if (!editId) router.replace(`/create-lecture-sheet?id=${docId}`); 
       })
-      .catch(async () => { 
+      .catch(async (error) => { 
         setSaving(false); 
         errorEmitter.emit('permission-error', new FirestorePermissionError({ 
           path: ref.path, operation: 'write', requestResourceData: payload 
