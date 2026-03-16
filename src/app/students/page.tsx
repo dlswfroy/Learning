@@ -50,6 +50,12 @@ import { format, startOfMonth } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
+/**
+ * Students Management Page
+ * Handles Student List, Attendance (Daily/Report), and Fees (Record/Report)
+ * Optimized for NCTB curriculum schools in Bangladesh.
+ */
+
 // Image processing for student photo
 async function processImage(file: File): Promise<string> {
   if (file.size > 5 * 1024 * 1024) {

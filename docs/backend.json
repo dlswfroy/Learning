@@ -100,7 +100,7 @@
     },
     "AttendanceRecord": {
       "title": "Attendance Record",
-      "description": "Daily attendance status for a student.",
+      "description": "Daily attendance status for a student managed by the teacher.",
       "type": "object",
       "properties": {
         "studentId": { "type": "string" },
@@ -173,7 +173,7 @@
     },
     "/attendance/{attendanceId}": {
       "schema": "AttendanceRecord",
-      "description": "Daily attendance records."
+      "description": "Daily attendance records linked to user IDs."
     },
     "/fees/{feeId}": {
       "schema": "FeeRecord",
