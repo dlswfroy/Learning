@@ -3,12 +3,19 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useFirestore, useUser, useCollection } from '@/firebase';
-import { collection, query, where, addDoc, deleteDoc, doc, serverTimestamp, getDocs, setDoc, limit, orderBy } from 'firebase/firestore';
+import { collection, query, where, addDoc, deleteDoc, doc, serverTimestamp, getDocs, setDoc, limit, orderBy, updateDoc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { 
   Users, 
   UserPlus, 
@@ -29,7 +36,9 @@ import {
   ClipboardList,
   PlusCircle,
   Camera,
-  User as UserIcon
+  User as UserIcon,
+  Edit,
+  MessageSquare
 } from 'lucide-react';
 import { CLASSES } from '@/lib/constants';
 import { toast } from '@/hooks/use-toast';
@@ -53,7 +62,7 @@ async function processImage(file: File): Promise<string> {
         const canvas = document.createElement('canvas');
         let width = img.width;
         let height = img.height;
-        const maxSide = 400; // Smaller side for student photo
+        const maxSide = 400;
 
         if (width > height) {
           if (width > maxSide) {
@@ -71,7 +80,7 @@ async function processImage(file: File): Promise<string> {
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.7)); // 70% quality for students
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
       };
       img.onerror = () => reject(new Error('ছবি লোড করা সম্ভব হয়নি।'));
       img.src = e.target?.result as string;
@@ -89,6 +98,7 @@ export default function StudentsPage() {
   const [filterClass, setFilterClass] = useState('all');
   const [activeTab, setActiveTab] = useState('list');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
 
   // Sub-tabs states
   const [listSubTab, setListSubTab] = useState<'view' | 'add'>('view');
@@ -111,6 +121,18 @@ export default function StudentsPage() {
   const [feeMonth, setFeeMonth] = useState(format(new Date(), 'MMMM'));
   const [feeYear, setFeeYear] = useState(new Date().getFullYear().toString());
   const [savingFee, setSavingFee] = useState(false);
+
+  // Edit states
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<any>(null);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    fatherName: '',
+    photo: '',
+    classId: '',
+    roll: '',
+    phone: ''
+  });
 
   const [formData, setFormData] = useState({
     name: '',
@@ -171,12 +193,16 @@ export default function StudentsPage() {
   }, [db, user]);
   const { data: recentFees, loading: feesLoading } = useCollection(feesQuery);
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>, isEdit = false) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
       const base64 = await processImage(file);
-      setFormData(prev => ({ ...prev, photo: base64 }));
+      if (isEdit) {
+        setEditFormData(prev => ({ ...prev, photo: base64 }));
+      } else {
+        setFormData(prev => ({ ...prev, photo: base64 }));
+      }
       toast({ title: "সফল", description: "ছবি প্রসেস করা হয়েছে।" });
     } catch (err: any) {
       toast({ variant: "destructive", title: "ত্রুটি", description: err.message });
@@ -210,6 +236,40 @@ export default function StudentsPage() {
         }));
       })
       .finally(() => setAdding(false));
+  };
+
+  const openEditDialog = (student: any) => {
+    setEditingStudent(student);
+    setEditFormData({
+      name: student.name || '',
+      fatherName: student.fatherName || '',
+      photo: student.photo || '',
+      classId: student.classId || '',
+      roll: student.roll || '',
+      phone: student.phone || ''
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateStudent = async () => {
+    if (!db || !user || !editingStudent) return;
+    setAdding(true);
+    const ref = doc(db, 'students', editingStudent.id);
+    
+    updateDoc(ref, {
+      ...editFormData,
+      updatedAt: serverTimestamp()
+    })
+    .then(() => {
+      toast({ title: "সফল", description: "শিক্ষার্থীর তথ্য আপডেট হয়েছে।" });
+      setIsEditDialogOpen(false);
+    })
+    .catch(async () => {
+      errorEmitter.emit('permission-error', new FirestorePermissionError({
+        path: ref.path, operation: 'update', requestResourceData: editFormData
+      }));
+    })
+    .finally(() => setAdding(false));
   };
 
   const handleSaveAttendance = async () => {
@@ -372,12 +432,26 @@ export default function StudentsPage() {
                           <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-[10px] font-bold text-muted-foreground">
                             <span className="flex items-center gap-1"><GraduationCap className="w-3 h-3 text-green-600" /> {CLASSES.find(c => c.id === s.classId)?.label} শ্রেণি</span>
                             <span className="flex items-center gap-1"><Hash className="w-3 h-3 text-green-600" /> রোল: {s.roll}</span>
-                            {s.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3 text-green-600" /> {s.phone}</span>}
+                          </div>
+                          <div className="flex gap-2 mt-2">
+                             <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10" onClick={() => openEditDialog(s)}>
+                               <Edit className="w-4 h-4" />
+                             </Button>
+                             {s.phone && (
+                               <>
+                                 <a href={`tel:${s.phone}`} className="h-8 w-8 flex items-center justify-center rounded-md text-green-600 hover:bg-green-50 transition-colors">
+                                   <Phone className="w-4 h-4" />
+                                 </a>
+                                 <a href={`sms:${s.phone}`} className="h-8 w-8 flex items-center justify-center rounded-md text-blue-600 hover:bg-blue-50 transition-colors">
+                                   <MessageSquare className="w-4 h-4" />
+                                 </a>
+                               </>
+                             )}
+                             <Button variant="ghost" size="icon" onClick={() => handleDelete(s.id)} className="h-8 w-8 text-destructive shrink-0">
+                               <Trash2 className="w-4 h-4" />
+                             </Button>
                           </div>
                         </div>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(s.id)} className="text-destructive shrink-0">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
                       </div>
                     ))}
                   </div>
@@ -509,6 +583,16 @@ export default function StudentsPage() {
                               <AvatarFallback className="bg-muted text-[10px] font-bold">{s.name?.charAt(0)}</AvatarFallback>
                             </Avatar>
                             <span className="font-bold">{s.name}</span>
+                            {status === 'absent' && s.phone && (
+                               <div className="flex gap-1 ml-2">
+                                 <a href={`tel:${s.phone}`} title="কল করুন" className="p-1.5 text-green-600 hover:bg-green-50 rounded-full transition-colors">
+                                   <Phone className="w-3.5 h-3.5" />
+                                 </a>
+                                 <a href={`sms:${s.phone}`} title="মেসেজ দিন" className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-full transition-colors">
+                                   <MessageSquare className="w-3.5 h-3.5" />
+                                 </a>
+                               </div>
+                            )}
                           </div>
                           <div className="flex gap-2">
                             <Button 
@@ -600,6 +684,7 @@ export default function StudentsPage() {
                             <th className="p-3 text-left font-bold">রোল</th>
                             <th className="p-3 text-left font-bold">নাম</th>
                             <th className="p-3 text-center font-bold">অবস্থা</th>
+                            <th className="p-3 text-right font-bold">যোগাযোগ</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y">
@@ -616,6 +701,18 @@ export default function StudentsPage() {
                                   <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${record.status === 'present' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                     {record.status === 'present' ? 'উপস্থিত' : 'অনুপস্থিত'}
                                   </span>
+                                </td>
+                                <td className="p-3 text-right">
+                                  {record.status === 'absent' && student?.phone && (
+                                     <div className="flex justify-end gap-1">
+                                       <a href={`tel:${student.phone}`} title="কল করুন" className="p-1.5 text-green-600 hover:bg-green-50 rounded-full transition-colors">
+                                         <Phone className="w-3.5 h-3.5" />
+                                       </a>
+                                       <a href={`sms:${student.phone}`} title="মেসেজ দিন" className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-full transition-colors">
+                                         <MessageSquare className="w-3.5 h-3.5" />
+                                       </a>
+                                     </div>
+                                  )}
                                 </td>
                               </tr>
                             );
@@ -712,6 +809,76 @@ export default function StudentsPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Edit Student Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-3xl font-kalpurush">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-primary flex items-center gap-2">
+               <Edit className="w-5 h-5" /> শিক্ষার্থীর তথ্য সংশোধন করুন
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 pt-4">
+            <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
+              <div className="flex flex-col items-center gap-3 shrink-0">
+                <div className="relative group">
+                  <Avatar className="h-28 w-28 border-4 border-primary/10 shadow-lg">
+                    <AvatarImage src={editFormData.photo || ''} />
+                    <AvatarFallback className="bg-secondary text-primary font-black text-3xl">
+                      <UserIcon className="w-12 h-12 opacity-20" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <button 
+                    type="button" 
+                    onClick={() => editFileInputRef.current?.click()} 
+                    className="absolute -bottom-1 -right-1 bg-primary text-white p-2 rounded-full shadow-lg hover:bg-primary/90 transition-colors"
+                  >
+                    <Camera className="w-4 h-4" />
+                  </button>
+                  <input type="file" ref={editFileInputRef} className="hidden" accept="image/*" onChange={(e) => handlePhotoUpload(e, true)} />
+                </div>
+                <span className="text-[10px] font-bold text-muted-foreground">ছবি পরিবর্তন করুন</span>
+              </div>
+
+              <div className="flex-1 w-full space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold">শিক্ষার্থীর নাম</label>
+                  <Input value={editFormData.name} onChange={e => setEditFormData(p => ({...p, name: e.target.value}))} placeholder="পুরো নাম" className="font-bold" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold">পিতার নাম</label>
+                  <Input value={editFormData.fatherName} onChange={e => setEditFormData(p => ({...p, fatherName: e.target.value}))} placeholder="পিতার নাম লিখুন" className="font-bold" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold">শ্রেণি</label>
+                    <Select onValueChange={v => setEditFormData(p => ({...p, classId: v}))} value={editFormData.classId}>
+                      <SelectTrigger className="font-bold"><SelectValue placeholder="শ্রেণি" /></SelectTrigger>
+                      <SelectContent>
+                        {CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold">রোল নম্বর</label>
+                    <Input value={editFormData.roll} onChange={e => setEditFormData(p => ({...p, roll: e.target.value}))} placeholder="রোল" className="font-bold" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold">মোবাইল নম্বর</label>
+                  <Input value={editFormData.phone} onChange={e => setEditFormData(p => ({...p, phone: e.target.value}))} placeholder="০১৭XXXXXXXX" className="font-bold" />
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="pt-6 border-t">
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="font-bold">বাতিল</Button>
+            <Button onClick={handleUpdateStudent} disabled={adding} className="font-bold bg-primary shadow-md">
+              {adding ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />} তথ্য আপডেট করুন
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
