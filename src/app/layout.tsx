@@ -6,8 +6,8 @@ import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 export const metadata: Metadata = {
-  title: 'আমার প্রশ্ন',
-  description: 'শিক্ষা সহায়ক প্ল্যাটফর্ম',
+  title: 'টপ গ্রেড টিউটোরিয়ালস',
+  description: 'আধুনিক শিক্ষা সহায়ক প্ল্যাটফর্ম',
 };
 
 export default function RootLayout({

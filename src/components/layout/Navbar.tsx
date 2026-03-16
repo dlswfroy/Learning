@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo } from 'react';
@@ -30,7 +29,7 @@ export function Navbar() {
   const userProfileRef = useMemo(() => user ? doc(db, 'users', user.uid) : null, [db, user]);
   const { data: userProfile } = useDoc(userProfileRef);
 
-  const appName = softwareConfig?.appName || 'আমার প্রশ্ন';
+  const appName = softwareConfig?.appName || 'টপ গ্রেড টিউটোরিয়ালস';
   const appLogoUrl = softwareConfig?.appLogoUrl || '';
 
   const userName = userProfile?.displayName || user?.displayName || 'ব্যবহারকারী';
@@ -55,7 +54,7 @@ export function Navbar() {
             <BookOpenText className="w-8 h-8" />
           )}
         </div>
-        <h1 className="text-2xl font-black font-headline tracking-tighter drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
+        <h1 className="text-xl md:text-2xl font-black font-headline tracking-tighter drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
           {appName}
         </h1>
       </Link>

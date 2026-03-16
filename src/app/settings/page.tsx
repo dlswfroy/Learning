@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from 'react';
@@ -128,8 +127,10 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (softwareConfig) {
-      setAppName(softwareConfig.appName || '');
+      setAppName(softwareConfig.appName || 'টপ গ্রেড টিউটোরিয়ালস');
       setAppLogoUrl(softwareConfig.appLogoUrl || '');
+    } else {
+      setAppName('টপ গ্রেড টিউটোরিয়ালস');
     }
   }, [softwareConfig]);
 
@@ -200,16 +201,12 @@ export default function SettingsPage() {
       updatedAt: serverTimestamp() 
     };
     try {
-      // Save to Firestore to support large Base64 strings (Firebase Auth has small limits)
       await setDoc(userProfileRef, profileData, { merge: true });
-      
-      // Also try to update Auth Profile (might fail if photoURL is too large, but we mainly care about displayName)
       try {
         await updateProfile(user, { displayName });
       } catch (authErr) {
-        // Ignore auth error as we're primarily using Firestore
+        // Auth profile error can be ignored if storage is in Firestore
       }
-      
       toast({ title: "সফল", description: "প্রোফাইল আপডেট করা হয়েছে।" });
     } catch (e) {
       errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -389,12 +386,35 @@ export default function SettingsPage() {
                   </div>
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2"><label className="text-sm font-semibold">{uploadMethod === 'file' ? 'PDF ফাইল' : 'ডাউনলোড লিঙ্ক'}</label>{uploadMethod === 'file' ? <Input type="file" accept=".pdf" onChange={e => setFile(e.target.files?.[0] || null)} disabled={uploading} /> : <Input placeholder="https://..." value={pdfUrl || ''} onChange={e => setPdfUrl(e.target.value)} disabled={uploading} />}</div>
-                  <div className="space-y-2"><label className="text-sm font-semibold">কভার ইমেজ (ঐচ্ছিক)</label><Input placeholder="https://..." value={coverImageUrl || ''} onChange={e => setCoverImageUrl(e.target.value)} disabled={uploading} /></div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold">{uploadMethod === 'file' ? 'PDF ফাইল' : 'ডাউনলোড লিঙ্ক'}</label>
+                    {uploadMethod === 'file' ? (
+                      <Input type="file" accept=".pdf" onChange={e => setFile(e.target.files?.[0] || null)} disabled={uploading} />
+                    ) : (
+                      <Input placeholder="https://..." value={pdfUrl || ''} onChange={e => setPdfUrl(e.target.value)} disabled={uploading} />
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold">কভার ইমেজ (ঐচ্ছিক)</label>
+                    <Input placeholder="https://..." value={coverImageUrl || ''} onChange={e => setCoverImageUrl(e.target.value)} disabled={uploading} />
+                  </div>
                 </div>
               </CardContent>
-              {uploading && uploadMethod === 'file' && <div className="px-6 pb-4 space-y-2"><div className="flex justify-between text-xs font-medium"><span>আপলোড হচ্ছে...</span><span>{Math.round(progress)}%</span></div><Progress value={progress} className="h-2" /></div>}
-              <CardFooter className="flex justify-end border-t bg-muted/20 py-4"><Button onClick={handleSaveBook} disabled={uploading || (uploadMethod === 'file' ? !file : !pdfUrl) || !classId || !subject} className="bg-accent text-white hover:bg-accent/90 gap-2 px-8">{uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}{uploadMethod === 'link' ? 'সেভ করুন' : 'আপলোড করুন'}</Button></CardFooter>
+              {uploading && uploadMethod === 'file' && (
+                <div className="px-6 pb-4 space-y-2">
+                  <div className="flex justify-between text-xs font-medium">
+                    <span>আপলোড হচ্ছে...</span>
+                    <span>{Math.round(progress)}%</span>
+                  </div>
+                  <Progress value={progress} className="h-2" />
+                </div>
+              )}
+              <CardFooter className="flex justify-end border-t bg-muted/20 py-4">
+                <Button onClick={handleSaveBook} disabled={uploading || (uploadMethod === 'file' ? !file : !pdfUrl) || !classId || !subject} className="bg-accent text-white hover:bg-accent/90 gap-2 px-8">
+                  {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                  {uploadMethod === 'link' ? 'সেভ করুন' : 'আপলোড করুন'}
+                </Button>
+              </CardFooter>
             </Card>
           )}
 
@@ -403,16 +423,44 @@ export default function SettingsPage() {
               <h3 className="text-lg font-bold">বর্তমানে থাকা বইসমূহ</h3>
               <div className="flex flex-wrap items-center gap-2 bg-secondary/30 p-1.5 rounded-lg border">
                 <Filter className="w-4 h-4 text-muted-foreground ml-2" />
-                <Select value={viewClassId || 'all'} onValueChange={setViewClassId}><SelectTrigger className="w-[120px] h-8 text-xs bg-white"><SelectValue placeholder="সব শ্রেণি" /></SelectTrigger><SelectContent><SelectItem value="all">সব শ্রেণি</SelectItem>{CLASSES.map(c => <SelectItem key={`filter-opt-${c.id}`} value={c.id}>{c.label} শ্রেণি</SelectItem>)}</SelectContent></Select>
-                <Select value={viewBookType || 'all'} onValueChange={setViewBookType}><SelectTrigger className="w-[120px] h-8 text-xs bg-white"><SelectValue placeholder="বইয়ের ধরন" /></SelectTrigger><SelectContent><SelectItem value="all">সব বই</SelectItem><SelectItem value="nctb">বোর্ড বই</SelectItem><SelectItem value="guide">গাইড বই</SelectItem></SelectContent></Select>
+                <Select value={viewClassId || 'all'} onValueChange={setViewClassId}>
+                  <SelectTrigger className="w-[120px] h-8 text-xs bg-white">
+                    <SelectValue placeholder="সব শ্রেণি" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">সব শ্রেণি</SelectItem>
+                    {CLASSES.map(c => (
+                      <SelectItem key={`filter-opt-${c.id}`} value={c.id}>{c.label} শ্রেণি</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={viewBookType || 'all'} onValueChange={setViewBookType}>
+                  <SelectTrigger className="w-[120px] h-8 text-xs bg-white">
+                    <SelectValue placeholder="বইয়ের ধরন" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">সব বই</SelectItem>
+                    <SelectItem value="nctb">বোর্ড বই</SelectItem>
+                    <SelectItem value="guide">গাইড বই</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-            {loadingBooks ? <div className="p-12 text-center"><Loader2 className="w-10 h-10 animate-spin text-primary mx-auto" /></div> : filteredBooks.length > 0 ? (
+            {loadingBooks ? (
+              <div className="p-12 text-center"><Loader2 className="w-10 h-10 animate-spin text-primary mx-auto" /></div>
+            ) : filteredBooks.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {filteredBooks.map(book => (
                   <Card key={book.id} className="p-4 flex items-center justify-between hover:border-primary/40 transition-colors group">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-16 rounded border bg-primary/10 flex items-center justify-center overflow-hidden shrink-0 relative">{book.coverImageUrl ? <img src={book.coverImageUrl} alt="Cover" className="w-full h-full object-cover" /> : <FileText className="w-6 h-6 text-primary" />}{book.isGuide && <div className="absolute top-0 right-0 bg-accent text-[8px] px-1 text-white font-bold">GUIDE</div>}</div>
+                      <div className="w-12 h-16 rounded border bg-primary/10 flex items-center justify-center overflow-hidden shrink-0 relative">
+                        {book.coverImageUrl ? (
+                          <img src={book.coverImageUrl} alt="Cover" className="w-full h-full object-cover" />
+                        ) : (
+                          <FileText className="w-6 h-6 text-primary" />
+                        )}
+                        {book.isGuide && <div className="absolute top-0 right-0 bg-accent text-[8px] px-1 text-white font-bold">GUIDE</div>}
+                      </div>
                       <div>
                         <h4 className="font-bold text-sm flex items-center gap-1">{book.subject}{book.isGuide && <BookCopy className="w-3 h-3 text-accent" />}</h4>
                         <p className="text-[10px] text-muted-foreground">{CLASSES.find(c => c.id === book.classId)?.label || 'অজানা'} শ্রেণি | {book.isGuide ? 'গাইড বই' : 'পাঠ্যবই'}</p>
@@ -420,11 +468,20 @@ export default function SettingsPage() {
                         <p className="text-[10px] text-primary hover:underline truncate max-w-[150px]">{book.fileName}</p>
                       </div>
                     </div>
-                    {isAdmin && <Button variant="ghost" size="icon" className="text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => removeBook(book.id)}><Trash2 className="w-4 h-4" /></Button>}
+                    {isAdmin && (
+                      <Button variant="ghost" size="icon" className="text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => removeBook(book.id)}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
                   </Card>
                 ))}
               </div>
-            ) : <Card className="p-12 text-center border-dashed"><FileText className="w-12 h-12 text-muted-foreground/20 mx-auto mb-4" /><p className="text-muted-foreground">কোনো বই পাওয়া যায়নি।</p></Card>}
+            ) : (
+              <Card className="p-12 text-center border-dashed">
+                <FileText className="w-12 h-12 text-muted-foreground/20 mx-auto mb-4" />
+                <p className="text-muted-foreground">কোনো বই পাওয়া যায়নি।</p>
+              </Card>
+            )}
           </section>
         </TabsContent>
 
@@ -450,7 +507,7 @@ export default function SettingsPage() {
                   <div className="flex-1 space-y-4">
                     <div className="space-y-2">
                       <Label>সফটওয়্যারের নাম</Label>
-                      <Input value={appName || ''} onChange={e => setAppName(e.target.value)} placeholder="আমার প্রশ্ন" />
+                      <Input value={appName || ''} onChange={e => setAppName(e.target.value)} placeholder="টপ গ্রেড টিউটোরিয়ালস" />
                     </div>
                     <div className="space-y-2">
                       <Label>লোগো ছবির লিঙ্ক বা Base64</Label>
