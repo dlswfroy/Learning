@@ -62,9 +62,6 @@ export function Navbar() {
           <p className="text-[10px] md:text-xs font-black text-red-500 italic leading-none mt-0.5 drop-shadow-[0_1px_1px_rgba(0,0,0,0.2)]">
             Smart learning, Bright Future.
           </p>
-          <p className="text-[9px] md:text-[10px] text-white/90 font-bold leading-none mt-1 tracking-wide">
-            আধুনিক প্রশ্নপত্র নির্মাতা
-          </p>
         </div>
       </Link>
       
