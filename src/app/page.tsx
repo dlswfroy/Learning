@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useUser } from '@/firebase';
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { GraduationCap, ArrowRight, BookMarked, BrainCircuit, Loader2, BookOpen, Library } from 'lucide-react';
+import { GraduationCap, ArrowRight, BrainCircuit, Loader2, BookOpen, Library, Users } from 'lucide-react';
 import { CLASSES } from '@/lib/constants';
 
 export default function Home() {
@@ -59,6 +59,20 @@ export default function Home() {
           </Card>
         </Link>
 
+        <Link href="/students">
+          <Card className="bg-green-50 border-green-200 shadow-md overflow-hidden group hover:shadow-lg transition-all border-l-4 border-l-green-600 h-full">
+            <CardHeader className="pb-2 p-4">
+              <div className="w-10 h-10 rounded-xl bg-green-600 flex items-center justify-center text-white mb-2 shadow-inner group-hover:scale-110 transition-transform">
+                <Users className="w-5 h-5" />
+              </div>
+              <CardTitle className="text-green-700 font-black text-base">শিক্ষার্থী</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <p className="text-[10px] font-bold text-muted-foreground">আপনার শিক্ষার্থীদের তথ্য সংরক্ষণ ও পরিচালনা করুন।</p>
+            </CardContent>
+          </Card>
+        </Link>
+
         <Link href="/my-questions">
           <Card className="bg-accent/10 border-accent/30 shadow-md overflow-hidden group hover:shadow-lg transition-all border-l-4 border-l-accent h-full">
             <CardHeader className="pb-2 p-4">
@@ -72,14 +86,6 @@ export default function Home() {
             </CardContent>
           </Card>
         </Link>
-
-        <Card className="bg-white border-dashed border-2 border-primary/30 text-center shadow-md hover:border-primary transition-colors p-4 flex flex-col justify-center h-full">
-          <h3 className="font-black text-xs mb-2 text-primary">সেটিংস</h3>
-          <p className="text-[9px] text-muted-foreground mb-3 font-bold">ব্র্যান্ডিং ও প্রোফাইল আপডেট</p>
-          <Link href="/settings" className="inline-block px-4 py-1.5 bg-primary text-white rounded-lg text-[10px] font-black hover:bg-primary/90 transition-all">
-            প্রবেশ করুন
-          </Link>
-        </Card>
       </section>
 
       <section>

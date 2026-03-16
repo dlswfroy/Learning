@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, PlusCircle, Settings, FileText, BookOpen, Library } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, Settings, BookOpen, Library, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/firebase';
 
@@ -19,7 +19,8 @@ export function BottomNav() {
     { label: 'হোম', icon: LayoutDashboard, href: '/' },
     { label: 'প্রশ্ন তৈরি', icon: PlusCircle, href: '/create-question' },
     { label: 'শিট তৈরি', icon: BookOpen, href: '/create-lecture-sheet' },
-    { label: 'লাইব্রেরি', icon: Library, href: '/my-questions' }, // Renamed from My Questions
+    { label: 'শিক্ষার্থী', icon: Users, href: '/students' },
+    { label: 'লাইব্রেরি', icon: Library, href: '/my-questions' },
     { label: 'সেটিং', icon: Settings, href: '/settings' },
   ];
 

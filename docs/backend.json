@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Book": {
@@ -80,6 +81,21 @@
         "userId": { "type": "string" }
       }
     },
+    "Student": {
+      "title": "Student",
+      "description": "Information about a student.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "classId": { "type": "string" },
+        "roll": { "type": "string" },
+        "phone": { "type": "string" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "classId"]
+    },
     "AdminConfig": {
       "title": "Admin Config",
       "description": "Stores the UID of the first registered admin.",
@@ -123,6 +139,10 @@
     "/lecture-sheets/{sheetId}": {
       "schema": "LectureSheet",
       "description": "Collection of study materials and lecture notes."
+    },
+    "/students/{studentId}": {
+      "schema": "Student",
+      "description": "Collection of students managed by the teacher."
     },
     "/config/admin": {
       "schema": "AdminConfig",
