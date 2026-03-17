@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Printer, Plus, Trash2, BookOpen, Save, FileText, ArrowLeft, Loader2, Image as ImageIcon, X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { useFirestore, useUser } from '@/firebase';
+import { useFirestore, useUser, useDoc } from '@/firebase';
 import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -115,6 +115,10 @@ function CreateQuestionContent() {
   const editId = searchParams.get('id');
   const [loading, setLoading] = useState(!!editId);
   const [saving, setSaving] = useState(false);
+  
+  const softwareDocRef = useMemo(() => doc(db, 'config', 'software'), [db]);
+  const { data: softwareConfig } = useDoc(softwareDocRef);
+  const appLogoUrl = softwareConfig?.appLogoUrl || '';
   
   const [meta, setMeta] = useState({
     institution: 'টপ গ্রেড টিউটোরিয়ালস', exam: '', classId: '', subject: '', time: '২ ঘণ্টা ৩০ মিনিট', totalMarks: '১০০',
@@ -427,8 +431,6 @@ function CreateQuestionContent() {
               margin: 0 !important; 
               padding: 0 !important;
               background: white !important;
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
               height: auto !important;
               overflow: visible !important;
             }
@@ -436,7 +438,7 @@ function CreateQuestionContent() {
               font-family: 'Kalpurush', sans-serif !important; 
               font-size: 9pt !important; 
               color: black !important; 
-              line-height: 1.4 !important; 
+              line-height: 1.3 !important; 
             }
             .paper { 
               width: 100% !important; 
@@ -449,33 +451,34 @@ function CreateQuestionContent() {
             .header { text-align: center; margin-bottom: 8px; border-bottom: 1.5pt solid black; padding-bottom: 6px; }
             .inst-name { font-size: 15pt; font-weight: 800; }
             .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 4px; font-size: 9.5pt; }
-            .section { margin-top: 4px; display: block; clear: both; }
+            .section { margin-top: 4px; display: block; clear: both; page-break-inside: auto; }
             .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 15px; margin: 2px auto; text-transform: uppercase; }
-            .instruction { font-style: italic; font-size: 9.5pt; text-align: center; margin-bottom: 2px; }
+            .instruction { font-style: italic; font-size: 9pt; text-align: center; margin-bottom: 2px; }
             .q-block { margin-bottom: 4px; break-inside: avoid; display: block; position: static !important; }
             .stimulus { margin-bottom: 2px; white-space: pre-wrap; display: block; text-align: justify; font-size: 9pt; }
-            .q-image { max-width: 400px; margin: 4px auto; display: block; border: 0.5pt solid #eee; }
+            .q-image { max-width: 300px; margin: 4px auto; display: block; border: 0.5pt solid #eee; }
             .sub-q { display: flex; justify-content: space-between; width: 100%; margin-bottom: 1px; font-size: 9pt; }
             .q-text-part { flex: 1; padding-right: 15px; }
             .mark { font-weight: bold; width: 35px; text-align: right; }
             
             .mcq-container-print {
               column-count: 2;
-              column-gap: 24px;
+              column-gap: 20px;
               column-rule: 0.5pt solid #000;
               display: block;
               width: 100%;
               margin-top: 4px;
               column-fill: auto;
+              page-break-before: auto;
             }
             
             .mcq-row { 
               display: grid; 
               grid-template-columns: 1fr 1fr; 
-              gap: 1px 12px; 
+              gap: 1px 10px; 
               margin-top: 1px; 
-              padding-left: 20px; 
-              font-size: 9pt; 
+              padding-left: 15px; 
+              font-size: 8.5pt; 
             }
             .mcq-opt { display: flex; gap: 4px; align-items: flex-start; }
             .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
@@ -558,8 +561,8 @@ function CreateQuestionContent() {
                       {q.imageUrl && <img src={q.imageUrl} className="q-image" alt="Question" />}
                       <div className="mcq-row">
                         <div className="mcq-opt"><span className="font-bold">ক)</span> <span dangerouslySetInnerHTML={{ __html: formatMath(p.k) }} /></div>
-                        <div className="mcq-opt"><span className="font-bold">খ)</span> <span dangerouslySetInnerHTML={{ __html: formatMath(p.kh) }} /></div>
                         <div className="mcq-opt"><span className="font-bold">গ)</span> <span dangerouslySetInnerHTML={{ __html: formatMath(p.g) }} /></div>
+                        <div className="mcq-opt"><span className="font-bold">খ)</span> <span dangerouslySetInnerHTML={{ __html: formatMath(p.kh) }} /></div>
                         <div className="mcq-opt"><span className="font-bold">ঘ)</span> <span dangerouslySetInnerHTML={{ __html: formatMath(p.gh) }} /></div>
                       </div>
                     </div>
