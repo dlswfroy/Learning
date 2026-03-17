@@ -38,14 +38,13 @@ function formatMath(text: string) {
     '\\\\eta': 'η', '\\\\in': '∈', '\\\\mathbb\\{N\\}': 'ℕ', '\\\\mathbb\\{R\\}': 'ℝ', '\\\\mathbb\\{Z\\}': 'ℤ',
     '\\\\mathbb\\{Q\\}': 'ℚ', '\\\\subset': '⊂', '\\\\subseteq': '⊆', '\\\\cup': '∪',
     '\\\\cap': '∩', '\\\\emptyset': '∅', '\\\\forall': '∀', '\\\\exists': '∃', 
-    '\\\\left': '', '\\\\right': '', '\\\\\%': '%'
+    '\\\\left': '', '\\\\right': '', '\\\\\%': '%', '\\\\setminus': '\\', '\\\\backslash': '\\'
   };
   
   Object.entries(symbolMap).forEach(([key, val]) => { 
     formatted = formatted.replace(new RegExp(key, 'g'), val); 
   });
   
-  // Handle fractions recursively by matching innermost ones first
   let prev;
   const simpleFracRegex = /\\frac\{([^{}]+)\}\s*\{([^{}]+)\}/g;
   do {

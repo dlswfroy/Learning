@@ -86,15 +86,13 @@ function formatMath(text: string) {
     '\\\\eta': 'η', '\\\\in': '∈', '\\\\mathbb\\{N\\}': 'ℕ', '\\\\mathbb\\{R\\}': 'ℝ', '\\\\mathbb\\{Z\\}': 'ℤ',
     '\\\\mathbb\\{Q\\}': 'ℚ', '\\\\subset': '⊂', '\\\\subseteq': '⊆', '\\\\cup': '∪',
     '\\\\cap': '∩', '\\\\emptyset': '∅', '\\\\forall': '∀', '\\\\exists': '∃', 
-    '\\\\left': '', '\\\\right': '', '\\\\\%': '%'
+    '\\\\left': '', '\\\\right': '', '\\\\\%': '%', '\\\\setminus': '\\', '\\\\backslash': '\\'
   };
   
   Object.entries(symbolMap).forEach(([key, val]) => { 
     formatted = formatted.replace(new RegExp(key, 'g'), val); 
   });
   
-  // Advanced Fraction Support: Handles nested fractions like \frac{f(\frac{1}{x^2})+1}{f(\frac{1}{x^2})-2}
-  // This iterative replacement works from inner-most fractions outwards.
   let prev;
   const fracRegex = /\\frac\{([^{}]+)\}\s*\{([^{}]+)\}/g;
   do {
