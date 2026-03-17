@@ -2,6 +2,7 @@
 "use client";
 
 import { useMemo } from 'react';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { BookOpenText, LogIn, LogOut, Settings as SettingsIcon } from 'lucide-react';
 import { useUser, useAuth, useFirestore, useDoc } from '@/firebase';
@@ -23,6 +24,7 @@ export function Navbar() {
   const { user, loading } = useUser();
   const auth = useAuth();
   const db = useFirestore();
+  const pathname = usePathname();
 
   const softwareDocRef = useMemo(() => doc(db, 'config', 'software'), [db]);
   const { data: softwareConfig } = useDoc(softwareDocRef);

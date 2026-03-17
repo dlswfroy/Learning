@@ -432,20 +432,22 @@ function CreateQuestionContent() {
               margin: 0 !important;
               padding: 0 !important;
               height: auto !important;
+              overflow: visible !important;
             }
             .paper { 
               width: 100%; 
               text-align: justify; 
               background: transparent !important;
               display: block !important;
+              position: static !important;
             }
-            .header { text-align: center; margin-bottom: 8px; border-bottom: 1.5pt solid black; padding-bottom: 6px; }
+            .header { text-align: center; margin-bottom: 8px; border-bottom: 1.5pt solid black; padding-bottom: 6px; position: static !important; }
             .inst-name { font-size: 15pt; font-weight: 800; }
             .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 4px; font-size: 9.5pt; }
-            .section { margin-top: 4px; display: block; position: relative; }
+            .section { margin-top: 4px; display: block; position: static !important; clear: none !important; }
             .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 15px; margin: 2px auto; text-transform: uppercase; }
             .instruction { font-style: italic; font-size: 9.5pt; text-align: center; margin-bottom: 2px; display: block; }
-            .q-block { margin-bottom: 4px; break-inside: avoid; display: block; }
+            .q-block { margin-bottom: 4px; break-inside: avoid; display: block; position: static !important; }
             .stimulus { margin-bottom: 2px; white-space: pre-wrap; display: block; text-align: justify; font-size: 9pt; }
             .q-image { max-width: 400px; margin: 4px auto; display: block; border: 0.5pt solid #eee; }
             .sub-q { display: flex; justify-content: space-between; width: 100%; margin-bottom: 1px; font-size: 9pt; }
@@ -454,15 +456,20 @@ function CreateQuestionContent() {
             
             .mcq-container-print {
               column-count: 2;
-              column-gap: 30px;
+              column-gap: 24px;
+              column-rule: 0.5pt solid #000;
               display: block;
               width: 100%;
+              margin-top: 4px;
+              column-fill: auto;
+              orphans: 1;
+              widows: 1;
             }
             
             .mcq-row { 
               display: grid; 
               grid-template-columns: 1fr 1fr; 
-              gap: 1px 15px; 
+              gap: 1px 12px; 
               margin-top: 1px; 
               padding-left: 20px; 
               font-size: 9pt; 
