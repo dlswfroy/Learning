@@ -85,15 +85,21 @@ function formatMath(text: string) {
     '\\\\gamma': 'γ', '\\\\delta': 'δ', '\\\\sigma': 'σ', '\\\\phi': 'φ', '\\\\omega': 'ω',
     '\\\\eta': 'η', '\\\\in': '∈', '\\\\mathbb\\{N\\}': 'ℕ', '\\\\mathbb\\{R\\}': 'ℝ', '\\\\mathbb\\{Z\\}': 'ℤ',
     '\\\\mathbb\\{Q\\}': 'ℚ', '\\\\subset': '⊂', '\\\\subseteq': '⊆', '\\\\cup': '∪',
-    '\\\\cap': '∩', '\\\\emptyset': '∅', '\\\\forall': '∀', '\\\\exists': '∃', '\\\\\%': '%'
+    '\\\\cap': '∩', '\\\\emptyset': '∅', '\\\\forall': '∀', '\\\\exists': '∃', 
+    '\\\\left': '', '\\\\right': '', '\\\\\%': '%'
   };
   
   Object.entries(symbolMap).forEach(([key, val]) => { 
     formatted = formatted.replace(new RegExp(key, 'g'), val); 
   });
   
-  const balancedRegex = /\\frac\{((?:[^{}]|\{[^{}]*\})+)\}\s*\{((?:[^{}]|\{[^{}]*\})+)\}/g;
-  formatted = formatted.replace(balancedRegex, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
+  // Handle fractions recursively by matching innermost ones first
+  let prev;
+  const simpleFracRegex = /\\frac\{([^{}]+)\}\s*\{([^{}]+)\}/g;
+  do {
+    prev = formatted;
+    formatted = formatted.replace(simpleFracRegex, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
+  } while (formatted !== prev);
   
   formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
