@@ -74,7 +74,6 @@ function formatMath(text: string) {
   if (!text) return '';
   let formatted = text.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
   
-  // Handle \text{...}
   formatted = formatted.replace(/\\text\{([^}]+)\}/g, '<span class="math-text">$1</span>');
 
   const symbolMap: Record<string, string> = {
@@ -93,7 +92,6 @@ function formatMath(text: string) {
     formatted = formatted.replace(new RegExp(key, 'g'), val); 
   });
   
-  // Balanced braces regex for one level of nesting
   const balancedRegex = /\\frac\{((?:[^{}]|\{[^{}]*\})+)\}\s*\{((?:[^{}]|\{[^{}]*\})+)\}/g;
   formatted = formatted.replace(balancedRegex, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
   
@@ -421,7 +419,10 @@ function CreateQuestionContent() {
       <div className="print-only">
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
-            @page { size: A4; margin: 0.5in !important; }
+            @page { 
+              size: A4; 
+              margin: 0.5in !important; 
+            }
             body { 
               font-family: 'Kalpurush', sans-serif !important; 
               font-size: 9pt !important; 
@@ -430,17 +431,23 @@ function CreateQuestionContent() {
               background: white !important; 
               margin: 0 !important;
               padding: 0 !important;
+              height: auto !important;
             }
-            .paper { width: 100%; text-align: justify; background: transparent !important; }
+            .paper { 
+              width: 100%; 
+              text-align: justify; 
+              background: transparent !important;
+              display: block !important;
+            }
             .header { text-align: center; margin-bottom: 8px; border-bottom: 1.5pt solid black; padding-bottom: 6px; }
             .inst-name { font-size: 15pt; font-weight: 800; }
             .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 4px; font-size: 9.5pt; }
-            .section { margin-top: 6px; }
-            .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 15px; margin: 3px auto; text-transform: uppercase; }
-            .instruction { font-style: italic; font-size: 9.5pt; text-align: center; margin-bottom: 4px; display: block; }
-            .q-block { margin-bottom: 4px; page-break-inside: avoid; clear: both; display: block; }
+            .section { margin-top: 4px; display: block; position: relative; }
+            .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 15px; margin: 2px auto; text-transform: uppercase; }
+            .instruction { font-style: italic; font-size: 9.5pt; text-align: center; margin-bottom: 2px; display: block; }
+            .q-block { margin-bottom: 4px; break-inside: avoid; display: block; }
             .stimulus { margin-bottom: 2px; white-space: pre-wrap; display: block; text-align: justify; font-size: 9pt; }
-            .q-image { max-width: 400px; margin: 6px auto; display: block; border: 0.5pt solid #eee; }
+            .q-image { max-width: 400px; margin: 4px auto; display: block; border: 0.5pt solid #eee; }
             .sub-q { display: flex; justify-content: space-between; width: 100%; margin-bottom: 1px; font-size: 9pt; }
             .q-text-part { flex: 1; padding-right: 15px; }
             .mark { font-weight: bold; width: 35px; text-align: right; }
@@ -448,14 +455,15 @@ function CreateQuestionContent() {
             .mcq-container-print {
               column-count: 2;
               column-gap: 30px;
-              column-fill: auto;
+              display: block;
+              width: 100%;
             }
             
             .mcq-row { 
               display: grid; 
               grid-template-columns: 1fr 1fr; 
-              gap: 2px 15px; 
-              margin-top: 2px; 
+              gap: 1px 15px; 
+              margin-top: 1px; 
               padding-left: 20px; 
               font-size: 9pt; 
             }
@@ -539,15 +547,10 @@ function CreateQuestionContent() {
                       <div className="font-bold mb-0.5" dangerouslySetInnerHTML={{ __html: `${qNum}. ${formatMath(p.main)}` }} />
                       {q.imageUrl && <img src={q.imageUrl} className="q-image" alt="Question" />}
                       <div className="mcq-row">
-                        {['ক', 'খ', 'গ', 'ঘ'].map((l, i) => {
-                          const opt = (p as any)[i === 0 ? 'k' : i === 1 ? 'kh' : i === 2 ? 'g' : 'gh'];
-                          return opt && (
-                            <div key={l} className="mcq-opt">
-                              <span className="font-bold">{l})</span>
-                              <span dangerouslySetInnerHTML={{ __html: formatMath(opt) }} />
-                            </div>
-                          );
-                        })}
+                        <div className="mcq-opt"><span className="font-bold">ক)</span> <span dangerouslySetInnerHTML={{ __html: formatMath(p.k) }} /></div>
+                        <div className="mcq-opt"><span className="font-bold">খ)</span> <span dangerouslySetInnerHTML={{ __html: formatMath(p.kh) }} /></div>
+                        <div className="mcq-opt"><span className="font-bold">গ)</span> <span dangerouslySetInnerHTML={{ __html: formatMath(p.g) }} /></div>
+                        <div className="mcq-opt"><span className="font-bold">ঘ)</span> <span dangerouslySetInnerHTML={{ __html: formatMath(p.gh) }} /></div>
                       </div>
                     </div>
                   );
