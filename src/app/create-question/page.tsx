@@ -93,12 +93,13 @@ function formatMath(text: string) {
     formatted = formatted.replace(new RegExp(key, 'g'), val); 
   });
   
-  // Handle fractions recursively by matching innermost ones first
+  // Advanced Fraction Support: Handles nested fractions like \frac{f(\frac{1}{x^2})+1}{f(\frac{1}{x^2})-2}
+  // This iterative replacement works from inner-most fractions outwards.
   let prev;
-  const simpleFracRegex = /\\frac\{([^{}]+)\}\s*\{([^{}]+)\}/g;
+  const fracRegex = /\\frac\{([^{}]+)\}\s*\{([^{}]+)\}/g;
   do {
     prev = formatted;
-    formatted = formatted.replace(simpleFracRegex, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
+    formatted = formatted.replace(fracRegex, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
   } while (formatted !== prev);
   
   formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
@@ -443,25 +444,22 @@ function CreateQuestionContent() {
             .paper { 
               width: 100% !important; 
               text-align: justify; 
-              position: absolute !important;
-              top: 0 !important;
-              left: 0 !important;
+              position: static !important;
               display: block !important;
               background: transparent !important;
               padding: 0 !important;
               margin: 0 !important;
-              z-index: 9999;
             }
-            .header { text-align: center; margin-bottom: 8px; border-bottom: 1.5pt solid black; padding-bottom: 6px; position: relative; }
+            .header { text-align: center; margin-bottom: 6px; border-bottom: 1.5pt solid black; padding-bottom: 4px; }
             .inst-name { font-size: 15pt; font-weight: 800; }
-            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 4px; font-size: 9.5pt; }
-            .section { margin-top: 4px; display: block; clear: both; }
+            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 2px; font-size: 9.5pt; }
+            .section { margin-top: 4px; clear: both; }
             .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 15px; margin: 2px auto; text-transform: uppercase; }
             .instruction { font-style: italic; font-size: 9pt; text-align: center; margin-bottom: 2px; }
-            .q-block { margin-bottom: 4px; break-inside: avoid; display: block; }
-            .stimulus { margin-bottom: 2px; white-space: pre-wrap; display: block; text-align: justify; font-size: 9pt; }
-            .q-image { max-width: 300px; margin: 4px auto; display: block; border: 0.5pt solid #eee; }
-            .sub-q { display: flex; justify-content: space-between; width: 100%; margin-bottom: 1px; font-size: 9pt; }
+            .q-block { margin-bottom: 4px; break-inside: avoid; }
+            .stimulus { margin-bottom: 1px; white-space: pre-wrap; display: block; text-align: justify; font-size: 9pt; }
+            .q-image { max-width: 250px; margin: 4px auto; display: block; border: 0.5pt solid #eee; }
+            .sub-q { display: flex; justify-content: space-between; width: 100%; margin-bottom: 0px; font-size: 9pt; }
             .q-text-part { flex: 1; padding-right: 15px; }
             .mark { font-weight: bold; width: 35px; text-align: right; }
             
@@ -477,8 +475,8 @@ function CreateQuestionContent() {
             .mcq-row { 
               display: grid; 
               grid-template-columns: 1fr 1fr; 
-              gap: 1px 10px; 
-              margin-top: 1px; 
+              gap: 0px 10px; 
+              margin-top: 0px; 
               padding-left: 15px; 
               font-size: 8.5pt; 
             }
@@ -497,8 +495,8 @@ function CreateQuestionContent() {
         <div className="paper">
           <div className="header">
             <div className="inst-name">{meta.institution || 'শিক্ষা প্রতিষ্ঠানের নাম'}</div>
-            <div className="font-bold text-lg">{meta.exam || 'পরীক্ষার নাম'}</div>
-            <div className="font-bold">শ্রেণি: {CLASSES.find(c => c.id === meta.classId)?.label || ''} | বিষয়: {meta.subject}</div>
+            <div className="font-bold text-lg leading-none">{meta.exam || 'পরীক্ষার নাম'}</div>
+            <div className="font-bold text-sm">শ্রেণি: {CLASSES.find(c => c.id === meta.classId)?.label || ''} | বিষয়: {meta.subject}</div>
             <div className="meta-info"><div>সময়: {meta.time}</div><div>পূর্ণমান: {meta.totalMarks}</div></div>
           </div>
 
@@ -511,7 +509,7 @@ function CreateQuestionContent() {
                 const p = parseText(q.content || '');
                 return (
                   <div key={q.id} className="q-block">
-                    <div className="font-bold mb-1">{qNum}. উদ্দীপকটি পড়ো এবং প্রশ্নগুলোর উত্তর দাও:</div>
+                    <div className="font-bold mb-0.5">{qNum}. উদ্দীপকটি পড়ো এবং প্রশ্নগুলোর উত্তর দাও:</div>
                     <div className="stimulus" dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} />
                     {q.imageUrl && <img src={q.imageUrl} className="q-image" alt="Question" />}
                     {['ক', 'খ', 'গ', 'ঘ'].map((l, i) => {
