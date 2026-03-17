@@ -435,12 +435,12 @@ function CreateQuestionContent() {
             .header { text-align: center; margin-bottom: 8px; border-bottom: 1.5pt solid black; padding-bottom: 6px; }
             .inst-name { font-size: 15pt; font-weight: 800; }
             .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 4px; font-size: 9.5pt; }
-            .section { margin-top: 10px; }
-            .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 15px; margin: 5px auto; text-transform: uppercase; }
-            .instruction { font-style: italic; font-size: 9.5pt; text-align: center; margin-bottom: 8px; display: block; }
-            .q-block { margin-bottom: 15px; page-break-inside: avoid; clear: both; display: block; }
-            .stimulus { margin-bottom: 5px; white-space: pre-wrap; display: block; text-align: justify; font-size: 9pt; }
-            .q-image { max-width: 400px; margin: 10px auto; display: block; border: 0.5pt solid #eee; }
+            .section { margin-top: 6px; }
+            .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 15px; margin: 3px auto; text-transform: uppercase; }
+            .instruction { font-style: italic; font-size: 9.5pt; text-align: center; margin-bottom: 4px; display: block; }
+            .q-block { margin-bottom: 4px; page-break-inside: avoid; clear: both; display: block; }
+            .stimulus { margin-bottom: 2px; white-space: pre-wrap; display: block; text-align: justify; font-size: 9pt; }
+            .q-image { max-width: 400px; margin: 6px auto; display: block; border: 0.5pt solid #eee; }
             .sub-q { display: flex; justify-content: space-between; width: 100%; margin-bottom: 1px; font-size: 9pt; }
             .q-text-part { flex: 1; padding-right: 15px; }
             .mark { font-weight: bold; width: 35px; text-align: right; }
@@ -454,8 +454,8 @@ function CreateQuestionContent() {
             .mcq-row { 
               display: grid; 
               grid-template-columns: 1fr 1fr; 
-              gap: 4px 15px; 
-              margin-top: 3px; 
+              gap: 2px 15px; 
+              margin-top: 2px; 
               padding-left: 20px; 
               font-size: 9pt; 
             }
