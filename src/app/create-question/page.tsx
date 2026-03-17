@@ -444,7 +444,21 @@ function CreateQuestionContent() {
             .sub-q { display: flex; justify-content: space-between; width: 100%; margin-bottom: 1px; font-size: 9pt; }
             .q-text-part { flex: 1; padding-right: 15px; }
             .mark { font-weight: bold; width: 35px; text-align: right; }
-            .mcq-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px 10px; margin-top: 3px; padding-left: 20px; font-size: 9pt; }
+            
+            .mcq-container-print {
+              column-count: 2;
+              column-gap: 30px;
+              column-fill: auto;
+            }
+            
+            .mcq-row { 
+              display: grid; 
+              grid-template-columns: 1fr 1fr; 
+              gap: 4px 15px; 
+              margin-top: 3px; 
+              padding-left: 20px; 
+              font-size: 9pt; 
+            }
             .mcq-opt { display: flex; gap: 4px; align-items: flex-start; }
             .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
             .math-num { border-bottom: 0.5pt solid black; padding: 0 1px; }
@@ -516,27 +530,29 @@ function CreateQuestionContent() {
             <div className="section">
               <div className="text-center"><div className="section-label">বহুনির্বাচনি প্রশ্ন</div></div>
               <div className="instruction">{meta.mcqInstruction}</div>
-              {questions.filter(q => q.type === 'mcq').map((q, idx) => {
-                const p = parseText(q.content || '');
-                const qNum = isEnglish ? (idx + 1) : toBengaliNumber(idx + 1);
-                return (
-                  <div key={q.id} className="q-block">
-                    <div className="font-bold mb-0.5" dangerouslySetInnerHTML={{ __html: `${qNum}. ${formatMath(p.main)}` }} />
-                    {q.imageUrl && <img src={q.imageUrl} className="q-image" alt="Question" />}
-                    <div className="mcq-row">
-                      {['ক', 'খ', 'গ', 'ঘ'].map((l, i) => {
-                        const opt = (p as any)[i === 0 ? 'k' : i === 1 ? 'kh' : i === 2 ? 'g' : 'gh'];
-                        return opt && (
-                          <div key={l} className="mcq-opt">
-                            <span className="font-bold">{l})</span>
-                            <span dangerouslySetInnerHTML={{ __html: formatMath(opt) }} />
-                          </div>
-                        );
-                      })}
+              <div className="mcq-container-print">
+                {questions.filter(q => q.type === 'mcq').map((q, idx) => {
+                  const p = parseText(q.content || '');
+                  const qNum = isEnglish ? (idx + 1) : toBengaliNumber(idx + 1);
+                  return (
+                    <div key={q.id} className="q-block">
+                      <div className="font-bold mb-0.5" dangerouslySetInnerHTML={{ __html: `${qNum}. ${formatMath(p.main)}` }} />
+                      {q.imageUrl && <img src={q.imageUrl} className="q-image" alt="Question" />}
+                      <div className="mcq-row">
+                        {['ক', 'খ', 'গ', 'ঘ'].map((l, i) => {
+                          const opt = (p as any)[i === 0 ? 'k' : i === 1 ? 'kh' : i === 2 ? 'g' : 'gh'];
+                          return opt && (
+                            <div key={l} className="mcq-opt">
+                              <span className="font-bold">{l})</span>
+                              <span dangerouslySetInnerHTML={{ __html: formatMath(opt) }} />
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
