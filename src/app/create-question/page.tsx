@@ -447,14 +447,15 @@ function CreateQuestionContent() {
               display: block !important;
               background: transparent !important;
               padding: 0 !important;
+              margin: 0 !important;
             }
-            .header { text-align: center; margin-bottom: 8px; border-bottom: 1.5pt solid black; padding-bottom: 6px; }
+            .header { text-align: center; margin-bottom: 8px; border-bottom: 1.5pt solid black; padding-bottom: 6px; position: relative; }
             .inst-name { font-size: 15pt; font-weight: 800; }
             .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 4px; font-size: 9.5pt; }
-            .section { margin-top: 4px; display: block; clear: both; page-break-inside: auto; }
+            .section { margin-top: 4px; display: block; clear: both; }
             .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 15px; margin: 2px auto; text-transform: uppercase; }
             .instruction { font-style: italic; font-size: 9pt; text-align: center; margin-bottom: 2px; }
-            .q-block { margin-bottom: 4px; break-inside: avoid; display: block; position: static !important; }
+            .q-block { margin-bottom: 4px; break-inside: avoid; display: block; }
             .stimulus { margin-bottom: 2px; white-space: pre-wrap; display: block; text-align: justify; font-size: 9pt; }
             .q-image { max-width: 300px; margin: 4px auto; display: block; border: 0.5pt solid #eee; }
             .sub-q { display: flex; justify-content: space-between; width: 100%; margin-bottom: 1px; font-size: 9pt; }
@@ -468,8 +469,6 @@ function CreateQuestionContent() {
               display: block;
               width: 100%;
               margin-top: 4px;
-              column-fill: auto;
-              page-break-before: auto;
             }
             
             .mcq-row { 
@@ -561,8 +560,8 @@ function CreateQuestionContent() {
                       {q.imageUrl && <img src={q.imageUrl} className="q-image" alt="Question" />}
                       <div className="mcq-row">
                         <div className="mcq-opt"><span className="font-bold">ক)</span> <span dangerouslySetInnerHTML={{ __html: formatMath(p.k) }} /></div>
-                        <div className="mcq-opt"><span className="font-bold">গ)</span> <span dangerouslySetInnerHTML={{ __html: formatMath(p.g) }} /></div>
                         <div className="mcq-opt"><span className="font-bold">খ)</span> <span dangerouslySetInnerHTML={{ __html: formatMath(p.kh) }} /></div>
+                        <div className="mcq-opt"><span className="font-bold">গ)</span> <span dangerouslySetInnerHTML={{ __html: formatMath(p.g) }} /></div>
                         <div className="mcq-opt"><span className="font-bold">ঘ)</span> <span dangerouslySetInnerHTML={{ __html: formatMath(p.gh) }} /></div>
                       </div>
                     </div>
