@@ -423,30 +423,35 @@ function CreateQuestionContent() {
               size: A4; 
               margin: 0.5in !important; 
             }
+            body, html { 
+              margin: 0 !important; 
+              padding: 0 !important;
+              background: white !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              height: auto !important;
+              overflow: visible !important;
+            }
             body { 
               font-family: 'Kalpurush', sans-serif !important; 
               font-size: 9pt !important; 
               color: black !important; 
               line-height: 1.4 !important; 
-              background: white !important; 
-              margin: 0 !important;
-              padding: 0 !important;
-              height: auto !important;
-              overflow: visible !important;
             }
             .paper { 
-              width: 100%; 
+              width: 100% !important; 
               text-align: justify; 
-              background: transparent !important;
+              position: static !important; 
               display: block !important;
-              position: static !important;
+              background: transparent !important;
+              padding: 0 !important;
             }
-            .header { text-align: center; margin-bottom: 8px; border-bottom: 1.5pt solid black; padding-bottom: 6px; position: static !important; }
+            .header { text-align: center; margin-bottom: 8px; border-bottom: 1.5pt solid black; padding-bottom: 6px; }
             .inst-name { font-size: 15pt; font-weight: 800; }
             .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 4px; font-size: 9.5pt; }
-            .section { margin-top: 4px; display: block; position: static !important; clear: none !important; }
+            .section { margin-top: 4px; display: block; clear: both; }
             .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 15px; margin: 2px auto; text-transform: uppercase; }
-            .instruction { font-style: italic; font-size: 9.5pt; text-align: center; margin-bottom: 2px; display: block; }
+            .instruction { font-style: italic; font-size: 9.5pt; text-align: center; margin-bottom: 2px; }
             .q-block { margin-bottom: 4px; break-inside: avoid; display: block; position: static !important; }
             .stimulus { margin-bottom: 2px; white-space: pre-wrap; display: block; text-align: justify; font-size: 9pt; }
             .q-image { max-width: 400px; margin: 4px auto; display: block; border: 0.5pt solid #eee; }
@@ -462,8 +467,6 @@ function CreateQuestionContent() {
               width: 100%;
               margin-top: 4px;
               column-fill: auto;
-              orphans: 1;
-              widows: 1;
             }
             
             .mcq-row { 
