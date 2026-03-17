@@ -434,20 +434,17 @@ function CreateQuestionContent() {
               height: auto !important;
               overflow: visible !important;
             }
-            body { 
-              font-family: 'Kalpurush', sans-serif !important; 
-              font-size: 9pt !important; 
-              color: black !important; 
-              line-height: 1.3 !important; 
-            }
             .paper { 
               width: 100% !important; 
               text-align: justify; 
-              position: static !important; 
+              position: absolute !important;
+              top: 0 !important;
+              left: 0 !important;
               display: block !important;
               background: transparent !important;
               padding: 0 !important;
               margin: 0 !important;
+              z-index: 9999;
             }
             .header { text-align: center; margin-bottom: 8px; border-bottom: 1.5pt solid black; padding-bottom: 6px; position: relative; }
             .inst-name { font-size: 15pt; font-weight: 800; }

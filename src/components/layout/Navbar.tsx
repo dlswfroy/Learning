@@ -48,7 +48,7 @@ export function Navbar() {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 min-h-14 h-14 py-0 bg-primary text-primary-foreground z-50 shadow-xl flex items-center px-4 md:px-6 no-print border-b border-white/10">
+    <nav className="fixed top-0 left-0 right-0 h-14 bg-primary text-primary-foreground z-50 shadow-xl flex items-center px-4 md:px-6 no-print border-b border-white/10">
       <Link href="/" className="flex items-center gap-3 group">
         <div className="bg-white p-1 rounded-xl text-primary group-hover:scale-105 transition-transform flex items-center justify-center shadow-lg shrink-0">
           {appLogoUrl ? (
@@ -58,7 +58,7 @@ export function Navbar() {
           )}
         </div>
         <div className="flex flex-col">
-          <h1 className="text-3xl md:text-6xl font-black font-headline tracking-tighter drop-shadow-[0_4px_4px_rgba(0,0,0,1)] leading-tight text-white uppercase scale-y-110 origin-left">
+          <h1 className="text-4xl md:text-7xl font-black font-headline tracking-tighter drop-shadow-[0_6px_6px_rgba(0,0,0,1)] leading-tight text-white uppercase scale-y-110 origin-left">
             {appName}
           </h1>
           <p className="text-[10px] md:text-xs font-black text-yellow-400 italic leading-none mt-1 drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]">

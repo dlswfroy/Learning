@@ -5,20 +5,19 @@
 
 @layer base {
   :root {
-    /* Brighter Primary Blue #0066FF -> HSL 212, 100%, 50% */
     --background: 210 40% 96%;
     --foreground: 212 60% 10%;
     --card: 0 0% 100%;
     --card-foreground: 212 60% 10%;
     --popover: 0 0% 100%;
     --popover-foreground: 212 60% 10%;
-    --primary: 212 100% 45%; /* Brighter Blue */
+    --primary: 212 100% 45%;
     --primary-foreground: 0 0% 100%;
     --secondary: 212 30% 90%;
     --secondary-foreground: 212 100% 45%;
     --muted: 212 20% 85%;
     --muted-foreground: 212 40% 35%;
-    --accent: 165 75% 45%; /* Brighter Teal */
+    --accent: 165 75% 45%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
@@ -26,27 +25,6 @@
     --input: 212 30% 85%;
     --ring: 212 100% 45%;
     --radius: 0.75rem;
-  }
-  .dark {
-    --background: 212 60% 5%;
-    --foreground: 212 20% 95%;
-    --card: 212 60% 8%;
-    --card-foreground: 212 20% 95%;
-    --popover: 212 60% 8%;
-    --popover-foreground: 212 20% 95%;
-    --primary: 212 100% 55%;
-    --primary-foreground: 212 60% 5%;
-    --secondary: 212 30% 15%;
-    --secondary-foreground: 212 100% 55%;
-    --muted: 212 30% 15%;
-    --muted-foreground: 212 20% 65%;
-    --accent: 165 75% 45%;
-    --accent-foreground: 212 60% 5%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 212 30% 20%;
-    --input: 212 30% 20%;
-    --ring: 212 100% 55%;
   }
 }
 
@@ -71,21 +49,19 @@
     left: 0 !important;
     width: 100% !important;
     z-index: 9999 !important;
+    background: white !important;
   }
-  body, html, main {
+  body, html {
     background: white !important;
     margin: 0 !important;
     padding: 0 !important;
     height: auto !important;
-    min-height: 0 !important;
-    font-family: 'Kalpurush', sans-serif !important;
-    font-size: 9pt !important;
     overflow: visible !important;
   }
-  /* Remove layout padding in print */
   main {
     padding-top: 0 !important;
     padding-bottom: 0 !important;
+    margin: 0 !important;
   }
 }
 
