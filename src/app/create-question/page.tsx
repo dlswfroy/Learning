@@ -469,6 +469,7 @@ function CreateQuestionContent() {
               display: block;
               width: 100%;
               margin-top: 4px;
+              font-size: 8pt;
             }
             
             .mcq-row { 
@@ -477,7 +478,7 @@ function CreateQuestionContent() {
               gap: 0px 10px; 
               margin-top: 0px; 
               padding-left: 15px; 
-              font-size: 8.5pt; 
+              font-size: 8pt; 
             }
             .mcq-opt { display: flex; gap: 4px; align-items: flex-start; }
             .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
