@@ -48,7 +48,7 @@ export function Navbar() {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 h-14 md:h-[65px] bg-primary text-primary-foreground z-50 shadow-xl flex items-center px-4 md:px-6 no-print border-b border-white/10">
+    <nav className="fixed top-0 left-0 right-0 h-14 md:h-[78px] bg-primary text-primary-foreground z-50 shadow-xl flex items-center px-4 md:px-6 no-print border-b border-white/10">
       <Link href="/" className="flex items-center gap-3 group">
         <div className="bg-white p-1 rounded-xl text-primary group-hover:scale-105 transition-transform flex items-center justify-center shadow-lg shrink-0">
           {appLogoUrl ? (
