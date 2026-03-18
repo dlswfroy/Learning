@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useState } from 'react';
-import { useAuth, useFirestore } from '@/firebase';
+import { useState, useMemo } from 'react';
+import { useAuth, useFirestore, useDoc } from '@/firebase';
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, LogIn, UserPlus } from 'lucide-react';
+import { Loader2, LogIn, UserPlus, BookOpenText } from 'lucide-react';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -26,6 +26,12 @@ export default function AuthPage() {
   const auth = useAuth();
   const db = useFirestore();
   const router = useRouter();
+
+  // Fetch Software Config for Logo and App Name
+  const softwareDocRef = useMemo(() => doc(db, 'config', 'software'), [db]);
+  const { data: softwareConfig } = useDoc(softwareDocRef);
+  const appName = softwareConfig?.appName || 'টপ গ্রেড টিউটোরিয়ালস';
+  const appLogoUrl = softwareConfig?.appLogoUrl || '';
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,13 +73,29 @@ export default function AuthPage() {
   return (
     <div className="flex items-center justify-center min-h-[70vh] px-4">
       <Card className="w-full max-w-md shadow-lg border-primary/20">
-        <CardHeader className="text-center space-y-1">
-          <CardTitle className="text-2xl font-bold text-primary">
-            {isLogin ? 'লগইন করুন' : 'নতুন অ্যাকাউন্ট'}
-          </CardTitle>
-          <CardDescription>
-            {isLogin ? 'আপনার ইমেইল ও পাসওয়ার্ড দিয়ে প্রবেশ করুন' : 'সিস্টেমে যুক্ত হতে তথ্য প্রদান করুন'}
-          </CardDescription>
+        <CardHeader className="text-center space-y-4">
+          {/* Branding Section */}
+          <div className="flex flex-col items-center gap-2">
+            <div className="bg-primary/5 p-2 rounded-2xl shadow-inner border border-primary/10">
+              {appLogoUrl ? (
+                <img src={appLogoUrl} alt="Logo" className="w-20 h-20 object-contain" />
+              ) : (
+                <BookOpenText className="w-16 h-16 text-primary" />
+              )}
+            </div>
+            <h1 className="text-2xl font-black text-primary tracking-tighter uppercase">
+              {appName}
+            </h1>
+          </div>
+          
+          <div className="space-y-1">
+            <CardTitle className="text-xl font-bold">
+              {isLogin ? 'লগইন করুন' : 'নতুন অ্যাকাউন্ট'}
+            </CardTitle>
+            <CardDescription>
+              {isLogin ? 'আপনার ইমেইল ও পাসওয়ার্ড দিয়ে প্রবেশ করুন' : 'সিস্টেমে যুক্ত হতে তথ্য প্রদান করুন'}
+            </CardDescription>
+          </div>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleAuth} className="space-y-4">
