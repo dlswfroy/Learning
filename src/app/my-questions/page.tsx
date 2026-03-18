@@ -20,7 +20,8 @@ import {
   AlertTriangle,
   Filter,
   Library,
-  Book
+  Book,
+  ClipboardList
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -39,6 +40,7 @@ import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { CLASSES, getSubjectsForClass } from '@/lib/constants';
 import { toast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
 
 export default function MyLibraryPage() {
   const db = useFirestore();
@@ -144,9 +146,9 @@ export default function MyLibraryPage() {
     <Card key={q.id} className="hover:border-primary/40 transition-all group shadow-sm bg-white">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start mb-2">
-          <div className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded-full uppercase">
+          <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 font-bold">
             {CLASSES.find(c => c.id === q.classId)?.label || 'অজানা'} শ্রেণি
-          </div>
+          </Badge>
           <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
             <Calendar className="w-3 h-3" />
             {q.updatedAt?.toDate ? format(q.updatedAt.toDate(), 'dd MMMM, yyyy', { locale: bn }) : 'অজানা তারিখ'}
@@ -155,17 +157,24 @@ export default function MyLibraryPage() {
         <CardTitle className="text-lg font-bold group-hover:text-primary transition-colors truncate">
           {q.exam || 'পরীক্ষার নাম নেই'}
         </CardTitle>
-        <CardDescription className="flex items-center gap-1">
+        <CardDescription className="flex items-center gap-1 font-bold">
           <GraduationCap className="w-3 h-3" /> {q.subject}
         </CardDescription>
       </CardHeader>
       <CardContent className="pb-4">
-        <p className="text-sm text-muted-foreground truncate font-medium">
-          {q.institution || 'শিক্ষা প্রতিষ্ঠানের নাম নেই'}
-        </p>
-        <p className="text-[10px] text-muted-foreground mt-1">
-          মোট প্রশ্ন: {q.questions?.length || 0} টি ({q.isMcq ? 'এমসিকিউ' : 'লিখিত'})
-        </p>
+        <div className="flex flex-col gap-2">
+          <p className="text-sm text-muted-foreground truncate font-medium">
+            {q.institution || 'শিক্ষা প্রতিষ্ঠানের নাম নেই'}
+          </p>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="text-[10px] font-bold">
+              {q.isMcq ? 'বহুনির্বাচনি' : 'লিখিত'}
+            </Badge>
+            <span className="text-[10px] text-muted-foreground font-bold">
+              মোট প্রশ্ন: {toBengaliNumber(q.questions?.length || 0)} টি
+            </span>
+          </div>
+        </div>
       </CardContent>
       <CardFooter className="border-t bg-muted/10 flex justify-end gap-2 p-3">
         <AlertDialog>
@@ -213,9 +222,9 @@ export default function MyLibraryPage() {
     <Card key={s.id} className="hover:border-orange-400/40 transition-all group shadow-sm bg-white">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start mb-2">
-          <div className="px-2 py-0.5 bg-orange-100 text-orange-600 text-[10px] font-bold rounded-full uppercase">
+          <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200 font-bold">
             {CLASSES.find(c => c.id === s.classId)?.label || 'অজানা'} শ্রেণি
-          </div>
+          </Badge>
           <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
             <Calendar className="w-3 h-3" />
             {s.updatedAt?.toDate ? format(s.updatedAt.toDate(), 'dd MMMM, yyyy', { locale: bn }) : 'অজানা তারিখ'}
@@ -224,14 +233,19 @@ export default function MyLibraryPage() {
         <CardTitle className="text-lg font-bold group-hover:text-orange-600 transition-colors truncate">
           {s.topic || 'শিরোনাম নেই'}
         </CardTitle>
-        <CardDescription className="flex items-center gap-1">
+        <CardDescription className="flex items-center gap-1 font-bold">
           <BookOpen className="w-3 h-3 text-orange-500" /> {s.subject}
         </CardDescription>
       </CardHeader>
       <CardContent className="pb-4">
-        <p className="text-sm text-muted-foreground truncate font-medium">
-          {s.institution || 'শিক্ষা প্রতিষ্ঠানের নাম নেই'}
-        </p>
+        <div className="flex flex-col gap-2">
+          <p className="text-sm text-muted-foreground truncate font-medium">
+            {s.institution || 'শিক্ষা প্রতিষ্ঠানের নাম নেই'}
+          </p>
+          <Badge className="w-fit bg-secondary text-secondary-foreground font-bold text-[10px]">
+            {s.content?.includes('ক.') || s.content?.includes('১.') ? 'লিখিত' : 'বহুনির্বাচনি'}
+          </Badge>
+        </div>
       </CardContent>
       <CardFooter className="border-t bg-muted/10 flex justify-end gap-2 p-3">
         <AlertDialog>
@@ -344,11 +358,11 @@ export default function MyLibraryPage() {
         <TabsList className="grid w-full grid-cols-2 mb-8 bg-secondary/50 p-1 h-14">
           <TabsTrigger value="questions" className="gap-2 font-bold py-3 text-base data-[state=active]:bg-white data-[state=active]:text-primary transition-all">
             <FileText className="w-5 h-5" />
-            আমার প্রশ্ন ({filteredQuestions.length})
+            আমার প্রশ্ন ({toBengaliNumber(filteredQuestions.length)})
           </TabsTrigger>
           <TabsTrigger value="sheets" className="gap-2 font-bold py-3 text-base data-[state=active]:bg-white data-[state=active]:text-primary transition-all">
             <BookOpen className="w-5 h-5" />
-            লেকচার শিট ({filteredSheets.length})
+            লেকচার শিট ({toBengaliNumber(filteredSheets.length)})
           </TabsTrigger>
         </TabsList>
 
@@ -390,4 +404,10 @@ export default function MyLibraryPage() {
       </Tabs>
     </div>
   );
+}
+
+function toBengaliNumber(n: number | string | undefined | null): string {
+  if (n === undefined || n === null || n === '') return '';
+  const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+  return n.toString().replace(/\d/g, (digit) => bengaliDigits[parseInt(digit)]);
 }

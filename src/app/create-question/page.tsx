@@ -330,6 +330,7 @@ function CreateQuestionContent() {
                     <SelectItem value="বার্ষিক পরীক্ষা">বার্ষিক পরীক্ষা</SelectItem>
                     <SelectItem value="প্রাক-নির্বাচনী পরীক্ষা">প্রাক-নির্বাচনী পরীক্ষা</SelectItem>
                     <SelectItem value="নির্বাচনী পরীক্ষা">নির্বাচনী পরীক্ষা</SelectItem>
+                    <SelectItem value="মডেল টেস্ট">মডেল টেস্ট</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
