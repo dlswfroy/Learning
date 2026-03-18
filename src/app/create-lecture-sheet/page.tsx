@@ -248,9 +248,10 @@ function CreateLectureSheetContent() {
               background: transparent !important;
               padding: 0 !important;
             }
-            .header { text-align: center; margin-bottom: 20px; border-bottom: 1.5pt solid black; padding-bottom: 10px; }
-            .print-logo { max-height: 60pt; width: auto; display: block; margin: 0 auto 5pt; object-fit: contain; }
-            .inst-name { font-size: 22pt; font-weight: 800; }
+            .header { margin-bottom: 20px; border-bottom: 1.5pt solid black; padding-bottom: 10px; }
+            .header-top { display: flex; align-items: center; justify-content: center; gap: 15pt; margin-bottom: 5pt; }
+            .print-logo { max-height: 50pt; width: auto; object-fit: contain; }
+            .inst-name { font-size: 22pt; font-weight: 900; }
             .topic-title { font-size: 13pt; font-weight: bold; margin: 15px 0; text-align: center; text-decoration: underline; }
             .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 4px; font-size: 9.5pt; border-top: 0.5pt solid #ddd; padding-top: 5px; }
             .content-area { white-space: pre-wrap; font-size: 9pt; background: transparent !important; }
@@ -295,8 +296,10 @@ function CreateLectureSheetContent() {
 
         <div className="paper">
           <div className="header">
-            {appLogoUrl && <img src={appLogoUrl} alt="logo" className="print-logo" />}
-            <div className="inst-name">{data.institution || 'শিক্ষা প্রতিষ্ঠানের নাম'}</div>
+            <div className="header-top">
+              {appLogoUrl && <img src={appLogoUrl} alt="logo" className="print-logo" />}
+              <div className="inst-name">{data.institution || 'শিক্ষা প্রতিষ্ঠানের নাম'}</div>
+            </div>
             <div className="meta-info">
               <div>শ্রেণি: {CLASSES.find(c => c.id === data.classId)?.label || ''} শ্রেণি</div>
               <div>বিষয়: {data.subject}</div>
