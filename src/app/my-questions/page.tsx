@@ -18,7 +18,6 @@ import {
   GraduationCap, 
   PlusCircle,
   AlertTriangle,
-  Filter,
   Library,
   Book,
   ClipboardList
@@ -51,6 +50,8 @@ export default function MyLibraryPage() {
   // Filtering states
   const [filterClassId, setFilterClassId] = useState<string>('all');
   const [filterSubject, setFilterSubject] = useState<string>('all');
+  const [filterExam, setFilterExam] = useState<string>('all');
+  const [filterSheetType, setFilterSheetType] = useState<string>('all');
 
   useEffect(() => {
     if (!userLoading && !user) {
@@ -116,8 +117,11 @@ export default function MyLibraryPage() {
     if (filterSubject !== 'all') {
       result = result.filter(q => q.subject === filterSubject);
     }
+    if (filterExam !== 'all') {
+      result = result.filter(q => q.exam === filterExam);
+    }
     return result;
-  }, [sortedQuestions, filterClassId, filterSubject]);
+  }, [sortedQuestions, filterClassId, filterSubject, filterExam]);
 
   const filteredSheets = useMemo(() => {
     let result = sortedSheets;
@@ -127,8 +131,11 @@ export default function MyLibraryPage() {
     if (filterSubject !== 'all') {
       result = result.filter(s => s.subject === filterSubject);
     }
+    if (filterSheetType !== 'all') {
+      result = result.filter(s => s.type === filterSheetType);
+    }
     return result;
-  }, [sortedSheets, filterClassId, filterSubject]);
+  }, [sortedSheets, filterClassId, filterSubject, filterSheetType]);
 
   const handleDelete = async (id: string, type: 'questions' | 'lecture-sheets') => {
     setDeleting(id);
@@ -243,7 +250,7 @@ export default function MyLibraryPage() {
             {s.institution || 'শিক্ষা প্রতিষ্ঠানের নাম নেই'}
           </p>
           <Badge className="w-fit bg-secondary text-secondary-foreground font-bold text-[10px]">
-            {s.content?.includes('ক.') || s.content?.includes('১.') ? 'লিখিত' : 'বহুনির্বাচনি'}
+            {s.type === 'mcq' ? 'বহুনির্বাচনি' : 'লিখিত'}
           </Badge>
         </div>
       </CardContent>
@@ -314,13 +321,13 @@ export default function MyLibraryPage() {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-primary/5 p-4 rounded-xl border border-primary/10">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 bg-primary/5 p-4 rounded-xl border border-primary/10">
         <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm font-bold text-primary">
-            <GraduationCap className="w-4 h-4" /> শ্রেণি অনুযায়ী ফিল্টার:
+          <div className="flex items-center gap-2 text-[10px] font-bold text-primary uppercase tracking-wider">
+            <GraduationCap className="w-3 h-3" /> শ্রেণি
           </div>
           <Select value={filterClassId} onValueChange={setFilterClassId}>
-            <SelectTrigger className="w-full bg-white font-bold">
+            <SelectTrigger className="w-full bg-white font-bold h-9 text-xs">
               <SelectValue placeholder="সব শ্রেণি" />
             </SelectTrigger>
             <SelectContent>
@@ -333,16 +340,16 @@ export default function MyLibraryPage() {
         </div>
 
         <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm font-bold text-primary">
-            <Book className="w-4 h-4" /> বিষয় অনুযায়ী ফিল্টার:
+          <div className="flex items-center gap-2 text-[10px] font-bold text-primary uppercase tracking-wider">
+            <Book className="w-3 h-3" /> বিষয়
           </div>
           <Select 
             value={filterSubject} 
             onValueChange={setFilterSubject}
             disabled={filterClassId === 'all'}
           >
-            <SelectTrigger className="w-full bg-white font-bold">
-              <SelectValue placeholder={filterClassId === 'all' ? "আগে শ্রেণি নির্বাচন করুন" : "সব বিষয়"} />
+            <SelectTrigger className="w-full bg-white font-bold h-9 text-xs">
+              <SelectValue placeholder={filterClassId === 'all' ? "শ্রেণি নির্বাচন করুন" : "সব বিষয়"} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all" className="font-bold">সব বিষয়</SelectItem>
@@ -367,6 +374,26 @@ export default function MyLibraryPage() {
         </TabsList>
 
         <TabsContent value="questions" className="animate-fade-in space-y-4">
+          <div className="mb-4 flex items-center gap-2 bg-muted/20 p-2 rounded-lg">
+             <div className="flex items-center gap-2 text-xs font-bold text-primary mr-2">
+               <FileText className="w-3 h-3" /> পরীক্ষার নাম ফিল্টার:
+             </div>
+             <Select value={filterExam} onValueChange={setFilterExam}>
+                <SelectTrigger className="w-[180px] bg-white font-bold h-8 text-[10px]">
+                  <SelectValue placeholder="সব পরীক্ষা" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="font-bold">সব পরীক্ষা</SelectItem>
+                  <SelectItem value="সাপ্তাহিক পরীক্ষা" className="font-bold">সাপ্তাহিক পরীক্ষা</SelectItem>
+                  <SelectItem value="মাসিক পরীক্ষা" className="font-bold">মাসিক পরীক্ষা</SelectItem>
+                  <SelectItem value="অর্ধ-বার্ষিক পরীক্ষা" className="font-bold">অর্ধ-বার্ষিক পরীক্ষা</SelectItem>
+                  <SelectItem value="বার্ষিক পরীক্ষা" className="font-bold">বার্ষিক পরীক্ষা</SelectItem>
+                  <SelectItem value="প্রাক-নির্বাচনী পরীক্ষা" className="font-bold">প্রাক-নির্বাচনী পরীক্ষা</SelectItem>
+                  <SelectItem value="নির্বাচনী পরীক্ষা" className="font-bold">নির্বাচনী পরীক্ষা</SelectItem>
+                  <SelectItem value="মডেল টেস্ট" className="font-bold">মডেল টেস্ট</SelectItem>
+                </SelectContent>
+             </Select>
+          </div>
           {filteredQuestions.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredQuestions.map(renderQuestionCard)}
@@ -385,6 +412,21 @@ export default function MyLibraryPage() {
         </TabsContent>
 
         <TabsContent value="sheets" className="animate-fade-in space-y-4">
+          <div className="mb-4 flex items-center gap-2 bg-muted/20 p-2 rounded-lg">
+             <div className="flex items-center gap-2 text-xs font-bold text-orange-600 mr-2">
+               <BookOpen className="w-3 h-3" /> শিটের ধরন ফিল্টার:
+             </div>
+             <Select value={filterSheetType} onValueChange={setFilterSheetType}>
+                <SelectTrigger className="w-[180px] bg-white font-bold h-8 text-[10px]">
+                  <SelectValue placeholder="সব ধরন" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="font-bold">সব ধরন</SelectItem>
+                  <SelectItem value="written" className="font-bold">লিখিত</SelectItem>
+                  <SelectItem value="mcq" className="font-bold">বহুনির্বাচনি</SelectItem>
+                </SelectContent>
+             </Select>
+          </div>
           {filteredSheets.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredSheets.map(renderSheetCard)}

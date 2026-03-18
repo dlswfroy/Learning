@@ -83,7 +83,8 @@ function CreateLectureSheetContent() {
     classId: '',
     subject: '',
     topic: '',
-    content: ''
+    content: '',
+    type: 'written'
   });
 
   useEffect(() => { if (!userLoading && !user) router.push('/auth'); }, [user, userLoading, router]);
@@ -103,7 +104,8 @@ function CreateLectureSheetContent() {
             classId: docData.classId || '',
             subject: docData.subject || '',
             topic: docData.topic || '',
-            content: docData.content || ''
+            content: docData.content || '',
+            type: docData.type || 'written'
           });
         }
       } catch (e) {} finally { setLoading(false); }
@@ -163,7 +165,7 @@ function CreateLectureSheetContent() {
         <Card className="shadow-md">
           <CardHeader className="bg-primary/5 border-b py-3"><CardTitle className="text-base flex items-center gap-2 font-bold"><FileText className="w-4 h-4 text-primary" /> শিট সংক্রান্ত তথ্য</CardTitle></CardHeader>
           <CardContent className="pt-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="space-y-2">
                 <label className="text-sm font-semibold">প্রতিষ্ঠানের নাম</label>
                 <Input value={data.institution || ''} onChange={e => setData(prev => ({...prev, institution: e.target.value}))} />
@@ -180,6 +182,16 @@ function CreateLectureSheetContent() {
                 <Select onValueChange={v => setData(prev => ({...prev, subject: v}))} value={data.subject || ''} disabled={!data.classId}>
                   <SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
                   <SelectContent>{subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold">শিটের ধরন</label>
+                <Select onValueChange={v => setData(prev => ({...prev, type: v}))} value={data.type || 'written'}>
+                  <SelectTrigger><SelectValue placeholder="ধরণ নির্বাচন করুন" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="written">লিখিত</SelectItem>
+                    <SelectItem value="mcq">বহুনির্বাচনি</SelectItem>
+                  </SelectContent>
                 </Select>
               </div>
             </div>
