@@ -47,6 +47,11 @@ export function Navbar() {
     }
   };
 
+  // লগইন পৃষ্ঠায় টপবার দেখাবে না
+  if (pathname === '/auth') {
+    return null;
+  }
+
   return (
     <nav className="fixed top-0 left-0 right-0 h-14 md:h-[78px] bg-primary text-primary-foreground z-50 shadow-xl flex items-center px-4 md:px-6 no-print border-b border-white/10">
       <Link href="/" className="flex items-center gap-3 group">
