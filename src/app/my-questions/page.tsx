@@ -20,14 +20,14 @@ import {
   AlertTriangle,
   Library,
   Book,
-  ClipboardList
+  ClipboardList,
+  Printer
 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
@@ -218,6 +218,12 @@ export default function MyLibraryPage() {
 
         <Link href={`/create-question?id=${q.id}`}>
           <Button variant="outline" size="sm" className="gap-2 border-primary text-primary hover:bg-primary/5 font-bold">
+            <Printer className="w-3 h-3" /> প্রিন্ট
+          </Button>
+        </Link>
+
+        <Link href={`/create-question?id=${q.id}`}>
+          <Button variant="outline" size="sm" className="gap-2 border-primary text-primary hover:bg-primary/5 font-bold">
             <Edit className="w-3 h-3" /> এডিট
           </Button>
         </Link>
@@ -286,6 +292,12 @@ export default function MyLibraryPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <Link href={`/create-lecture-sheet?id=${s.id}`}>
+          <Button variant="outline" size="sm" className="gap-2 border-orange-500 text-orange-600 hover:bg-orange-50 font-bold">
+            <Printer className="w-3 h-3" /> প্রিন্ট
+          </Button>
+        </Link>
 
         <Link href={`/create-lecture-sheet?id=${s.id}`}>
           <Button variant="outline" size="sm" className="gap-2 border-orange-500 text-orange-600 hover:bg-orange-50 font-bold">
