@@ -28,6 +28,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
+  AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
@@ -188,7 +189,7 @@ export default function MyLibraryPage() {
           <AlertDialogTrigger asChild>
             <Button 
               variant="ghost" 
-              size="sm" 
+              size="icon" 
               className="text-destructive hover:bg-destructive/10"
               disabled={deleting === q.id}
             >
@@ -265,7 +266,7 @@ export default function MyLibraryPage() {
           <AlertDialogTrigger asChild>
             <Button 
               variant="ghost" 
-              size="sm" 
+              size="icon" 
               className="text-destructive hover:bg-destructive/10"
               disabled={deleting === s.id}
             >
