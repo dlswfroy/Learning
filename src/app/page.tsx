@@ -30,59 +30,60 @@ export default function Home() {
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Dashboard Cards - 2 columns on mobile (50% size), 4 on desktop */}
+      <section className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <Link href="/create-question">
           <Card className="bg-primary/5 border-primary/30 shadow-md overflow-hidden group hover:shadow-lg transition-all border-l-4 border-l-primary h-full">
-            <CardHeader className="pb-2 p-4">
-              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white mb-2 shadow-inner group-hover:scale-110 transition-transform">
-                <BrainCircuit className="w-5 h-5" />
+            <CardHeader className="pb-1 p-3 md:p-4">
+              <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-primary flex items-center justify-center text-white mb-2 shadow-inner group-hover:scale-110 transition-transform">
+                <BrainCircuit className="w-4 h-4 md:w-5 md:h-5" />
               </div>
-              <CardTitle className="text-primary font-black text-base">প্রশ্ন ব্যাংক</CardTitle>
+              <CardTitle className="text-primary font-black text-sm md:text-base">প্রশ্ন ব্যাংক</CardTitle>
             </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <p className="text-[10px] font-bold text-muted-foreground">বোর্ড স্ট্যান্ডার্ড সৃজনশীল ও এমসিকিউ প্রশ্ন তৈরি করুন।</p>
+            <CardContent className="p-3 md:p-4 pt-0">
+              <p className="text-[9px] md:text-[10px] font-bold text-muted-foreground leading-tight">বোর্ড স্ট্যান্ডার্ড সৃজনশীল ও এমসিকিউ প্রশ্ন তৈরি করুন।</p>
             </CardContent>
           </Card>
         </Link>
 
         <Link href="/create-lecture-sheet">
           <Card className="bg-orange-50 border-orange-200 shadow-md overflow-hidden group hover:shadow-lg transition-all border-l-4 border-l-orange-500 h-full">
-            <CardHeader className="pb-2 p-4">
-              <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center text-white mb-2 shadow-inner group-hover:scale-110 transition-transform">
-                <BookOpen className="w-5 h-5" />
+            <CardHeader className="pb-1 p-3 md:p-4">
+              <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-orange-500 flex items-center justify-center text-white mb-2 shadow-inner group-hover:scale-110 transition-transform">
+                <BookOpen className="w-4 h-4 md:w-5 md:h-5" />
               </div>
-              <CardTitle className="text-orange-600 font-black text-base">লেকচার শিট</CardTitle>
+              <CardTitle className="text-orange-600 font-black text-sm md:text-base">লেকচার শিট</CardTitle>
             </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <p className="text-[10px] font-bold text-muted-foreground">অধ্যায় ভিত্তিক লেকচার নোট তৈরি ও প্রিন্ট করুন।</p>
+            <CardContent className="p-3 md:p-4 pt-0">
+              <p className="text-[9px] md:text-[10px] font-bold text-muted-foreground leading-tight">অধ্যায় ভিত্তিক লেকচার নোট তৈরি ও প্রিন্ট করুন।</p>
             </CardContent>
           </Card>
         </Link>
 
         <Link href="/students">
           <Card className="bg-green-50 border-green-200 shadow-md overflow-hidden group hover:shadow-lg transition-all border-l-4 border-l-green-600 h-full">
-            <CardHeader className="pb-2 p-4">
-              <div className="w-10 h-10 rounded-xl bg-green-600 flex items-center justify-center text-white mb-2 shadow-inner group-hover:scale-110 transition-transform">
-                <Users className="w-5 h-5" />
+            <CardHeader className="pb-1 p-3 md:p-4">
+              <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-green-600 flex items-center justify-center text-white mb-2 shadow-inner group-hover:scale-110 transition-transform">
+                <Users className="w-4 h-4 md:w-5 md:h-5" />
               </div>
-              <CardTitle className="text-green-700 font-black text-base">শিক্ষার্থী</CardTitle>
+              <CardTitle className="text-green-700 font-black text-sm md:text-base">শিক্ষার্থী</CardTitle>
             </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <p className="text-[10px] font-bold text-muted-foreground">আপনার শিক্ষার্থীদের তথ্য সংরক্ষণ ও পরিচালনা করুন।</p>
+            <CardContent className="p-3 md:p-4 pt-0">
+              <p className="text-[9px] md:text-[10px] font-bold text-muted-foreground leading-tight">আপনার শিক্ষার্থীদের তথ্য সংরক্ষণ ও পরিচালনা করুন।</p>
             </CardContent>
           </Card>
         </Link>
 
         <Link href="/my-questions">
           <Card className="bg-accent/10 border-accent/30 shadow-md overflow-hidden group hover:shadow-lg transition-all border-l-4 border-l-accent h-full">
-            <CardHeader className="pb-2 p-4">
-              <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center text-white mb-2 shadow-inner group-hover:scale-110 transition-transform">
-                <Library className="w-5 h-5" />
+            <CardHeader className="pb-1 p-3 md:p-4">
+              <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-accent flex items-center justify-center text-white mb-2 shadow-inner group-hover:scale-110 transition-transform">
+                <Library className="w-4 h-4 md:w-5 md:h-5" />
               </div>
-              <CardTitle className="text-accent-foreground font-black text-base">আমার লাইব্রেরি</CardTitle>
+              <CardTitle className="text-accent-foreground font-black text-sm md:text-base">আমার লাইব্রেরি</CardTitle>
             </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <p className="text-[10px] font-bold text-muted-foreground">আপনার তৈরি করা প্রশ্ন ও শিটগুলো এখানে পাবেন।</p>
+            <CardContent className="p-3 md:p-4 pt-0">
+              <p className="text-[9px] md:text-[10px] font-bold text-muted-foreground leading-tight">আপনার তৈরি করা প্রশ্ন ও শিটগুলো এখানে পাবেন।</p>
             </CardContent>
           </Card>
         </Link>
