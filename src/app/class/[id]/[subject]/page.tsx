@@ -7,7 +7,7 @@ import { CLASSES } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { BookOpen, HelpCircle, FileText, Download, Loader2, BookCopy } from 'lucide-react';
+import { BookOpen, HelpCircle, FileText, Download, Loader2, BookCopy, Printer } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { useFirestore, useCollection } from '@/firebase';
@@ -39,6 +39,7 @@ export default function SubjectPage() {
     notFound();
   }
 
+  // Book Query
   const bookQuery = useMemo(() => {
     if (!db || !id || !subject) return null;
     return query(
@@ -48,12 +49,22 @@ export default function SubjectPage() {
     );
   }, [db, id, subject]);
 
+  // Sheets Query (Notes)
+  const sheetsQuery = useMemo(() => {
+    if (!db || !id || !subject) return null;
+    return query(
+      collection(db, 'lecture-sheets'),
+      where('classId', '==', id),
+      where('subject', '==', subject)
+    );
+  }, [db, id, subject]);
+
   const { data: books, loading: loadingBooks } = useCollection(bookQuery);
+  const { data: sheets, loading: loadingSheets } = useCollection(sheetsQuery);
   
   const nctbBooks = useMemo(() => books?.filter(b => !b.isGuide) || [], [books]);
   const guideBooks = useMemo(() => {
     const list = books?.filter(b => b.isGuide) || [];
-    // Apply natural sort so गদ্য-১, गদ্য-২, गদ্য-১০ stays in order
     return [...list].sort(naturalSort);
   }, [books]);
 
@@ -185,9 +196,47 @@ export default function SubjectPage() {
             </TabsContent>
             
             <TabsContent value="resources">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card className="bg-background border-primary/10"><CardHeader><CardTitle className="text-base font-bold">অধ্যায় ভিত্তিক নোট</CardTitle><CardDescription>শীঘ্রই আসছে...</CardDescription></CardHeader><CardContent><Button variant="secondary" className="w-full" disabled>ডাউনলোড</Button></CardContent></Card>
-                <Card className="bg-background border-primary/10"><CardHeader><CardTitle className="text-base font-bold">বিগত বছরের প্রশ্ন</CardTitle><CardDescription>শীঘ্রই আসছে...</CardDescription></CardHeader><CardContent><Button variant="secondary" className="w-full" disabled>ডাউনলোড</Button></CardContent></Card>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="bg-background border-primary/10 shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-base font-bold flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-primary" /> অধ্যায় ভিত্তিক নোট
+                    </CardTitle>
+                    <CardDescription>
+                      {loadingSheets ? "লোড হচ্ছে..." : (sheets && sheets.length > 0 ? `${toBengaliNumber(sheets.length)}টি নোট পাওয়া গেছে` : "কোনো নোট পাওয়া যায়নি")}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {sheets && sheets.length > 0 ? (
+                      sheets.map((sheet) => (
+                        <div key={sheet.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/20 group hover:border-primary/40 transition-all">
+                          <span className="text-sm font-bold truncate flex-1 pr-4">{sheet.topic}</span>
+                          <div className="flex gap-2">
+                            <Link href={`/create-lecture-sheet?id=${sheet.id}`}>
+                              <Button size="sm" variant="outline" className="h-8 gap-2 font-bold border-primary text-primary">
+                                <BookOpen className="w-3.5 h-3.5" /> পড়ুন
+                              </Button>
+                            </Link>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      !loadingSheets && <p className="text-xs text-muted-foreground italic text-center py-4">এই বিষয়ের কোনো নোট এখনো তৈরি করা হয়নি।</p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-background border-primary/10 opacity-60">
+                  <CardHeader>
+                    <CardTitle className="text-base font-bold flex items-center gap-2">
+                      <Download className="w-4 h-4 text-primary" /> বিগত বছরের প্রশ্ন
+                    </CardTitle>
+                    <CardDescription>শীঘ্রই আসছে...</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button variant="secondary" className="w-full font-bold" disabled>ডাউনলোড</Button>
+                  </CardContent>
+                </Card>
               </div>
             </TabsContent>
           </>
