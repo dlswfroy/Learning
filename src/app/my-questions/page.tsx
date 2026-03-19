@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   FileText, 
   Edit, 
@@ -21,7 +22,9 @@ import {
   Library,
   Book,
   ClipboardList,
-  Printer
+  Printer,
+  Combine,
+  X
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -38,7 +41,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
-import { CLASSES, getSubjectsForClass } from '@/lib/constants';
+import { CLASSES, getSubjectsForClass, getChaptersForSubject } from '@/lib/constants';
 import { toast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 
@@ -51,8 +54,12 @@ export default function MyLibraryPage() {
   // Filtering states
   const [filterClassId, setFilterClassId] = useState<string>('all');
   const [filterSubject, setFilterSubject] = useState<string>('all');
+  const [filterChapter, setFilterChapter] = useState<string>('all');
   const [filterExam, setFilterExam] = useState<string>('all');
   const [filterSheetType, setFilterSheetType] = useState<string>('all');
+
+  // Multi-select state
+  const [selectedQuestions, setSelectedQuestions] = useState<string[]>([]);
 
   useEffect(() => {
     if (!userLoading && !user) {
@@ -66,10 +73,22 @@ export default function MyLibraryPage() {
     return getSubjectsForClass(filterClassId);
   }, [filterClassId]);
 
+  // Available chapters based on subject
+  const availableChapters = useMemo(() => {
+    if (filterClassId === 'all' || filterSubject === 'all') return [];
+    return getChaptersForSubject(filterClassId, filterSubject);
+  }, [filterClassId, filterSubject]);
+
   // Reset subject filter when class changes
   useEffect(() => {
     setFilterSubject('all');
+    setFilterChapter('all');
   }, [filterClassId]);
+
+  // Reset chapter filter when subject changes
+  useEffect(() => {
+    setFilterChapter('all');
+  }, [filterSubject]);
 
   // Query for Questions
   const questionsQuery = useMemo(() => {
@@ -118,11 +137,14 @@ export default function MyLibraryPage() {
     if (filterSubject !== 'all') {
       result = result.filter(q => q.subject === filterSubject);
     }
+    if (filterChapter !== 'all') {
+      result = result.filter(q => q.chapter === filterChapter);
+    }
     if (filterExam !== 'all') {
       result = result.filter(q => q.exam === filterExam);
     }
     return result;
-  }, [sortedQuestions, filterClassId, filterSubject, filterExam]);
+  }, [sortedQuestions, filterClassId, filterSubject, filterChapter, filterExam]);
 
   const filteredSheets = useMemo(() => {
     let result = sortedSheets;
@@ -150,9 +172,30 @@ export default function MyLibraryPage() {
     }
   };
 
+  const handleToggleSelect = (id: string) => {
+    setSelectedQuestions(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleMergeQuestions = () => {
+    if (selectedQuestions.length < 2) {
+      toast({ variant: "destructive", title: "তথ্য অসম্পূর্ণ", description: "কমপক্ষে ২টি প্রশ্ন সেট সিলেক্ট করুন।" });
+      return;
+    }
+    router.push(`/create-question?mergeIds=${selectedQuestions.join(',')}`);
+  };
+
   const renderQuestionCard = (q: any) => (
-    <Card key={q.id} className="hover:border-primary/40 transition-all group shadow-sm bg-white">
-      <CardHeader className="pb-3">
+    <Card key={q.id} className={`hover:border-primary/40 transition-all group shadow-sm bg-white relative ${selectedQuestions.includes(q.id) ? 'border-primary ring-1 ring-primary/20' : ''}`}>
+      <div className="absolute top-3 left-3 z-10">
+        <Checkbox 
+          checked={selectedQuestions.includes(q.id)} 
+          onCheckedChange={() => handleToggleSelect(q.id)}
+          className="w-5 h-5 bg-white"
+        />
+      </div>
+      <CardHeader className="pb-3 pl-10">
         <div className="flex justify-between items-start mb-2">
           <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 font-bold">
             {CLASSES.find(c => c.id === q.classId)?.label || 'অজানা'} শ্রেণি
@@ -163,16 +206,16 @@ export default function MyLibraryPage() {
           </div>
         </div>
         <CardTitle className="text-lg font-bold group-hover:text-primary transition-colors truncate">
-          {q.exam || 'পরীক্ষার নাম নেই'}
+          {q.chapter || q.exam || 'শিরোনাম নেই'}
         </CardTitle>
         <CardDescription className="flex items-center gap-1 font-bold">
           <GraduationCap className="w-3 h-3" /> {q.subject}
         </CardDescription>
       </CardHeader>
-      <CardContent className="pb-4">
+      <CardContent className="pb-4 pl-10">
         <div className="flex flex-col gap-2">
           <p className="text-sm text-muted-foreground truncate font-medium">
-            {q.institution || 'শিক্ষা প্রতিষ্ঠানের নাম নেই'}
+            {q.exam || 'পরীক্ষার নাম নেই'}
           </p>
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className="text-[10px] font-bold">
@@ -329,9 +372,20 @@ export default function MyLibraryPage() {
           </div>
           <div>
             <h2 className="text-2xl font-bold">আমার লাইব্রেরি</h2>
-            <p className="text-xs text-muted-foreground font-bold">আপনার তৈরি করা সকল প্রশ্ন ও শিট এখানে পাবেন</p>
+            <p className="text-xs text-muted-foreground font-bold">অধ্যায় ভিত্তিক প্রশ্ন ও লেকচার শিট সংগ্রহশালা</p>
           </div>
         </div>
+        {selectedQuestions.length > 0 && (
+          <div className="flex items-center gap-3 bg-primary/10 px-4 py-2 rounded-xl animate-in fade-in slide-in-from-right-4">
+            <span className="text-sm font-bold text-primary">{toBengaliNumber(selectedQuestions.length)}টি প্রশ্ন সেট সিলেক্ট করা হয়েছে</span>
+            <Button onClick={handleMergeQuestions} className="gap-2 font-bold h-9 shadow-md bg-accent hover:bg-accent/90">
+              <Combine className="w-4 h-4" /> প্রশ্নপত্র তৈরি করুন
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => setSelectedQuestions([])} className="h-8 w-8 text-muted-foreground hover:text-destructive">
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 bg-primary/5 p-4 rounded-xl border border-primary/10">
@@ -372,13 +426,34 @@ export default function MyLibraryPage() {
             </SelectContent>
           </Select>
         </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-[10px] font-bold text-primary uppercase tracking-wider">
+            <ListOrdered className="w-3 h-3" /> অধ্যায়
+          </div>
+          <Select 
+            value={filterChapter} 
+            onValueChange={setFilterChapter}
+            disabled={filterSubject === 'all'}
+          >
+            <SelectTrigger className="w-full bg-white font-bold h-9 text-xs">
+              <SelectValue placeholder={filterSubject === 'all' ? "বিষয় নির্বাচন করুন" : "সব অধ্যায়"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" className="font-bold">সব অধ্যায়</SelectItem>
+              {availableChapters.map(ch => (
+                <SelectItem key={ch} value={ch} className="font-bold">{ch}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <Tabs defaultValue="questions" className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-8 bg-secondary/50 p-1 h-14">
           <TabsTrigger value="questions" className="gap-2 font-bold py-3 text-base data-[state=active]:bg-white data-[state=active]:text-primary transition-all">
             <FileText className="w-5 h-5" />
-            আমার প্রশ্ন ({toBengaliNumber(filteredQuestions.length)})
+            প্রশ্ন ব্যাংক ({toBengaliNumber(filteredQuestions.length)})
           </TabsTrigger>
           <TabsTrigger value="sheets" className="gap-2 font-bold py-3 text-base data-[state=active]:bg-white data-[state=active]:text-primary transition-all">
             <BookOpen className="w-5 h-5" />
@@ -389,20 +464,19 @@ export default function MyLibraryPage() {
         <TabsContent value="questions" className="animate-fade-in space-y-4">
           <div className="mb-4 flex items-center gap-2 bg-muted/20 p-2 rounded-lg">
              <div className="flex items-center gap-2 text-xs font-bold text-primary mr-2">
-               <FileText className="w-3 h-3" /> পরীক্ষার নাম ফিল্টার:
+               <FileText className="w-3 h-3" /> ফিল্টার:
              </div>
              <Select value={filterExam} onValueChange={setFilterExam}>
                 <SelectTrigger className="w-[180px] bg-white font-bold h-8 text-[10px]">
-                  <SelectValue placeholder="সব পরীক্ষা" />
+                  <SelectValue placeholder="সব ধরন" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all" className="font-bold">সব পরীক্ষা</SelectItem>
+                  <SelectItem value="all" className="font-bold">সব ধরন</SelectItem>
+                  <SelectItem value="অধ্যায় ভিত্তিক পরীক্ষা" className="font-bold">অধ্যায় ভিত্তিক পরীক্ষা</SelectItem>
                   <SelectItem value="সাপ্তাহিক পরীক্ষা" className="font-bold">সাপ্তাহিক পরীক্ষা</SelectItem>
                   <SelectItem value="মাসিক পরীক্ষা" className="font-bold">মাসিক পরীক্ষা</SelectItem>
                   <SelectItem value="অর্ধ-বার্ষিক পরীক্ষা" className="font-bold">অর্ধ-বার্ষিক পরীক্ষা</SelectItem>
                   <SelectItem value="বার্ষিক পরীক্ষা" className="font-bold">বার্ষিক পরীক্ষা</SelectItem>
-                  <SelectItem value="প্রাক-নির্বাচনী পরীক্ষা" className="font-bold">প্রাক-নির্বাচনী পরীক্ষা</SelectItem>
-                  <SelectItem value="নির্বাচনী পরীক্ষা" className="font-bold">নির্বাচনী পরীক্ষা</SelectItem>
                   <SelectItem value="মডেল টেস্ট" className="font-bold">মডেল টেস্ট</SelectItem>
                 </SelectContent>
              </Select>

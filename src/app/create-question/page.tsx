@@ -3,16 +3,16 @@
 
 import { useState, useEffect, Suspense, useMemo, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { CLASSES, getSubjectsForClass } from '@/lib/constants';
+import { CLASSES, getSubjectsForClass, getChaptersForSubject } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, Plus, Trash2, BookOpen, Save, FileText, ArrowLeft, Loader2, Image as ImageIcon, X } from 'lucide-react';
+import { Printer, Plus, Trash2, BookOpen, Save, FileText, ArrowLeft, Loader2, Image as ImageIcon, X, ListOrdered } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useDoc } from '@/firebase';
-import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, setDoc, doc, getDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -118,7 +118,9 @@ function CreateQuestionContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const editId = searchParams.get('id');
-  const [loading, setLoading] = useState(!!editId);
+  const mergeIds = searchParams.get('mergeIds')?.split(',') || [];
+  
+  const [loading, setLoading] = useState(!!editId || mergeIds.length > 0);
   const [saving, setSaving] = useState(false);
   
   const softwareDocRef = useMemo(() => doc(db, 'config', 'software'), [db]);
@@ -126,7 +128,7 @@ function CreateQuestionContent() {
   const appLogoUrl = softwareConfig?.appLogoUrl || '';
   
   const [meta, setMeta] = useState({
-    institution: 'টপ গ্রেড টিউটোরিয়ালস', exam: '', classId: '', subject: '', time: '২ ঘণ্টা ৩০ মিনিট', totalMarks: '১০০',
+    institution: 'টপ গ্রেড টিউটোরিয়ালস', exam: '', chapter: '', classId: '', subject: '', time: '২ ঘণ্টা ৩০ মিনিট', totalMarks: '১০০',
     creativeInstruction: 'যেকোনো ৭টি প্রশ্নের উত্তর দাও', shortInstruction: 'সকল প্রশ্নের উত্তর দাও',
     mcqInstruction: 'সঠিক উত্তরের বৃত্তটি ভরাট করো', marksA: 1, marksB: 2, marksC: 3, marksD: 4, shortMarks: 2, mcqMarks: 1
   });
@@ -138,38 +140,75 @@ function CreateQuestionContent() {
   useEffect(() => { if (!userLoading && !user) router.push('/auth'); }, [user, userLoading, router]);
   
   useEffect(() => {
-    async function loadQuestion() {
-      if (!editId || !db || !user) return;
-      try {
-        const docRef = doc(db, 'questions', editId);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          if (data.userId !== user.uid) { router.push('/my-questions'); return; }
-          setMeta({
-            institution: data.institution || 'টপ গ্রেড টিউটোরিয়ালস', exam: data.exam || '', classId: data.classId || '',
-            subject: data.subject || '', time: data.time || '', totalMarks: data.totalMarks || '',
-            creativeInstruction: data.creativeInstruction || '', 
-            shortInstruction: data.shortInstruction || 'সকল প্রশ্নের উত্তর দাও',
-            mcqInstruction: data.mcqInstruction || 'সঠিক উত্তরের বৃত্তটি ভরাট করো',
-            marksA: data.marksA || 1, marksB: data.marksB || 2, marksC: data.marksC || 3, marksD: data.marksD || 4,
-            shortMarks: data.shortMarks || 2, mcqMarks: data.mcqMarks || 1
-          });
-          const reconstructed = (data.questions || []).map((q: any) => {
-            const id = Math.random().toString(36).substr(2, 9);
-            const commonFields = { id, type: q.type, imageUrl: q.imageUrl || '' };
-            if (q.type === 'mcq') return { ...commonFields, content: `${q.mcqQuestion || ''}\nক. ${q.optA || ''}\nখ. ${q.optB || ''}\nগ. ${q.optC || ''}\nঘ. ${q.optD || ''}` };
-            if (q.type === 'creative') return { ...commonFields, content: `${q.stimulus || ''}\nক. ${q.qA || ''}\nখ. ${q.qB || ''}\nগ. ${q.qC || ''}\nঘ. ${q.qD || ''}` };
-            return { ...commonFields, content: q.shortText || '' };
-          });
-          setQuestions(reconstructed);
-        }
-      } catch (e) {} finally { setLoading(false); }
+    async function loadQuestions() {
+      if (!db || !user) return;
+
+      if (editId) {
+        try {
+          const docRef = doc(db, 'questions', editId);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data.userId !== user.uid) { router.push('/my-questions'); return; }
+            setMeta(prev => ({
+              ...prev,
+              institution: data.institution || 'টপ গ্রেড টিউটোরিয়ালস', exam: data.exam || '', chapter: data.chapter || '', classId: data.classId || '',
+              subject: data.subject || '', time: data.time || '', totalMarks: data.totalMarks || '',
+              creativeInstruction: data.creativeInstruction || '', 
+              shortInstruction: data.shortInstruction || 'সকল প্রশ্নের উত্তর দাও',
+              mcqInstruction: data.mcqInstruction || 'সঠিক উত্তরের বৃত্তটি ভরাট করো',
+              marksA: data.marksA || 1, marksB: data.marksB || 2, marksC: data.marksC || 3, marksD: data.marksD || 4,
+              shortMarks: data.shortMarks || 2, mcqMarks: data.mcqMarks || 1
+            }));
+            const reconstructed = (data.questions || []).map((q: any) => {
+              const id = Math.random().toString(36).substr(2, 9);
+              const commonFields = { id, type: q.type, imageUrl: q.imageUrl || '' };
+              if (q.type === 'mcq') return { ...commonFields, content: `${q.mcqQuestion || ''}\nক. ${q.optA || ''}\nখ. ${q.optB || ''}\nগ. ${q.optC || ''}\nঘ. ${q.optD || ''}` };
+              if (q.type === 'creative') return { ...commonFields, content: `${q.stimulus || ''}\nক. ${q.qA || ''}\nখ. ${q.qB || ''}\nগ. ${q.qC || ''}\nঘ. ${q.qD || ''}` };
+              return { ...commonFields, content: q.shortText || '' };
+            });
+            setQuestions(reconstructed);
+          }
+        } catch (e) {} finally { setLoading(false); }
+      } else if (mergeIds.length > 0) {
+        try {
+          let mergedQuestions: Question[] = [];
+          let firstSet: any = null;
+
+          for (const id of mergeIds) {
+            const docSnap = await getDoc(doc(db, 'questions', id));
+            if (docSnap.exists()) {
+              const data = docSnap.data();
+              if (!firstSet) firstSet = data;
+              
+              const reconstructed = (data.questions || []).map((q: any) => {
+                const qId = Math.random().toString(36).substr(2, 9);
+                const commonFields = { id: qId, type: q.type, imageUrl: q.imageUrl || '' };
+                if (q.type === 'mcq') return { ...commonFields, content: `${q.mcqQuestion || ''}\nক. ${q.optA || ''}\nখ. ${q.optB || ''}\nগ. ${q.optC || ''}\nঘ. ${q.optD || ''}` };
+                if (q.type === 'creative') return { ...commonFields, content: `${q.stimulus || ''}\nক. ${q.qA || ''}\nখ. ${q.qB || ''}\nগ. ${q.qC || ''}\nঘ. ${q.qD || ''}` };
+                return { ...commonFields, content: q.shortText || '' };
+              });
+              mergedQuestions = [...mergedQuestions, ...reconstructed];
+            }
+          }
+
+          if (firstSet) {
+            setMeta(prev => ({
+              ...prev,
+              classId: firstSet.classId,
+              subject: firstSet.subject,
+              institution: firstSet.institution
+            }));
+          }
+          setQuestions(mergedQuestions);
+        } catch (e) {} finally { setLoading(false); }
+      }
     }
-    if (user && db) loadQuestion();
-  }, [editId, db, user, router]);
+    if (user && db) loadQuestions();
+  }, [editId, mergeIds.join(','), db, user, router]);
 
   const subjects = useMemo(() => meta.classId ? getSubjectsForClass(meta.classId) : [], [meta.classId]);
+  const chapters = useMemo(() => (meta.classId && meta.subject) ? getChaptersForSubject(meta.classId, meta.subject) : [], [meta.classId, meta.subject]);
 
   const handleAddQuestion = (type: 'creative' | 'short' | 'mcq') => {
     setQuestions(prev => [...prev, { id: Math.random().toString(36).substr(2, 9), type, content: '', imageUrl: '' }]);
@@ -261,6 +300,7 @@ function CreateQuestionContent() {
     const data: any = {
       institution: meta.institution || 'টপ গ্রেড টিউটোরিয়ালস',
       exam: meta.exam || '',
+      chapter: meta.chapter || '',
       classId: meta.classId || '',
       subject: meta.subject || '',
       time: meta.time || '',
@@ -320,16 +360,15 @@ function CreateQuestionContent() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div className="space-y-2"><label className="text-sm font-semibold">প্রতিষ্ঠানের নাম</label><Input value={meta.institution || ''} onChange={e => setMeta(prev => ({...prev, institution: e.target.value}))} /></div>
               <div className="space-y-2">
-                <label className="text-sm font-semibold">পরীক্ষার নাম</label>
+                <label className="text-sm font-semibold">পরীক্ষার নাম / ধরন</label>
                 <Select onValueChange={v => setMeta(prev => ({...prev, exam: v}))} value={meta.exam || ''}>
                   <SelectTrigger><SelectValue placeholder="পরীক্ষা নির্বাচন করুন" /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="অধ্যায় ভিত্তিক পরীক্ষা">অধ্যায় ভিত্তিক পরীক্ষা</SelectItem>
                     <SelectItem value="সাপ্তাহিক পরীক্ষা">সাপ্তাহিক পরীক্ষা</SelectItem>
                     <SelectItem value="মাসিক পরীক্ষা">মাসিক পরীক্ষা</SelectItem>
                     <SelectItem value="অর্ধ-বার্ষিক পরীক্ষা">অর্ধ-বার্ষিক পরীক্ষা</SelectItem>
                     <SelectItem value="বার্ষিক পরীক্ষা">বার্ষিক পরীক্ষা</SelectItem>
-                    <SelectItem value="প্রাক-নির্বাচনী পরীক্ষা">প্রাক-নির্বাচনী পরীক্ষা</SelectItem>
-                    <SelectItem value="নির্বাচনী পরীক্ষা">নির্বাচনী পরীক্ষা</SelectItem>
                     <SelectItem value="মডেল টেস্ট">মডেল টেস্ট</SelectItem>
                   </SelectContent>
                 </Select>
@@ -338,6 +377,15 @@ function CreateQuestionContent() {
               <div className="space-y-2"><label className="text-sm font-semibold">পূর্ণমান</label><Input value={meta.totalMarks || ''} onChange={e => setMeta(prev => ({...prev, totalMarks: e.target.value}))} /></div>
               <div className="space-y-2"><label className="text-sm font-semibold">শ্রেণি</label><Select onValueChange={v => setMeta(prev => ({...prev, classId: v}))} value={meta.classId || ''}><SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger><SelectContent>{CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}</SelectContent></Select></div>
               <div className="space-y-2"><label className="text-sm font-semibold">বিষয়</label><Select onValueChange={v => setMeta(prev => ({...prev, subject: v}))} value={meta.subject || ''} disabled={!meta.classId}><SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger><SelectContent>{subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold">অধ্যায় (ঐচ্ছিক)</label>
+                <Select onValueChange={v => setMeta(prev => ({...prev, chapter: v}))} value={meta.chapter || ''} disabled={!meta.subject}>
+                  <SelectTrigger><SelectValue placeholder="অধ্যায় নির্বাচন করুন" /></SelectTrigger>
+                  <SelectContent>
+                    {chapters.map(ch => <SelectItem key={ch} value={ch}>{ch}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             
             <div className="pt-4 border-t">
@@ -497,6 +545,7 @@ function CreateQuestionContent() {
             <div className="inst-name">{meta.institution || 'শিক্ষা প্রতিষ্ঠানের নাম'}</div>
             <div className="font-bold text-lg leading-none">{meta.exam || 'পরীক্ষার নাম'}</div>
             <div className="font-bold text-sm">শ্রেণি: {CLASSES.find(c => c.id === meta.classId)?.label || ''} | বিষয়: {meta.subject}</div>
+            {meta.chapter && <div className="font-bold text-xs">অধ্যায়: {meta.chapter}</div>}
             <div className="meta-info"><div>সময়: {meta.time}</div><div>পূর্ণমান: {meta.totalMarks}</div></div>
           </div>
 

@@ -26,6 +26,7 @@
       "properties": {
         "institution": { "type": "string" },
         "exam": { "type": "string" },
+        "chapter": { "type": "string", "description": "Specific chapter for chapter-wise saving." },
         "classId": { "type": "string" },
         "subject": { "type": "string" },
         "time": { "type": "string" },
@@ -177,7 +178,7 @@
     },
     "/attendance/{attendanceId}": {
       "schema": "AttendanceRecord",
-      "description": "Daily attendance records linked to user IDs. (Re-deployed rules to fix access issue)"
+      "description": "Daily attendance status."
     },
     "/fees/{feeId}": {
       "schema": "FeeRecord",
