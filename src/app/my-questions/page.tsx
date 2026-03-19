@@ -26,7 +26,10 @@ import {
   X,
   ListOrdered,
   Eye,
-  CheckCircle2
+  CheckCircle2,
+  BrainCircuit,
+  FileQuestion,
+  ListChecks
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -142,14 +145,12 @@ export default function MyLibraryPage() {
     if (!rawQuestions) return [];
     const chaptersSet = new Set<string>();
     
-    // Add from data
     rawQuestions.forEach(q => {
       if (q.classId === filterClassId && q.subject === filterSubject && q.chapter) {
         chaptersSet.add(q.chapter);
       }
     });
 
-    // Add from constants
     if (filterClassId !== 'all' && filterSubject !== 'all') {
       getChaptersForSubject(filterClassId, filterSubject).forEach(ch => chaptersSet.add(ch));
     }
@@ -274,6 +275,16 @@ export default function MyLibraryPage() {
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
   };
+
+  // Selection counts by type
+  const selectionSummary = useMemo(() => {
+    const selected = availableQuestions.filter(q => selectedIndividualQuestions.includes(q.id));
+    return {
+      creative: selected.filter(q => q.type === 'creative').length,
+      short: selected.filter(q => q.type === 'short').length,
+      mcq: selected.filter(q => q.type === 'mcq').length,
+    };
+  }, [availableQuestions, selectedIndividualQuestions]);
 
   const renderQuestionCard = (q: any) => (
     <Card key={q.id} className={`hover:border-primary/40 transition-all group shadow-sm bg-white relative ${selectedSets.includes(q.id) ? 'border-primary ring-1 ring-primary/20' : ''}`}>
@@ -480,7 +491,7 @@ export default function MyLibraryPage() {
 
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-[10px] font-bold text-primary uppercase tracking-wider">
-            <ListOrdered className="w-3 h-3" /> অধ্যায় (সব ধরণের বানান সমর্থন করে)
+            <ListOrdered className="w-3 h-3" /> অধ্যায়
           </div>
           <Select value={filterChapter} onValueChange={setFilterChapter} disabled={filterSubject === 'all'}>
             <SelectTrigger className="w-full bg-white font-bold h-9 text-xs">
@@ -538,22 +549,48 @@ export default function MyLibraryPage() {
       <Dialog open={isMergeDialogOpen} onOpenChange={setIsMergeDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col font-kalpurush overflow-hidden p-0">
           <DialogHeader className="p-6 bg-primary/5 border-b sticky top-0 z-10">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-2">
               <DialogTitle className="text-xl font-bold text-primary flex items-center gap-2">
                 <Combine className="w-6 h-6" /> প্রশ্ন বাছাই করুন
               </DialogTitle>
               <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border shadow-sm">
-                <span className="text-xs font-bold text-muted-foreground">বাছাইকৃত:</span>
+                <span className="text-xs font-bold text-muted-foreground">মোট বাছাইকৃত:</span>
                 <Badge variant="secondary" className="font-black text-xs">{toBengaliNumber(selectedIndividualQuestions.length)} / {toBengaliNumber(availableQuestions.length)}</Badge>
               </div>
             </div>
-            <div className="flex gap-2 mt-4 no-print overflow-x-auto pb-1">
-              <Button size="sm" variant="outline" onClick={() => setSelectedIndividualQuestions(availableQuestions.map(q => q.id))} className="text-[10px] font-bold h-7 gap-1">
-                <CheckCircle2 className="w-3 h-3" /> সব সিলেক্ট করুন
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => setSelectedIndividualQuestions([])} className="text-[10px] font-bold h-7 gap-1">
-                <X className="w-3 h-3" /> সব মুছুন
-              </Button>
+            
+            {/* Selection Summary Counter */}
+            <div className="flex flex-wrap gap-2 md:gap-4 no-print py-2">
+              <div className="flex items-center gap-2 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100">
+                <BrainCircuit className="w-4 h-4 text-primary" />
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-bold text-primary uppercase">সৃজনশীল</span>
+                  <span className="text-sm font-black text-primary leading-none">{toBengaliNumber(selectionSummary.creative)}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-lg border border-green-100">
+                <ListChecks className="w-4 h-4 text-accent" />
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-bold text-accent uppercase">সংক্ষিপ্ত</span>
+                  <span className="text-sm font-black text-accent leading-none">{toBengaliNumber(selectionSummary.short)}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 bg-orange-50 px-3 py-1.5 rounded-lg border border-orange-100">
+                <FileQuestion className="w-4 h-4 text-orange-600" />
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-bold text-orange-600 uppercase">বহুনির্বাচনি</span>
+                  <span className="text-sm font-black text-orange-600 leading-none">{toBengaliNumber(selectionSummary.mcq)}</span>
+                </div>
+              </div>
+              <div className="flex-1" />
+              <div className="flex gap-1 self-end">
+                <Button size="sm" variant="outline" onClick={() => setSelectedIndividualQuestions(availableQuestions.map(q => q.id))} className="text-[10px] font-bold h-8 gap-1 border-primary/20">
+                  <CheckCircle2 className="w-3 h-3" /> সব সিলেক্ট
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setSelectedIndividualQuestions([])} className="text-[10px] font-bold h-8 gap-1 border-destructive/20 text-destructive">
+                  <X className="w-3 h-3" /> সব মুছুন
+                </Button>
+              </div>
             </div>
           </DialogHeader>
 
