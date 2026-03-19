@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Printer, Plus, Trash2, BookOpen, Save, FileText, ArrowLeft, Loader2, Image as ImageIcon, X, ListOrdered } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useDoc } from '@/firebase';
-import { collection, setDoc, doc, getDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
+import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -118,9 +118,9 @@ function CreateQuestionContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const editId = searchParams.get('id');
-  const mergeIds = searchParams.get('mergeIds')?.split(',') || [];
+  const source = searchParams.get('source');
   
-  const [loading, setLoading] = useState(!!editId || mergeIds.length > 0);
+  const [loading, setLoading] = useState(!!editId || source === 'merge');
   const [saving, setSaving] = useState(false);
   
   const softwareDocRef = useMemo(() => doc(db, 'config', 'software'), [db]);
@@ -128,7 +128,7 @@ function CreateQuestionContent() {
   const appLogoUrl = softwareConfig?.appLogoUrl || '';
   
   const [meta, setMeta] = useState({
-    institution: 'টপ গ্রেড টিউটোরিয়ালস', exam: '', chapter: '', classId: '', subject: '', time: '২ ঘণ্টা ৩০ মিনিট', totalMarks: '১০০',
+    institution: 'টপ গ্রেড টিউটোরিয়ালস', exam: 'সাপ্তাহিক পরীক্ষা', chapter: '', classId: '', subject: '', time: '২ ঘণ্টা ৩০ মিনিট', totalMarks: '১০০',
     creativeInstruction: 'যেকোনো ৭টি প্রশ্নের উত্তর দাও', shortInstruction: 'সকল প্রশ্নের উত্তর দাও',
     mcqInstruction: 'সঠিক উত্তরের বৃত্তটি ভরাট করো', marksA: 1, marksB: 2, marksC: 3, marksD: 4, shortMarks: 2, mcqMarks: 1
   });
@@ -170,42 +170,26 @@ function CreateQuestionContent() {
             setQuestions(reconstructed);
           }
         } catch (e) {} finally { setLoading(false); }
-      } else if (mergeIds.length > 0) {
-        try {
-          let mergedQuestions: Question[] = [];
-          let firstSet: any = null;
-
-          for (const id of mergeIds) {
-            const docSnap = await getDoc(doc(db, 'questions', id));
-            if (docSnap.exists()) {
-              const data = docSnap.data();
-              if (!firstSet) firstSet = data;
-              
-              const reconstructed = (data.questions || []).map((q: any) => {
-                const qId = Math.random().toString(36).substr(2, 9);
-                const commonFields = { id: qId, type: q.type, imageUrl: q.imageUrl || '' };
-                if (q.type === 'mcq') return { ...commonFields, content: `${q.mcqQuestion || ''}\nক. ${q.optA || ''}\nখ. ${q.optB || ''}\nগ. ${q.optC || ''}\nঘ. ${q.optD || ''}` };
-                if (q.type === 'creative') return { ...commonFields, content: `${q.stimulus || ''}\nক. ${q.qA || ''}\nখ. ${q.qB || ''}\nগ. ${q.qC || ''}\nঘ. ${q.qD || ''}` };
-                return { ...commonFields, content: q.shortText || '' };
-              });
-              mergedQuestions = [...mergedQuestions, ...reconstructed];
-            }
-          }
-
-          if (firstSet) {
-            setMeta(prev => ({
-              ...prev,
-              classId: firstSet.classId,
-              subject: firstSet.subject,
-              institution: firstSet.institution
-            }));
-          }
-          setQuestions(mergedQuestions);
-        } catch (e) {} finally { setLoading(false); }
+      } else if (source === 'merge') {
+        const stored = sessionStorage.getItem('merged_questions_data');
+        if (stored) {
+          const mergedData = JSON.parse(stored);
+          const reconstructed = mergedData.map((q: any) => {
+            const id = Math.random().toString(36).substr(2, 9);
+            const commonFields = { id, type: q.type, imageUrl: q.imageUrl || '' };
+            if (q.type === 'mcq') return { ...commonFields, content: `${q.mcqQuestion || ''}\nক. ${q.optA || ''}\nখ. ${q.optB || ''}\nগ. ${q.optC || ''}\nঘ. ${q.optD || ''}` };
+            if (q.type === 'creative') return { ...commonFields, content: `${q.stimulus || ''}\nক. ${q.qA || ''}\nখ. ${q.qB || ''}\nগ. ${q.qC || ''}\nঘ. ${q.qD || ''}` };
+            return { ...commonFields, content: q.shortText || '' };
+          });
+          setQuestions(reconstructed);
+          // Optional: clear session storage
+          sessionStorage.removeItem('merged_questions_data');
+        }
+        setLoading(false);
       }
     }
     if (user && db) loadQuestions();
-  }, [editId, mergeIds.join(','), db, user, router]);
+  }, [editId, source, db, user, router]);
 
   const subjects = useMemo(() => meta.classId ? getSubjectsForClass(meta.classId) : [], [meta.classId]);
   const chapters = useMemo(() => (meta.classId && meta.subject) ? getChaptersForSubject(meta.classId, meta.subject) : [], [meta.classId, meta.subject]);
@@ -341,49 +325,39 @@ function CreateQuestionContent() {
 
   const isEnglish = meta.subject?.toLowerCase().includes('english') || meta.subject?.toLowerCase().includes('ইংরেজি');
 
-  if (loading || userLoading) return <div className="flex flex-col items-center justify-center p-20 min-h-[50vh]"><Loader2 className="w-12 h-12 animate-spin text-primary mb-4" /><p className="text-muted-foreground">অ্যাক্সেস চেক করা হচ্ছে...</p></div>;
+  if (loading || userLoading) return <div className="flex flex-col items-center justify-center p-20 min-h-[50vh] font-kalpurush"><Loader2 className="w-12 h-12 animate-spin text-primary mb-4" /><p className="text-muted-foreground font-bold">অ্যাক্সেস চেক করা হচ্ছে...</p></div>;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-32">
+    <div className="max-w-5xl mx-auto space-y-8 pb-32 font-kalpurush">
       <div className="no-print space-y-8">
         <header className="flex items-center justify-between border-b pb-4">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-primary text-white flex items-center justify-center shadow-sm"><FileText className="w-7 h-7" /></div>
             <h2 className="text-2xl font-bold text-primary">প্রশ্নপত্র নির্মাতা</h2>
           </div>
-          <Button variant="ghost" onClick={() => router.push('/my-questions')} className="gap-2"><ArrowLeft className="w-4 h-4" /> আমার প্রশ্নসমূহ</Button>
+          <Button variant="ghost" onClick={() => router.push('/my-questions')} className="gap-2 font-bold"><ArrowLeft className="w-4 h-4" /> আমার লাইব্রেরি</Button>
         </header>
 
         <Card className="shadow-md">
           <CardHeader className="bg-primary/5 border-b py-3"><CardTitle className="text-base flex items-center gap-2 font-bold"><BookOpen className="w-4 h-4 text-primary" /> পরীক্ষার তথ্য ও মান বণ্টন</CardTitle></CardHeader>
           <CardContent className="pt-6 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="space-y-2"><label className="text-sm font-semibold">প্রতিষ্ঠানের নাম</label><Input value={meta.institution || ''} onChange={e => setMeta(prev => ({...prev, institution: e.target.value}))} /></div>
+              <div className="space-y-2"><label className="text-sm font-semibold">প্রতিষ্ঠানের নাম</label><Input value={meta.institution || ''} onChange={e => setMeta(prev => ({...prev, institution: e.target.value}))} className="font-bold" /></div>
               <div className="space-y-2">
                 <label className="text-sm font-semibold">পরীক্ষার নাম / ধরন</label>
-                <Select onValueChange={v => setMeta(prev => ({...prev, exam: v}))} value={meta.exam || ''}>
-                  <SelectTrigger><SelectValue placeholder="পরীক্ষা নির্বাচন করুন" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="অধ্যায় ভিত্তিক পরীক্ষা">অধ্যায় ভিত্তিক পরীক্ষা</SelectItem>
-                    <SelectItem value="সাপ্তাহিক পরীক্ষা">সাপ্তাহিক পরীক্ষা</SelectItem>
-                    <SelectItem value="মাসিক পরীক্ষা">মাসিক পরীক্ষা</SelectItem>
-                    <SelectItem value="অর্ধ-বার্ষিক পরীক্ষা">অর্ধ-বার্ষিক পরীক্ষা</SelectItem>
-                    <SelectItem value="বার্ষিক পরীক্ষা">বার্ষিক পরীক্ষা</SelectItem>
-                    <SelectItem value="মডেল টেস্ট">মডেল টেস্ট</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Input value={meta.exam || ''} onChange={e => setMeta(prev => ({...prev, exam: e.target.value}))} className="font-bold" placeholder="যেমন: সাপ্তাহিক পরীক্ষা" />
               </div>
-              <div className="space-y-2"><label className="text-sm font-semibold">সময়</label><Input value={meta.time || ''} onChange={e => setMeta(prev => ({...prev, time: e.target.value}))} /></div>
-              <div className="space-y-2"><label className="text-sm font-semibold">পূর্ণমান</label><Input value={meta.totalMarks || ''} onChange={e => setMeta(prev => ({...prev, totalMarks: e.target.value}))} /></div>
-              <div className="space-y-2"><label className="text-sm font-semibold">শ্রেণি</label><Select onValueChange={v => setMeta(prev => ({...prev, classId: v}))} value={meta.classId || ''}><SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger><SelectContent>{CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}</SelectContent></Select></div>
-              <div className="space-y-2"><label className="text-sm font-semibold">বিষয়</label><Select onValueChange={v => setMeta(prev => ({...prev, subject: v}))} value={meta.subject || ''} disabled={!meta.classId}><SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger><SelectContent>{subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
+              <div className="space-y-2"><label className="text-sm font-semibold">সময়</label><Input value={meta.time || ''} onChange={e => setMeta(prev => ({...prev, time: e.target.value}))} className="font-bold" /></div>
+              <div className="space-y-2"><label className="text-sm font-semibold">পূর্ণমান</label><Input value={meta.totalMarks || ''} onChange={e => setMeta(prev => ({...prev, totalMarks: e.target.value}))} className="font-bold" /></div>
+              <div className="space-y-2"><label className="text-sm font-semibold">শ্রেণি</label><Select onValueChange={v => setMeta(prev => ({...prev, classId: v}))} value={meta.classId || ''}><SelectTrigger className="font-bold"><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger><SelectContent>{CLASSES.map(c => <SelectItem key={c.id} value={c.id} className="font-bold">{c.label} শ্রেণি</SelectItem>)}</SelectContent></Select></div>
+              <div className="space-y-2"><label className="text-sm font-semibold">বিষয়</label><Select onValueChange={v => setMeta(prev => ({...prev, subject: v}))} value={meta.subject || ''} disabled={!meta.classId}><SelectTrigger className="font-bold"><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger><SelectContent>{subjects.map(s => <SelectItem key={s} value={s} className="font-bold">{s}</SelectItem>)}</SelectContent></Select></div>
               <div className="space-y-2">
                 <label className="text-sm font-semibold">অধ্যায় (ঐচ্ছিক)</label>
                 <Select onValueChange={v => setMeta(prev => ({...prev, chapter: v}))} value={meta.chapter || ''} disabled={!meta.subject}>
-                  <SelectTrigger><SelectValue placeholder="অধ্যায় নির্বাচন করুন" /></SelectTrigger>
+                  <SelectTrigger className="font-bold"><SelectValue placeholder="অধ্যায় নির্বাচন করুন" /></SelectTrigger>
                   <SelectContent>
                     {chapters.map(ch => (
-                      <SelectItem key={ch} value={ch}>{ch}</SelectItem>
+                      <SelectItem key={ch} value={ch} className="font-bold">{ch}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -394,20 +368,20 @@ function CreateQuestionContent() {
               <h4 className="text-sm font-bold mb-4 text-primary">মান বণ্টন ও নির্দেশনা</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
-                  <div className="space-y-2"><label className="text-xs font-semibold">সৃজনশীল নির্দেশিকা</label><Input value={meta.creativeInstruction || ''} onChange={e => setMeta(prev => ({...prev, creativeInstruction: e.target.value}))} /></div>
+                  <div className="space-y-2"><label className="text-xs font-semibold">সৃজনশীল নির্দেশিকা</label><Input value={meta.creativeInstruction || ''} onChange={e => setMeta(prev => ({...prev, creativeInstruction: e.target.value}))} className="font-bold" /></div>
                   <div className="grid grid-cols-4 gap-2">
-                    <div className="space-y-1"><label className="text-[10px] font-bold">ক</label><Input type="number" value={meta.marksA || ''} onChange={e => setMeta(prev => ({...prev, marksA: parseInt(e.target.value) || 0}))} className="h-8" /></div>
-                    <div className="space-y-1"><label className="text-[10px] font-bold">খ</label><Input type="number" value={meta.marksB || ''} onChange={e => setMeta(prev => ({...prev, marksB: parseInt(e.target.value) || 0}))} className="h-8" /></div>
-                    <div className="space-y-1"><label className="text-[10px] font-bold">গ</label><Input type="number" value={meta.marksC || ''} onChange={e => setMeta(prev => ({...prev, marksC: parseInt(e.target.value) || 0}))} className="h-8" /></div>
-                    <div className="space-y-1"><label className="text-[10px] font-bold">ঘ</label><Input type="number" value={meta.marksD || ''} onChange={e => setMeta(prev => ({...prev, marksD: parseInt(e.target.value) || 0}))} className="h-8" /></div>
+                    <div className="space-y-1"><label className="text-[10px] font-bold">ক</label><Input type="number" value={meta.marksA || ''} onChange={e => setMeta(prev => ({...prev, marksA: parseInt(e.target.value) || 0}))} className="h-8 font-bold" /></div>
+                    <div className="space-y-1"><label className="text-[10px] font-bold">খ</label><Input type="number" value={meta.marksB || ''} onChange={e => setMeta(prev => ({...prev, marksB: parseInt(e.target.value) || 0}))} className="h-8 font-bold" /></div>
+                    <div className="space-y-1"><label className="text-[10px] font-bold">গ</label><Input type="number" value={meta.marksC || ''} onChange={e => setMeta(prev => ({...prev, marksC: parseInt(e.target.value) || 0}))} className="h-8 font-bold" /></div>
+                    <div className="space-y-1"><label className="text-[10px] font-bold">ঘ</label><Input type="number" value={meta.marksD || ''} onChange={e => setMeta(prev => ({...prev, marksD: parseInt(e.target.value) || 0}))} className="h-8 font-bold" /></div>
                   </div>
                 </div>
                 <div className="space-y-4">
-                  <div className="space-y-2"><label className="text-xs font-semibold">সংক্ষিপ্ত নির্দেশিকা</label><Input value={meta.shortInstruction || ''} onChange={e => setMeta(prev => ({...prev, shortInstruction: e.target.value}))} /></div>
-                  <div className="space-y-2"><label className="text-xs font-semibold">এমসিকিউ নির্দেশিকা</label><Input value={meta.mcqInstruction || ''} onChange={e => setMeta(prev => ({...prev, mcqInstruction: e.target.value}))} /></div>
+                  <div className="space-y-2"><label className="text-xs font-semibold">সংক্ষিপ্ত নির্দেশিকা</label><Input value={meta.shortInstruction || ''} onChange={e => setMeta(prev => ({...prev, shortInstruction: e.target.value}))} className="font-bold" /></div>
+                  <div className="space-y-2"><label className="text-xs font-semibold">এমসিকিউ নির্দেশিকা</label><Input value={meta.mcqInstruction || ''} onChange={e => setMeta(prev => ({...prev, mcqInstruction: e.target.value}))} className="font-bold" /></div>
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1"><label className="text-[10px] font-bold">সংক্ষিপ্ত মার্কস</label><Input type="number" value={meta.shortMarks || ''} onChange={e => setMeta(prev => ({...prev, shortMarks: parseInt(e.target.value) || 0}))} className="h-8" /></div>
-                    <div className="space-y-1"><label className="text-[10px] font-bold">এমসিকিউ মার্কস</label><Input type="number" value={meta.mcqMarks || ''} onChange={e => setMeta(prev => ({...prev, mcqMarks: parseInt(e.target.value) || 0}))} className="h-8" /></div>
+                    <div className="space-y-1"><label className="text-[10px] font-bold">সংক্ষিপ্ত মার্কস</label><Input type="number" value={meta.shortMarks || ''} onChange={e => setMeta(prev => ({...prev, shortMarks: parseInt(e.target.value) || 0}))} className="h-8 font-bold" /></div>
+                    <div className="space-y-1"><label className="text-[10px] font-bold">এমসিকিউ মার্কস</label><Input type="number" value={meta.mcqMarks || ''} onChange={e => setMeta(prev => ({...prev, mcqMarks: parseInt(e.target.value) || 0}))} className="h-8 font-bold" /></div>
                   </div>
                 </div>
               </div>
@@ -416,11 +390,11 @@ function CreateQuestionContent() {
         </Card>
 
         <div className="flex items-center justify-between border-b pb-2">
-          <h3 className="text-lg font-bold">প্রশ্নসমূহ ({questions.length})</h3>
+          <h3 className="text-lg font-bold">প্রশ্নসমূহ ({toBengaliNumber(questions.length)})</h3>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => handleAddQuestion('creative')} className="border-primary text-primary"><Plus className="w-3 h-3" /> সৃজনশীল</Button>
-            <Button variant="outline" size="sm" onClick={() => handleAddQuestion('short')} className="border-accent text-accent"><Plus className="w-3 h-3" /> সংক্ষিপ্ত</Button>
-            <Button variant="outline" size="sm" onClick={() => handleAddQuestion('mcq')} className="border-orange-500 text-orange-500"><Plus className="w-3 h-3" /> বহুনির্বাচনি</Button>
+            <Button variant="outline" size="sm" onClick={() => handleAddQuestion('creative')} className="border-primary text-primary font-bold"><Plus className="w-3 h-3" /> সৃজনশীল</Button>
+            <Button variant="outline" size="sm" onClick={() => handleAddQuestion('short')} className="border-accent text-accent font-bold"><Plus className="w-3 h-3" /> সংক্ষিপ্ত</Button>
+            <Button variant="outline" size="sm" onClick={() => handleAddQuestion('mcq')} className="border-orange-500 text-orange-500 font-bold"><Plus className="w-3 h-3" /> বহুনির্বাচনি</Button>
           </div>
         </div>
 
@@ -453,7 +427,7 @@ function CreateQuestionContent() {
                 <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${q.type === 'mcq' ? 'bg-orange-100 text-orange-600' : q.type === 'short' ? 'bg-accent/10 text-accent' : 'bg-primary/10 text-primary'}`}>{q.type === 'mcq' ? 'বহুনির্বাচনি' : q.type === 'short' ? 'সংক্ষিপ্ত' : 'সৃজনশীল'}</span>
                 <span className="text-sm font-bold">প্রশ্ন নং: {isEnglish ? (idx + 1) : toBengaliNumber(idx + 1)}</span>
               </div>
-              <Textarea placeholder={q.type === 'mcq' ? "প্রশ্ন ও অপশনগুলো ক. খ. গ. ঘ. সহ লিখুন" : "উদ্দীপক ও প্রশ্ন ক. খ. গ. ঘ. সহ লিখুন"} value={q.content || ''} onChange={e => setQuestions(prev => prev.map(item => item.id === q.id ? {...item, content: e.target.value} : item))} className="min-h-[120px] text-sm" />
+              <Textarea placeholder={q.type === 'mcq' ? "প্রশ্ন ও অপশনগুলো ক. খ. গ. ঘ. সহ লিখুন" : "উদ্দীপক ও প্রশ্ন ক. খ. গ. ঘ. সহ লিখুন"} value={q.content || ''} onChange={e => setQuestions(prev => prev.map(item => item.id === q.id ? {...item, content: e.target.value} : item))} className="min-h-[120px] text-sm font-bold" />
               
               {q.imageUrl && (
                 <div className="relative w-full max-w-sm rounded-lg border overflow-hidden bg-muted/20">
@@ -476,7 +450,7 @@ function CreateQuestionContent() {
         </div>
       </div>
 
-      <div className="print-only">
+      <div className="print-only font-kalpurush">
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
             @page { 
@@ -498,6 +472,7 @@ function CreateQuestionContent() {
               background: transparent !important;
               padding: 0 !important;
               margin: 0 !important;
+              color: black !important;
             }
             .header { text-align: center; margin-bottom: 6px; border-bottom: 1.5pt solid black; padding-bottom: 4px; }
             .inst-name { font-size: 15pt; font-weight: 800; }
@@ -628,4 +603,4 @@ function CreateQuestionContent() {
   );
 }
 
-export default function CreateQuestionPage() { return <Suspense fallback={<div className="flex justify-center p-20"><Loader2 className="animate-spin text-primary" /></div>}><CreateQuestionContent /></Suspense>; }
+export default function CreateQuestionPage() { return <Suspense fallback={<div className="flex justify-center p-20 font-kalpurush"><Loader2 className="animate-spin text-primary" /></div>}><CreateQuestionContent /></Suspense>; }
