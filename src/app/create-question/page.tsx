@@ -182,7 +182,6 @@ function CreateQuestionContent() {
             return { ...commonFields, content: q.shortText || '' };
           });
           setQuestions(reconstructed);
-          // Optional: clear session storage
           sessionStorage.removeItem('merged_questions_data');
         }
         setLoading(false);
@@ -192,7 +191,7 @@ function CreateQuestionContent() {
   }, [editId, source, db, user, router]);
 
   const subjects = useMemo(() => meta.classId ? getSubjectsForClass(meta.classId) : [], [meta.classId]);
-  const chapters = useMemo(() => (meta.classId && meta.subject) ? getChaptersForSubject(meta.classId, meta.subject) : [], [meta.classId, meta.subject]);
+  const chapterSuggestions = useMemo(() => (meta.classId && meta.subject) ? getChaptersForSubject(meta.classId, meta.subject) : [], [meta.classId, meta.subject]);
 
   const handleAddQuestion = (type: 'creative' | 'short' | 'mcq') => {
     setQuestions(prev => [...prev, { id: Math.random().toString(36).substr(2, 9), type, content: '', imageUrl: '' }]);
@@ -349,18 +348,25 @@ function CreateQuestionContent() {
               </div>
               <div className="space-y-2"><label className="text-sm font-semibold">সময়</label><Input value={meta.time || ''} onChange={e => setMeta(prev => ({...prev, time: e.target.value}))} className="font-bold" /></div>
               <div className="space-y-2"><label className="text-sm font-semibold">পূর্ণমান</label><Input value={meta.totalMarks || ''} onChange={e => setMeta(prev => ({...prev, totalMarks: e.target.value}))} className="font-bold" /></div>
-              <div className="space-y-2"><label className="text-sm font-semibold">শ্রেণি</label><Select onValueChange={v => setMeta(prev => ({...prev, classId: v}))} value={meta.classId || ''}><SelectTrigger className="font-bold"><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger><SelectContent>{CLASSES.map(c => <SelectItem key={c.id} value={c.id} className="font-bold">{c.label} শ্রেণি</SelectItem>)}</SelectContent></Select></div>
-              <div className="space-y-2"><label className="text-sm font-semibold">বিষয়</label><Select onValueChange={v => setMeta(prev => ({...prev, subject: v}))} value={meta.subject || ''} disabled={!meta.classId}><SelectTrigger className="font-bold"><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger><SelectContent>{subjects.map(s => <SelectItem key={s} value={s} className="font-bold">{s}</SelectItem>)}</SelectContent></Select></div>
+              <div className="space-y-2"><label className="text-sm font-semibold">শ্রেণি</label><Select onValueChange={v => setMeta(prev => ({...prev, classId: v, subject: '', chapter: ''}))} value={meta.classId || ''}><SelectTrigger className="font-bold"><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger><SelectContent>{CLASSES.map(c => <SelectItem key={c.id} value={c.id} className="font-bold">{c.label} শ্রেণি</SelectItem>)}</SelectContent></Select></div>
+              <div className="space-y-2"><label className="text-sm font-semibold">বিষয়</label><Select onValueChange={v => setMeta(prev => ({...prev, subject: v, chapter: ''}))} value={meta.subject || ''} disabled={!meta.classId}><SelectTrigger className="font-bold"><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger><SelectContent>{subjects.map(s => <SelectItem key={s} value={s} className="font-bold">{s}</SelectItem>)}</SelectContent></Select></div>
+              
               <div className="space-y-2">
-                <label className="text-sm font-semibold">অধ্যায় (ঐচ্ছিক)</label>
-                <Select onValueChange={v => setMeta(prev => ({...prev, chapter: v}))} value={meta.chapter || ''} disabled={!meta.subject}>
-                  <SelectTrigger className="font-bold"><SelectValue placeholder="অধ্যায় নির্বাচন করুন" /></SelectTrigger>
-                  <SelectContent>
-                    {chapters.map(ch => (
-                      <SelectItem key={ch} value={ch} className="font-bold">{ch}</SelectItem>
+                <label className="text-sm font-semibold">অধ্যায় (টাইপ করুন বা সিলেক্ট করুন)</label>
+                <div className="relative">
+                  <Input 
+                    list="chapter-options"
+                    value={meta.chapter || ''} 
+                    onChange={e => setMeta(prev => ({...prev, chapter: e.target.value}))} 
+                    placeholder="অধ্যায়ের নাম লিখুন..." 
+                    className="font-bold"
+                  />
+                  <datalist id="chapter-options">
+                    {chapterSuggestions.map(ch => (
+                      <option key={ch} value={ch} />
                     ))}
-                  </SelectContent>
-                </Select>
+                  </datalist>
+                </div>
               </div>
             </div>
             
@@ -394,7 +400,7 @@ function CreateQuestionContent() {
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => handleAddQuestion('creative')} className="border-primary text-primary font-bold"><Plus className="w-3 h-3" /> সৃজনশীল</Button>
             <Button variant="outline" size="sm" onClick={() => handleAddQuestion('short')} className="border-accent text-accent font-bold"><Plus className="w-3 h-3" /> সংক্ষিপ্ত</Button>
-            <Button variant="outline" size="sm" onClick={() => handleAddQuestion('mcq')} className="border-orange-500 text-orange-500 font-bold"><Plus className="w-3 h-3" /> বহুনির্বাচনি</Button>
+            <Button variant="outline" size="sm" onClick={() => handleAddQuestion('mcq')} className="border-orange-500 text-orange-600 font-bold"><Plus className="w-3 h-3" /> বহুনির্বাচনি</Button>
           </div>
         </div>
 

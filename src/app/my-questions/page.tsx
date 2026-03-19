@@ -54,21 +54,50 @@ import { CLASSES, getSubjectsForClass, getChaptersForSubject } from '@/lib/const
 import { toast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 
+// Helper for chapter normalization to group similar names
+function normalizeChapter(chapter: string): string {
+  if (!chapter) return '';
+  const bengaliToEnglish: Record<string, string> = {
+    '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4',
+    '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9'
+  };
+  const ordinalMap: Record<string, string> = {
+    'প্রথম': '1', 'দ্বিতীয়': '2', 'তৃতীয়': '3', 'চতুর্থ': '4', 'পঞ্চম': '5',
+    'ষষ্ঠ': '6', 'সপ্তম': '7', 'অষ্টম': '8', 'নবম': '9', 'দশম': '10'
+  };
+
+  let normalized = chapter.toString().toLowerCase().trim();
+  
+  // Replace ordinals
+  Object.entries(ordinalMap).forEach(([bnWord, num]) => {
+    if (normalized.includes(bnWord)) normalized = normalized.replace(bnWord, num);
+  });
+
+  // Replace Bengali digits
+  Object.entries(bengaliToEnglish).forEach(([bn, en]) => {
+    normalized = normalized.replace(new RegExp(bn, 'g'), en);
+  });
+
+  // Remove common suffixes and words
+  normalized = normalized.replace(/(অধ্যায়|অধ্যায়|ম|র্থ|ষ্ঠ|তম|য়|দশ|ঃ)/g, '');
+  // Remove spaces
+  normalized = normalized.replace(/\s+/g, '');
+  
+  return normalized;
+}
+
 export default function MyLibraryPage() {
   const db = useFirestore();
   const { user, loading: userLoading } = useUser();
   const router = useRouter();
   const [deleting, setDeleting] = useState<string | null>(null);
   
-  // Filtering states
   const [filterClassId, setFilterClassId] = useState<string>('all');
   const [filterSubject, setFilterSubject] = useState<string>('all');
   const [filterChapter, setFilterChapter] = useState<string>('all');
 
-  // Multi-select state for question sets
   const [selectedSets, setSelectedSets] = useState<string[]>([]);
   
-  // Selection Popup states
   const [isMergeDialogOpen, setIsMergeDialogOpen] = useState(false);
   const [mergeLoading, setMergeLoading] = useState(false);
   const [availableQuestions, setAvailableQuestions] = useState<any[]>([]);
@@ -80,19 +109,12 @@ export default function MyLibraryPage() {
     }
   }, [user, userLoading, router]);
 
-  // Available subjects based on selected class
   const availableSubjects = useMemo(() => {
     if (filterClassId === 'all') return [];
     return getSubjectsForClass(filterClassId);
   }, [filterClassId]);
 
-  // Available chapters based on subject
-  const availableChapters = useMemo(() => {
-    if (filterClassId === 'all' || filterSubject === 'all') return [];
-    return getChaptersForSubject(filterClassId, filterSubject);
-  }, [filterClassId, filterSubject]);
-
-  // Reset filters when class changes
+  // Reset filters
   useEffect(() => {
     setFilterSubject('all');
     setFilterChapter('all');
@@ -102,7 +124,6 @@ export default function MyLibraryPage() {
     setFilterChapter('all');
   }, [filterSubject]);
 
-  // Queries
   const questionsQuery = useMemo(() => {
     if (!db || !user) return null;
     return query(collection(db, 'questions'), where('userId', '==', user.uid));
@@ -116,12 +137,36 @@ export default function MyLibraryPage() {
   const { data: rawQuestions, loading: questionsLoading } = useCollection(questionsQuery);
   const { data: rawSheets, loading: sheetsLoading } = useCollection(sheetsQuery);
 
+  // Dynamically derive chapters from existing questions + predefined list
+  const availableChaptersList = useMemo(() => {
+    if (!rawQuestions) return [];
+    const chaptersSet = new Set<string>();
+    
+    // Add from data
+    rawQuestions.forEach(q => {
+      if (q.classId === filterClassId && q.subject === filterSubject && q.chapter) {
+        chaptersSet.add(q.chapter);
+      }
+    });
+
+    // Add from constants
+    if (filterClassId !== 'all' && filterSubject !== 'all') {
+      getChaptersForSubject(filterClassId, filterSubject).forEach(ch => chaptersSet.add(ch));
+    }
+
+    return Array.from(chaptersSet).sort((a, b) => a.localeCompare(b, 'bn', { numeric: true }));
+  }, [rawQuestions, filterClassId, filterSubject]);
+
   const filteredQuestions = useMemo(() => {
     if (!rawQuestions) return [];
     let result = [...rawQuestions];
     if (filterClassId !== 'all') result = result.filter(q => q.classId === filterClassId);
     if (filterSubject !== 'all') result = result.filter(q => q.subject === filterSubject);
-    if (filterChapter !== 'all') result = result.filter(q => q.chapter === filterChapter);
+    
+    if (filterChapter !== 'all') {
+      const normTarget = normalizeChapter(filterChapter);
+      result = result.filter(q => normalizeChapter(q.chapter || '') === normTarget);
+    }
     
     return result.sort((a, b) => {
       const dateA = (a.updatedAt as any)?.toDate?.() || (a.createdAt as any)?.toDate?.() || new Date(0);
@@ -188,7 +233,6 @@ export default function MyLibraryPage() {
       });
       
       setAvailableQuestions(allQ);
-      // Default select all
       setSelectedIndividualQuestions(allQ.map(q => q.id));
     } catch (e) {
       toast({ variant: "destructive", title: "ত্রুটি", description: "প্রশ্নগুলো লোড করা সম্ভব হয়নি।" });
@@ -203,7 +247,6 @@ export default function MyLibraryPage() {
       return;
     }
 
-    // Filter and prepare data
     const finalQuestions = availableQuestions
       .filter(q => selectedIndividualQuestions.includes(q.id))
       .map(q => ({
@@ -222,7 +265,6 @@ export default function MyLibraryPage() {
         optD: q.optD || ''
       }));
 
-    // Use session storage to pass large data to the editor
     sessionStorage.setItem('merged_questions_data', JSON.stringify(finalQuestions));
     router.push('/create-question?source=merge');
   };
@@ -438,7 +480,7 @@ export default function MyLibraryPage() {
 
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-[10px] font-bold text-primary uppercase tracking-wider">
-            <ListOrdered className="w-3 h-3" /> অধ্যায়
+            <ListOrdered className="w-3 h-3" /> অধ্যায় (সব ধরণের বানান সমর্থন করে)
           </div>
           <Select value={filterChapter} onValueChange={setFilterChapter} disabled={filterSubject === 'all'}>
             <SelectTrigger className="w-full bg-white font-bold h-9 text-xs">
@@ -446,7 +488,9 @@ export default function MyLibraryPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all" className="font-bold">সব অধ্যায়</SelectItem>
-              {availableChapters.map(ch => <SelectItem key={ch} value={ch} className="font-bold">{ch}</SelectItem>)}
+              {availableChaptersList.map(ch => (
+                <SelectItem key={ch} value={ch} className="font-bold">{ch}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -491,7 +535,6 @@ export default function MyLibraryPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Question Selection Popup (Dialog) */}
       <Dialog open={isMergeDialogOpen} onOpenChange={setIsMergeDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col font-kalpurush overflow-hidden p-0">
           <DialogHeader className="p-6 bg-primary/5 border-b sticky top-0 z-10">
