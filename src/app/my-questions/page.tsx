@@ -80,86 +80,58 @@ export default function MyLibraryPage() {
     return getChaptersForSubject(filterClassId, filterSubject);
   }, [filterClassId, filterSubject]);
 
-  // Reset subject filter when class changes
+  // Reset filters when class changes
   useEffect(() => {
     setFilterSubject('all');
     setFilterChapter('all');
   }, [filterClassId]);
 
-  // Reset chapter filter when subject changes
   useEffect(() => {
     setFilterChapter('all');
   }, [filterSubject]);
 
-  // Query for Questions
+  // Queries
   const questionsQuery = useMemo(() => {
     if (!db || !user) return null;
-    return query(
-      collection(db, 'questions'),
-      where('userId', '==', user.uid)
-    );
+    return query(collection(db, 'questions'), where('userId', '==', user.uid));
   }, [db, user]);
 
-  // Query for Lecture Sheets
   const sheetsQuery = useMemo(() => {
     if (!db || !user) return null;
-    return query(
-      collection(db, 'lecture-sheets'),
-      where('userId', '==', user.uid)
-    );
+    return query(collection(db, 'lecture-sheets'), where('userId', '==', user.uid));
   }, [db, user]);
 
   const { data: rawQuestions, loading: questionsLoading } = useCollection(questionsQuery);
   const { data: rawSheets, loading: sheetsLoading } = useCollection(sheetsQuery);
 
-  const sortedQuestions = useMemo(() => {
-    if (!rawQuestions) return [];
-    return [...rawQuestions].sort((a, b) => {
-      const dateA = (a.updatedAt as any)?.toDate?.() || (a.createdAt as any)?.toDate?.() || new Date(0);
-      const dateB = (b.updatedAt as any)?.toDate?.() || (b.createdAt as any)?.toDate?.() || new Date(0);
-      return dateB.getTime() - dateA.getTime();
-    });
-  }, [rawQuestions]);
-
-  const sortedSheets = useMemo(() => {
-    if (!rawSheets) return [];
-    return [...rawSheets].sort((a, b) => {
-      const dateA = (a.updatedAt as any)?.toDate?.() || (a.createdAt as any)?.toDate?.() || new Date(0);
-      const dateB = (b.updatedAt as any)?.toDate?.() || (b.createdAt as any)?.toDate?.() || new Date(0);
-      return dateB.getTime() - dateA.getTime();
-    });
-  }, [rawSheets]);
-
   const filteredQuestions = useMemo(() => {
-    let result = sortedQuestions;
-    if (filterClassId !== 'all') {
-      result = result.filter(q => q.classId === filterClassId);
-    }
-    if (filterSubject !== 'all') {
-      result = result.filter(q => q.subject === filterSubject);
-    }
-    if (filterChapter !== 'all') {
-      result = result.filter(q => q.chapter === filterChapter);
-    }
-    if (filterExam !== 'all') {
-      result = result.filter(q => q.exam === filterExam);
-    }
-    return result;
-  }, [sortedQuestions, filterClassId, filterSubject, filterChapter, filterExam]);
+    if (!rawQuestions) return [];
+    let result = [...rawQuestions];
+    if (filterClassId !== 'all') result = result.filter(q => q.classId === filterClassId);
+    if (filterSubject !== 'all') result = result.filter(q => q.subject === filterSubject);
+    if (filterChapter !== 'all') result = result.filter(q => q.chapter === filterChapter);
+    if (filterExam !== 'all') result = result.filter(q => q.exam === filterExam);
+    
+    return result.sort((a, b) => {
+      const dateA = (a.updatedAt as any)?.toDate?.() || (a.createdAt as any)?.toDate?.() || new Date(0);
+      const dateB = (b.updatedAt as any)?.toDate?.() || (b.createdAt as any)?.toDate?.() || new Date(0);
+      return dateB.getTime() - dateA.getTime();
+    });
+  }, [rawQuestions, filterClassId, filterSubject, filterChapter, filterExam]);
 
   const filteredSheets = useMemo(() => {
-    let result = sortedSheets;
-    if (filterClassId !== 'all') {
-      result = result.filter(s => s.classId === filterClassId);
-    }
-    if (filterSubject !== 'all') {
-      result = result.filter(s => s.subject === filterSubject);
-    }
-    if (filterSheetType !== 'all') {
-      result = result.filter(s => s.type === filterSheetType);
-    }
-    return result;
-  }, [sortedSheets, filterClassId, filterSubject, filterSheetType]);
+    if (!rawSheets) return [];
+    let result = [...rawSheets];
+    if (filterClassId !== 'all') result = result.filter(s => s.classId === filterClassId);
+    if (filterSubject !== 'all') result = result.filter(s => s.subject === filterSubject);
+    if (filterSheetType !== 'all') result = result.filter(s => s.type === filterSheetType);
+    
+    return result.sort((a, b) => {
+      const dateA = (a.updatedAt as any)?.toDate?.() || (a.createdAt as any)?.toDate?.() || new Date(0);
+      const dateB = (b.updatedAt as any)?.toDate?.() || (b.createdAt as any)?.toDate?.() || new Date(0);
+      return dateB.getTime() - dateA.getTime();
+    });
+  }, [rawSheets, filterClassId, filterSubject, filterSheetType]);
 
   const handleDelete = async (id: string, type: 'questions' | 'lecture-sheets') => {
     setDeleting(id);
@@ -362,8 +334,6 @@ export default function MyLibraryPage() {
     );
   }
 
-  if (!user) return null;
-
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-fade-in pb-10">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-6">
@@ -389,7 +359,7 @@ export default function MyLibraryPage() {
         )}
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 bg-primary/5 p-4 rounded-xl border border-primary/10">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 bg-primary/5 p-4 rounded-xl border border-primary/10">
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-[10px] font-bold text-primary uppercase tracking-wider">
             <GraduationCap className="w-3 h-3" /> শ্রেণি
@@ -463,25 +433,6 @@ export default function MyLibraryPage() {
         </TabsList>
 
         <TabsContent value="questions" className="animate-fade-in space-y-4">
-          <div className="mb-4 flex items-center gap-2 bg-muted/20 p-2 rounded-lg">
-             <div className="flex items-center gap-2 text-xs font-bold text-primary mr-2">
-               <FileText className="w-3 h-3" /> ফিল্টার:
-             </div>
-             <Select value={filterExam} onValueChange={setFilterExam}>
-                <SelectTrigger className="w-[180px] bg-white font-bold h-8 text-[10px]">
-                  <SelectValue placeholder="সব ধরন" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all" className="font-bold">সব ধরন</SelectItem>
-                  <SelectItem value="অধ্যায় ভিত্তিক পরীক্ষা" className="font-bold">অধ্যায় ভিত্তিক পরীক্ষা</SelectItem>
-                  <SelectItem value="সাপ্তাহিক পরীক্ষা" className="font-bold">সাপ্তাহিক পরীক্ষা</SelectItem>
-                  <SelectItem value="মাসিক পরীক্ষা" className="font-bold">মাসিক পরীক্ষা</SelectItem>
-                  <SelectItem value="অর্ধ-বার্ষিক পরীক্ষা" className="font-bold">অর্ধ-বার্ষিক পরীক্ষা</SelectItem>
-                  <SelectItem value="বার্ষিক পরীক্ষা" className="font-bold">বার্ষিক পরীক্ষা</SelectItem>
-                  <SelectItem value="মডেল টেস্ট" className="font-bold">মডেল টেস্ট</SelectItem>
-                </SelectContent>
-             </Select>
-          </div>
           {filteredQuestions.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredQuestions.map(renderQuestionCard)}
@@ -500,21 +451,6 @@ export default function MyLibraryPage() {
         </TabsContent>
 
         <TabsContent value="sheets" className="animate-fade-in space-y-4">
-          <div className="mb-4 flex items-center gap-2 bg-muted/20 p-2 rounded-lg">
-             <div className="flex items-center gap-2 text-xs font-bold text-orange-600 mr-2">
-               <BookOpen className="w-3 h-3" /> শিটের ধরন ফিল্টার:
-             </div>
-             <Select value={filterSheetType} onValueChange={setFilterSheetType}>
-                <SelectTrigger className="w-[180px] bg-white font-bold h-8 text-[10px]">
-                  <SelectValue placeholder="সব ধরন" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all" className="font-bold">সব ধরন</SelectItem>
-                  <SelectItem value="written" className="font-bold">লিখিত</SelectItem>
-                  <SelectItem value="mcq" className="font-bold">বহুনির্বাচনি</SelectItem>
-                </SelectContent>
-             </Select>
-          </div>
           {filteredSheets.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredSheets.map(renderSheetCard)}

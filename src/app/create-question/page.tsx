@@ -382,7 +382,9 @@ function CreateQuestionContent() {
                 <Select onValueChange={v => setMeta(prev => ({...prev, chapter: v}))} value={meta.chapter || ''} disabled={!meta.subject}>
                   <SelectTrigger><SelectValue placeholder="অধ্যায় নির্বাচন করুন" /></SelectTrigger>
                   <SelectContent>
-                    {chapters.map(ch => <SelectItem key={ch} value={ch}>{ch}</SelectItem>)}
+                    {chapters.map(ch => (
+                      <SelectItem key={ch} value={ch}>{ch}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
