@@ -15,6 +15,7 @@ import { useFirestore, useUser, useDoc } from '@/firebase';
 import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { cn } from '@/lib/utils';
 
 function toBengaliNumber(n: number | string | undefined | null): string {
   if (n === undefined || n === null || n === '') return '';
@@ -70,6 +71,7 @@ function CreateLectureSheetContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const editId = searchParams.get('id');
+  const isPrintMode = searchParams.get('print') === 'true';
   const [loading, setLoading] = useState(!!editId);
   const [saving, setSaving] = useState(false);
   const [existingData, setExistingData] = useState<any>(null);
@@ -113,6 +115,15 @@ function CreateLectureSheetContent() {
     if (user && db) loadSheet();
   }, [editId, db, user, router]);
 
+  useEffect(() => {
+    if (isPrintMode && !loading && !userLoading && data.content) {
+      const timer = setTimeout(() => {
+        window.print();
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [isPrintMode, loading, userLoading, data.content]);
+
   const subjects = useMemo(() => data.classId ? getSubjectsForClass(data.classId) : [], [data.classId]);
 
   const handleSave = () => {
@@ -149,17 +160,20 @@ function CreateLectureSheetContent() {
       });
   };
 
-  if (loading || userLoading) return <div className="flex flex-col items-center justify-center p-20 min-h-[50vh]"><Loader2 className="w-12 h-12 animate-spin text-primary mb-4" /><p className="text-muted-foreground">অ্যাক্সেস চেক করা হচ্ছে...</p></div>;
+  if (loading || userLoading) return <div className="flex flex-col items-center justify-center p-20 min-h-[50vh] font-kalpurush"><Loader2 className="w-12 h-12 animate-spin text-primary mb-4" /><p className="text-muted-foreground font-bold">অ্যাক্সেস চেক করা হচ্ছে...</p></div>;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-32">
-      <div className="no-print space-y-8">
+    <div className="max-w-5xl mx-auto space-y-8 pb-32 font-kalpurush">
+      <div className={cn("no-print space-y-8", isPrintMode && "hidden")}>
         <header className="flex items-center justify-between border-b pb-4">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-orange-500 text-white flex items-center justify-center shadow-sm"><BookOpen className="w-7 h-7" /></div>
             <h2 className="text-2xl font-bold text-primary">লেকচার শিট নির্মাতা</h2>
           </div>
-          <Button variant="ghost" onClick={() => router.back()} className="gap-2"><ArrowLeft className="w-4 h-4" /> ফিরে যান</Button>
+          <div className="flex gap-2">
+            <Button variant="ghost" onClick={() => router.back()} className="gap-2 font-bold"><ArrowLeft className="w-4 h-4" /> ফিরে যান</Button>
+            <Button variant="secondary" onClick={() => window.print()} className="gap-2 font-bold"><Printer className="w-4 h-4" /> প্রিন্ট</Button>
+          </div>
         </header>
 
         <Card className="shadow-md">
@@ -209,72 +223,50 @@ function CreateLectureSheetContent() {
               placeholder="এখানে আপনার লেকচার নোট লিখুন... সেট লিখতে {x \in \mathbb{N} : x < 4} এভাবে টাইপ করুন।" 
               value={data.content || ''} 
               onChange={e => setData(prev => ({...prev, content: e.target.value}))} 
-              className="min-h-[400px] text-base leading-relaxed" 
+              className="min-h-[400px] text-base leading-relaxed font-bold" 
             />
           </CardContent>
         </Card>
 
         <div className="flex gap-4 pt-8">
           <Button onClick={handleSave} disabled={saving} className="gap-2 px-8 font-bold"><Save className="w-4 h-4" /> সেভ করুন</Button>
-          <Button onClick={() => window.print()} variant="secondary" className="gap-2 px-10 shadow-lg font-bold"><Printer className="w-4 h-4" /> প্রিন্ট / পিডিএফ</Button>
+          <Button onClick={() => window.print()} variant="secondary" className="gap-2 px-10 shadow-lg font-bold"><Printer className="w-4 h-4" /> প্রিন্ট</Button>
         </div>
       </div>
 
-      <div className="print-only">
+      {isPrintMode && (
+        <div className="no-print flex justify-center py-4 border-b bg-muted/10">
+          <Button variant="outline" onClick={() => router.back()} className="gap-2 font-bold border-primary text-primary">
+            <ArrowLeft className="w-4 h-4" /> লাইব্রেরিতে ফিরে যান
+          </Button>
+        </div>
+      )}
+
+      <div className={cn("print-only font-kalpurush", isPrintMode && "block")}>
         <style dangerouslySetInnerHTML={{ __html: `
-          @media print {
-            @page { 
-              size: A4; 
-              margin: 0.5in !important; 
-            }
-            body, html { 
-              margin: 0 !important; 
-              padding: 0 !important;
-              background: white !important;
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-            }
-            body { 
-              font-family: 'Kalpurush', sans-serif !important; 
-              font-size: 9pt !important; 
-              color: black !important; 
-              line-height: 1.5 !important; 
-            }
+          @media print, screen {
+            ${isPrintMode ? `
+              body { background: #f0f2f5 !important; }
+              .paper { 
+                background: white !important; 
+                margin: 20px auto !important; 
+                padding: 0.5in !important; 
+                box-shadow: 0 0 15px rgba(0,0,0,0.1);
+                min-height: 11.69in;
+              }
+            ` : ''}
             .paper { 
               width: 100% !important; 
               text-align: justify; 
-              position: relative; 
-              z-index: 10;
-              background: transparent !important;
-              padding: 0 !important;
+              color: black !important;
             }
             .header { margin-bottom: 8px; border-bottom: 1.5pt solid black; padding-bottom: 5px; }
-            .header-top { display: flex; align-items: center; justify-content: center; gap: 15pt; margin-bottom: 0px; }
+            .header-top { display: flex; align-items: center; justify-content: center; gap: 15pt; }
             .print-logo { max-height: 45pt; width: auto; object-fit: contain; }
-            .inst-name { font-size: 20pt; font-weight: 900; }
+            .inst-name { font-size: 25px !important; font-weight: 900; }
             .topic-title { font-size: 13pt; font-weight: bold; margin: 10px 0; text-align: center; text-decoration: underline; }
             .meta-info { display: flex; justify-content: center; gap: 20pt; font-weight: 900; margin-top: 4px; font-size: 10pt; border-top: 0.5pt solid #ddd; padding-top: 5px; }
             .content-area { white-space: pre-wrap; font-size: 9pt; background: transparent !important; }
-            
-            .watermark-container {
-              position: fixed !important;
-              top: 50% !important;
-              left: 50% !important;
-              transform: translate(-50%, -50%) !important;
-              width: 60% !important;
-              opacity: 0.08 !important;
-              z-index: 0 !important;
-              pointer-events: none;
-              display: flex !important;
-              justify-content: center;
-              align-items: center;
-            }
-            .watermark-container img {
-              max-width: 100% !important;
-              max-height: 100% !important;
-              object-fit: contain !important;
-              display: block !important;
-            }
             
             .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
             .math-num { border-bottom: 0.5pt solid black; padding: 0 1px; }
@@ -284,16 +276,13 @@ function CreateLectureSheetContent() {
             .math-sup { font-size: 0.7em; vertical-align: super; }
             .math-sub { font-size: 0.7em; vertical-align: sub; }
             .math-text { font-family: 'Kalpurush', sans-serif; font-style: normal; }
-            .no-print { display: none !important; }
+          }
+          @media print {
+            .paper { margin: 0 !important; box-shadow: none !important; padding: 0 !important; }
+            @page { size: A4; margin: 0.5in !important; }
           }
         `}} />
         
-        {appLogoUrl && (
-          <div className="watermark-container">
-            <img src={appLogoUrl} alt="watermark" />
-          </div>
-        )}
-
         <div className="paper">
           <div className="header">
             <div className="header-top">
@@ -313,4 +302,4 @@ function CreateLectureSheetContent() {
   );
 }
 
-export default function CreateLectureSheetPage() { return <Suspense fallback={<div className="flex justify-center p-20"><Loader2 className="animate-spin text-primary" /></div>}><CreateLectureSheetContent /></Suspense>; }
+export default function CreateLectureSheetPage() { return <Suspense fallback={<div className="flex justify-center p-20 font-kalpurush"><Loader2 className="animate-spin text-primary" /></div>}><CreateLectureSheetContent /></Suspense>; }

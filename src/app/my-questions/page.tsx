@@ -267,7 +267,7 @@ export default function MyLibraryPage() {
               </CardHeader>
               <CardFooter className="pt-0 flex justify-between items-center text-[10px] font-bold text-muted-foreground">
                 <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {s.updatedAt?.toDate ? format(s.updatedAt.toDate(), 'dd MMM, yy', { locale: bn }) : ''}</span>
-                <Link href={`/create-lecture-sheet?id=${s.id}`}><Button size="sm" variant="outline" className="h-7 text-[10px] font-bold gap-1 border-orange-500 text-orange-600"><Printer className="w-3 h-3" /> প্রিন্ট</Button></Link>
+                <Link href={`/create-lecture-sheet?id=${s.id}&print=true`}><Button size="sm" variant="outline" className="h-7 text-[10px] font-bold gap-1 border-orange-500 text-orange-600"><Printer className="w-3 h-3" /> প্রিন্ট</Button></Link>
               </CardFooter>
             </Card>
           ))}
@@ -324,7 +324,7 @@ export default function MyLibraryPage() {
             </CardHeader>
             <CardFooter className="pt-0 flex justify-between items-center text-[10px] font-bold text-muted-foreground">
               <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {q.updatedAt?.toDate ? format(q.updatedAt.toDate(), 'dd MMM, yy', { locale: bn }) : ''}</span>
-              <Link href={`/create-question?id=${q.id}`}><Button size="sm" variant="outline" className="h-7 text-[10px] font-bold gap-1 border-primary text-primary"><Printer className="w-3 h-3" /> প্রিন্ট</Button></Link>
+              <Link href={`/create-question?id=${q.id}&print=true`}><Button size="sm" variant="outline" className="h-7 text-[10px] font-bold gap-1 border-primary text-primary"><Printer className="w-3 h-3" /> প্রিন্ট</Button></Link>
             </CardFooter>
           </Card>
         ))}
@@ -381,13 +381,13 @@ export default function MyLibraryPage() {
           {selectedSubject && (
             <>
               <ChevronRight className="w-3 h-3 shrink-0" />
-              <span className={cn("cursor-pointer hover:text-primary", viewMode === 'chapters' && "text-primary")} onClick={() => { setViewMode('chapters'); setSelectedChapter(null); setSelectedType(null); setSelectedSubType(null); }}>{selectedSubject}</span>
+              <span className={cn("cursor-pointer hover:text-primary", viewMode === 'chapters' && "text-primary")} onClick={() => { setViewMode('chapters'); setSelectedSubject(null); setSelectedChapter(null); setSelectedType(null); setSelectedSubType(null); }}>{selectedSubject}</span>
             </>
           )}
           {selectedChapter && (
             <>
               <ChevronRight className="w-3 h-3 shrink-0" />
-              <span className={cn("cursor-pointer hover:text-primary", viewMode === 'types' && "text-primary")} onClick={() => { setViewMode('types'); setSelectedType(null); setSelectedSubType(null); }}>{selectedChapter === 'শিরোনামহীন' ? 'শিরোনামহীন' : 'অধ্যায় / টপিক'}</span>
+              <span className={cn("cursor-pointer hover:text-primary", viewMode === 'types' && "text-primary")} onClick={() => { setViewMode('chapters'); setSelectedChapter(null); setSelectedType(null); setSelectedSubType(null); }}>{selectedChapter === 'শিরোনামহীন' ? 'শিরোনামহীন' : 'অধ্যায় / টপিক'}</span>
             </>
           )}
           {selectedType && (
@@ -429,4 +429,3 @@ function toBengaliNumber(n: number | string | undefined | null): string {
   const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
   return n.toString().replace(/\d/g, (digit) => bengaliDigits[parseInt(digit)]);
 }
-    

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, Suspense, useMemo, useRef } from 'react';
@@ -118,6 +119,7 @@ function CreateQuestionContent() {
   const router = useRouter();
   const editId = searchParams.get('id');
   const source = searchParams.get('source');
+  const isPrintMode = searchParams.get('print') === 'true';
   
   const [loading, setLoading] = useState(!!editId || source === 'merge');
   const [saving, setSaving] = useState(false);
@@ -188,6 +190,15 @@ function CreateQuestionContent() {
     }
     if (user && db) loadQuestions();
   }, [editId, source, db, user, router]);
+
+  useEffect(() => {
+    if (isPrintMode && !loading && !userLoading && questions.length > 0) {
+      const timer = setTimeout(() => {
+        window.print();
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [isPrintMode, loading, userLoading, questions]);
 
   const subjects = useMemo(() => meta.classId ? getSubjectsForClass(meta.classId) : [], [meta.classId]);
   const chapterSuggestions = useMemo(() => (meta.classId && meta.subject) ? getChaptersForSubject(meta.classId, meta.subject) : [], [meta.classId, meta.subject]);
@@ -327,13 +338,16 @@ function CreateQuestionContent() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-32 font-kalpurush">
-      <div className="no-print space-y-8">
+      <div className={cn("no-print space-y-8", isPrintMode && "hidden")}>
         <header className="flex items-center justify-between border-b pb-4">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-primary text-white flex items-center justify-center shadow-sm"><FileText className="w-7 h-7" /></div>
             <h2 className="text-2xl font-bold text-primary">প্রশ্নপত্র নির্মাতা</h2>
           </div>
-          <Button variant="ghost" onClick={() => router.push('/my-questions')} className="gap-2 font-bold"><ArrowLeft className="w-4 h-4" /> আমার লাইব্রেরি</Button>
+          <div className="flex gap-2">
+            <Button variant="ghost" onClick={() => router.push('/my-questions')} className="gap-2 font-bold"><ArrowLeft className="w-4 h-4" /> ফিরে যান</Button>
+            <Button variant="secondary" onClick={() => window.print()} className="gap-2 font-bold"><Printer className="w-4 h-4" /> প্রিন্ট</Button>
+          </div>
         </header>
 
         <Card className="shadow-md">
@@ -451,32 +465,34 @@ function CreateQuestionContent() {
 
         <div className="flex gap-4 pt-8">
           <Button onClick={handleSaveToDb} disabled={saving} className="gap-2 px-8 font-bold"><Save className="w-4 h-4" /> সেভ করুন</Button>
-          <Button onClick={() => window.print()} variant="secondary" className="gap-2 px-10 shadow-lg font-bold"><Printer className="w-4 h-4" /> প্রিন্ট / পিডিএফ</Button>
+          <Button onClick={() => window.print()} variant="secondary" className="gap-2 px-10 shadow-lg font-bold"><Printer className="w-4 h-4" /> প্রিন্ট</Button>
         </div>
       </div>
 
-      <div className="print-only font-kalpurush">
+      {isPrintMode && (
+        <div className="no-print flex justify-center py-4 border-b bg-muted/10">
+          <Button variant="outline" onClick={() => router.back()} className="gap-2 font-bold border-primary text-primary">
+            <ArrowLeft className="w-4 h-4" /> লাইব্রেরিতে ফিরে যান
+          </Button>
+        </div>
+      )}
+
+      <div className={cn("print-only font-kalpurush", isPrintMode && "block")}>
         <style dangerouslySetInnerHTML={{ __html: `
-          @media print {
-            @page { 
-              size: A4; 
-              margin: 0.4in !important; 
-            }
-            body, html { 
-              margin: 0 !important; 
-              padding: 0 !important;
-              background: white !important;
-              height: auto !important;
-              overflow: visible !important;
-            }
+          @media print, screen {
+            ${isPrintMode ? `
+              body { background: #f0f2f5 !important; }
+              .paper { 
+                background: white !important; 
+                margin: 20px auto !important; 
+                padding: 0.4in !important; 
+                box-shadow: 0 0 15px rgba(0,0,0,0.1);
+                min-height: 11.69in;
+              }
+            ` : ''}
             .paper { 
               width: 100% !important; 
               text-align: justify; 
-              position: static !important;
-              display: block !important;
-              background: transparent !important;
-              padding: 0 !important;
-              margin: 0 !important;
               color: black !important;
             }
             .header { text-align: center; margin-bottom: 6px; border-bottom: 1.5pt solid black; padding-bottom: 4px; }
@@ -519,7 +535,10 @@ function CreateQuestionContent() {
             .math-sup { font-size: 0.7em; vertical-align: super; }
             .math-sub { font-size: 0.7em; vertical-align: sub; }
             .math-text { font-family: 'Kalpurush', sans-serif; font-style: normal; }
-            .no-print { display: none !important; }
+          }
+          @media print {
+            .paper { margin: 0 !important; box-shadow: none !important; padding: 0 !important; }
+            @page { size: A4; margin: 0.4in !important; }
           }
         `}} />
         <div className="paper">
