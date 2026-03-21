@@ -93,6 +93,9 @@ function formatMath(text: string) {
   Object.entries(symbolMap).forEach(([key, val]) => { 
     formatted = formatted.replace(new RegExp(key, 'g'), val); 
   });
+
+  // আবৃত দশমিক (Recurring Decimals) formatting
+  formatted = formatted.replace(/\\dot\{([^}]+)\}/g, '<span class="math-dot">$1</span>');
   
   let prev;
   const fracRegex = /\\frac\{([^{}]+)\}\s*\{([^{}]+)\}/g;
@@ -101,7 +104,6 @@ function formatMath(text: string) {
     formatted = formatted.replace(fracRegex, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
   } while (formatted !== prev);
   
-  formatted = formatted.replace(/\\dot\{([^}]+)\}/g, '<span class="math-dot">$1</span>');
   formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
@@ -477,25 +479,22 @@ function CreateQuestionContent() {
                 position: relative;
               }
               .watermark {
-                position: absolute;
+                position: fixed;
                 top: 50%;
                 left: 50%;
-                transform: translate(-50%, -50%) rotate(-45deg);
-                opacity: 0.05;
-                font-size: 80pt;
-                font-weight: 900;
-                color: #000;
+                transform: translate(-50%, -50%);
+                opacity: 0.06;
+                width: 70%;
+                max-width: 500px;
                 pointer-events: none;
                 z-index: 0;
-                white-space: nowrap;
-                text-transform: uppercase;
               }
             ` : ''}
             .header { text-align: center; margin-bottom: 6px; border-bottom: 1.5pt solid black; padding-bottom: 4px; position: relative; z-index: 10; }
             .inst-name { font-size: 23px !important; font-weight: 800; }
             .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 2px; font-size: 9.5pt; }
             .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 15px; margin: 2px auto; text-transform: uppercase; }
-            .content-area { font-size: 10.5pt; line-height: 1.5; color: black !important; }
+            .content-area { font-size: 10.5pt; line-height: 1.5; color: black !important; position: relative; z-index: 10; }
             .stimulus-box { margin-bottom: 10px; font-weight: 500; text-align: justify; }
             .questions-list { margin-left: 15px; }
             .q-item { display: flex; gap: 8px; margin-bottom: 4px; }
@@ -518,7 +517,7 @@ function CreateQuestionContent() {
         )}
 
         <div className="paper">
-          {appLogoUrl && <div className="watermark">{meta.institution?.substring(0, 10)}</div>}
+          {appLogoUrl && <div className="watermark"><img src={appLogoUrl} alt="" className="w-full h-auto" /></div>}
           <div className="header">
             <div className="inst-name">{meta.institution || 'শিক্ষা প্রতিষ্ঠানের নাম'}</div>
             <div className="font-bold text-lg leading-none">{meta.exam || 'পরীক্ষার নাম'}</div>

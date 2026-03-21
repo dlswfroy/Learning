@@ -46,6 +46,9 @@ function formatMath(text: string) {
     formatted = formatted.replace(new RegExp(key, 'g'), val); 
   });
   
+  // আবৃত দশমিক (Recurring Decimals) formatting
+  formatted = formatted.replace(/\\dot\{([^}]+)\}/g, '<span class="math-dot">$1</span>');
+
   let prev;
   const simpleFracRegex = /\\frac\{([^{}]+)\}\s*\{([^{}]+)\}/g;
   do {
@@ -53,7 +56,6 @@ function formatMath(text: string) {
     formatted = formatted.replace(simpleFracRegex, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
   } while (formatted !== prev);
   
-  formatted = formatted.replace(/\\dot\{([^}]+)\}/g, '<span class="math-dot">$1</span>');
   formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
@@ -257,18 +259,15 @@ function CreateLectureSheetContent() {
                 position: relative;
               }
               .watermark {
-                position: absolute;
+                position: fixed;
                 top: 50%;
                 left: 50%;
-                transform: translate(-50%, -50%) rotate(-45deg);
-                opacity: 0.05;
-                font-size: 80pt;
-                font-weight: 900;
-                color: #000;
+                transform: translate(-50%, -50%);
+                opacity: 0.06;
+                width: 70%;
+                max-width: 500px;
                 pointer-events: none;
                 z-index: 0;
-                white-space: nowrap;
-                text-transform: uppercase;
               }
             ` : ''}
             .paper { 
@@ -279,10 +278,10 @@ function CreateLectureSheetContent() {
             .header { margin-bottom: 8px; border-bottom: 1.5pt solid black; padding-bottom: 5px; position: relative; z-index: 10; }
             .header-top { display: flex; align-items: center; justify-content: center; gap: 15pt; }
             .print-logo { max-height: 45pt; width: auto; object-fit: contain; }
-            .inst-name { font-size: 23px !important; font-weight: 900; }
+            .inst-name { font-size: 23px !important; font-weight: 800; }
             .topic-title { font-size: 13pt; font-weight: bold; margin: 10px 0; text-align: center; text-decoration: underline; }
             .meta-info { display: flex; justify-content: center; gap: 20pt; font-weight: 900; margin-top: 4px; font-size: 10pt; border-top: 0.5pt solid #ddd; padding-top: 5px; }
-            .content-area { white-space: pre-wrap; font-size: 9pt; background: transparent !important; }
+            .content-area { white-space: pre-wrap; font-size: 9pt; background: transparent !important; position: relative; z-index: 10; }
             
             .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
             .math-num { border-bottom: 0.5pt solid black; padding: 0 1px; }
@@ -302,7 +301,7 @@ function CreateLectureSheetContent() {
         `}} />
         
         <div className="paper">
-          {appLogoUrl && <div className="watermark">{data.institution?.substring(0, 10)}</div>}
+          {appLogoUrl && <div className="watermark"><img src={appLogoUrl} alt="" className="w-full h-auto" /></div>}
           <div className="header">
             <div className="header-top">
               {appLogoUrl && <img src={appLogoUrl} alt="logo" className="print-logo" />}
