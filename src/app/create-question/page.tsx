@@ -479,15 +479,17 @@ function CreateQuestionContent() {
                 z-index: 1;
               }
             ` : ''}
+            .paper { line-height: 1.1; }
             .header { text-align: center; margin-bottom: 2px; position: relative; z-index: 10; }
             .inst-name { font-size: 23px !important; font-weight: 800; line-height: 1.1; }
+            .font-bold { line-height: 1.1; }
             .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 2px; font-size: 10pt; border-top: 1.5pt solid black; padding-top: 2px; line-height: 1.1; }
-            .section-label { font-size: 11pt; font-weight: bold; border: 1pt solid black; display: inline-block; padding: 2px 20px; margin: 2px auto; text-transform: uppercase; }
+            .section-label { font-size: 11pt; font-weight: bold; border: 1pt solid black; display: inline-block; padding: 2px 20px; margin: 2px auto; text-transform: uppercase; line-height: 1.1; }
             .instruction-text { font-size: 8.5pt; font-style: italic; font-weight: 500; margin-bottom: 4px; text-align: justify; line-height: 1.1; }
             .content-area { font-size: 10.5pt; line-height: 1.1; color: black !important; position: relative; z-index: 10; }
-            .stimulus-box { margin-bottom: 4px; font-weight: 500; text-align: justify; line-height: 1.1; }
+            .stimulus-box { margin-bottom: 2px; font-weight: 500; text-align: justify; line-height: 1.1; }
             .questions-list { margin-left: 15px; }
-            .q-item { display: flex; gap: 8px; margin-bottom: 2px; line-height: 1.1; }
+            .q-item { display: flex; gap: 8px; margin-bottom: 1px; line-height: 1.1; }
             .q-marker { font-weight: bold; min-width: 22px; }
             
             .mcq-container { 
@@ -496,12 +498,12 @@ function CreateQuestionContent() {
               column-rule: 1pt solid #000; 
               column-fill: balance;
             }
-            .mcq-item { margin-bottom: 6px; break-inside: avoid; line-height: 1.1; }
+            .mcq-item { margin-bottom: 4px; break-inside: avoid; line-height: 1.1; }
             .mcq-options { 
               display: grid; 
               grid-template-columns: 1fr 1fr; 
               gap: 1px 10px; 
-              margin-top: 2px; 
+              margin-top: 1px; 
               padding-left: 20px; 
               font-size: 10pt; 
               line-height: 1.1;
@@ -519,7 +521,7 @@ function CreateQuestionContent() {
             .math-text { font-family: 'Kalpurush', sans-serif; font-style: normal; }
           }
           @media print {
-            .paper { margin: 0 !important; box-shadow: none !important; width: 100% !important; height: auto !important; }
+            .paper { margin: 0 !important; box-shadow: none !important; width: 100% !important; height: auto !important; padding-top: 0 !important; }
             .no-print { display: none !important; }
             @page { size: auto; margin: 0.5in !important; }
           }
@@ -544,44 +546,52 @@ function CreateQuestionContent() {
             </div>
           </div>
 
-          <div className="content-area mt-2">
+          <div className="content-area mt-1">
             {/* Creative Section */}
             {questions.some(q => q.type === 'creative') && (
               <div className="mb-4">
-                <div className="text-center mb-2">
+                <div className="text-center mb-1">
                   <div className="section-label">সৃজনশীল প্রশ্ন</div>
                   <p className="text-[10px] font-bold mt-0.5">[{meta.creativeInstruction || 'যেকোনো ৭টি প্রশ্নের উত্তর দাও'}]</p>
                 </div>
                 {questions.filter(q => q.type === 'creative').map((q, idx) => {
                   const p = parseText(q.content);
                   return (
-                    <div key={q.id} className="mb-3 break-inside-avoid">
-                      <div className="flex gap-2 font-bold mb-1">
+                    <div key={q.id} className="mb-2 break-inside-avoid">
+                      <div className="flex gap-2 font-bold mb-0.5">
                         <span>{toBengaliNumber(idx + 1)}.</span>
                         <div className="stimulus-box" dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} />
                       </div>
-                      {q.imageUrl && <img src={q.imageUrl} className="max-w-[250px] mx-auto mb-2 border p-1" />}
+                      {q.imageUrl && <img src={q.imageUrl} className="max-w-[250px] mx-auto mb-1 border p-0.5" />}
                       <div className="questions-list">
-                        <div className="q-item">
-                          <span className="q-marker">ক.</span>
-                          <div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.k) }} />
-                          <span className="font-bold">{toBengaliNumber(meta.marksA)}</span>
-                        </div>
-                        <div className="q-item">
-                          <span className="q-marker">খ.</span>
-                          <div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.kh) }} />
-                          <span className="font-bold">{toBengaliNumber(meta.marksB)}</span>
-                        </div>
-                        <div className="q-item">
-                          <span className="q-marker">গ.</span>
-                          <div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.g) }} />
-                          <span className="font-bold">{toBengaliNumber(meta.marksC)}</span>
-                        </div>
-                        <div className="q-item">
-                          <span className="q-marker">ঘ.</span>
-                          <div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.gh) }} />
-                          <span className="font-bold">{toBengaliNumber(meta.marksD)}</span>
-                        </div>
+                        {p.k && (
+                          <div className="q-item">
+                            <span className="q-marker">ক.</span>
+                            <div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.k) }} />
+                            <span className="font-bold">{toBengaliNumber(meta.marksA)}</span>
+                          </div>
+                        )}
+                        {p.kh && (
+                          <div className="q-item">
+                            <span className="q-marker">খ.</span>
+                            <div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.kh) }} />
+                            <span className="font-bold">{toBengaliNumber(meta.marksB)}</span>
+                          </div>
+                        )}
+                        {p.g && (
+                          <div className="q-item">
+                            <span className="q-marker">গ.</span>
+                            <div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.g) }} />
+                            <span className="font-bold">{toBengaliNumber(meta.marksC)}</span>
+                          </div>
+                        )}
+                        {p.gh && (
+                          <div className="q-item">
+                            <span className="q-marker">ঘ.</span>
+                            <div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.gh) }} />
+                            <span className="font-bold">{toBengaliNumber(meta.marksD)}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -592,13 +602,13 @@ function CreateQuestionContent() {
             {/* Short Section */}
             {questions.some(q => q.type === 'short') && (
               <div className="mb-4">
-                <div className="text-center mb-2">
+                <div className="text-center mb-1">
                   <div className="section-label">সংক্ষিপ্ত প্রশ্ন</div>
                   <p className="text-[10px] font-bold mt-0.5">[{meta.shortInstruction || 'সকল প্রশ্নের উত্তর দাও'}]</p>
                 </div>
                 {questions.filter(q => q.type === 'short').map((q, idx) => {
                   return (
-                    <div key={q.id} className="mb-2 break-inside-avoid flex gap-2">
+                    <div key={q.id} className="mb-1 break-inside-avoid flex gap-2">
                       <span className="font-bold">{toBengaliNumber(idx + 1)}.</span>
                       <div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(q.content) }} />
                       <span className="font-bold ml-auto">{toBengaliNumber(meta.shortMarks)}</span>
@@ -610,10 +620,10 @@ function CreateQuestionContent() {
 
             {/* MCQ Section */}
             {questions.some(q => q.type === 'mcq') && (
-              <div className="mt-4">
-                <div className="text-center mb-4">
+              <div className="mt-2">
+                <div className="text-center mb-2">
                   <div className="section-label">বহুনির্বাচনি প্রশ্ন</div>
-                  <div className="instruction-text mt-1 mx-4">
+                  <div className="instruction-text mt-0.5 mx-4">
                     [ {meta.mcqInstruction || 'সঠিক উত্তরের বিপরীতের বৃত্তটি বল পয়েন্ট কলম দ্বারা ভরাট কর। সকল প্রশ্নের উত্তর দিতে হবে। প্রশ্নপত্রে কোন প্রকার দাগ দেওয়া যাবে না।'} ]
                   </div>
                 </div>
@@ -626,7 +636,7 @@ function CreateQuestionContent() {
                           <span className="font-bold">{toBengaliNumber(idx + 1)}.</span>
                           <div dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} />
                         </div>
-                        {q.imageUrl && <img src={q.imageUrl} className="max-w-full h-auto mx-auto my-1 border p-1" />}
+                        {q.imageUrl && <img src={q.imageUrl} className="max-w-full h-auto mx-auto my-0.5 border p-0.5" />}
                         <div className="mcq-options">
                           <div>ক) {formatMath(p.k)}</div>
                           <div>খ) {formatMath(p.kh)}</div>

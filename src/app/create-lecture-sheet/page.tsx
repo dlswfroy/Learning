@@ -262,10 +262,11 @@ function CreateLectureSheetContent() {
               width: 100% !important; 
               text-align: justify; 
               color: black !important;
+              line-height: 1.1;
             }
             .header { margin-bottom: 2px; border-bottom: 1.5pt solid black; padding-bottom: 2px; position: relative; z-index: 10; text-align: center; }
             .inst-name { font-size: 23px !important; font-weight: 800; line-height: 1.1; }
-            .topic-title { font-size: 13pt; font-weight: bold; margin: 6px 0; text-align: center; text-decoration: underline; line-height: 1.1; }
+            .topic-title { font-size: 13pt; font-weight: bold; margin: 4px 0; text-align: center; text-decoration: underline; line-height: 1.1; }
             .meta-info { display: flex; justify-content: center; gap: 20pt; font-weight: 900; margin-top: 2px; font-size: 10pt; border-top: 0.5pt solid #ddd; padding-top: 2px; line-height: 1.1; }
             .content-area { white-space: pre-wrap; font-size: 9.5pt; line-height: 1.1; background: transparent !important; position: relative; z-index: 10; }
             
@@ -281,7 +282,7 @@ function CreateLectureSheetContent() {
             .math-text { font-family: 'Kalpurush', sans-serif; font-style: normal; }
           }
           @media print {
-            .paper { margin: 0 !important; box-shadow: none !important; padding: 0 !important; }
+            .paper { margin: 0 !important; box-shadow: none !important; padding: 0 !important; padding-top: 0 !important; }
             @page { size: auto; margin: 0.5in !important; }
           }
         `}} />
