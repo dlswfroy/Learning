@@ -50,8 +50,16 @@ function toBengaliNumber(n: number | string | undefined | null): string {
   return n.toString().replace(/\d/g, (digit) => bengaliDigits[parseInt(digit)]);
 }
 
-// Enhanced helper for chapter normalization to group all variations into one "Main Folder"
-function getChapterGroupKey(chapter: string): string {
+// Map numbers to Bengali ordinal names
+const BENGALI_ORDINALS: Record<string, string> = {
+  '1': 'প্রথম অধ্যায়', '2': 'দ্বিতীয় অধ্যায়', '3': 'তৃতীয় অধ্যায়', '4': 'চতুর্থ অধ্যায়', '5': 'পঞ্চম অধ্যায়',
+  '6': 'ষষ্ঠ অধ্যায়', '7': 'সপ্তম অধ্যায়', '8': 'অষ্টম অধ্যায়', '9': 'নবম অধ্যায়', '10': 'দশম অধ্যায়',
+  '11': 'একাদশ অধ্যায়', '12': 'দ্বাদশ অধ্যায়', '13': 'ত্রয়োদশ অধ্যায়', '14': 'চতুর্দশ অধ্যায়', '15': 'পঞ্চদশ অধ্যায়',
+  '16': 'ষোড়শ অধ্যায়', '17': 'সপ্তদশ অধ্যায়', '18': 'অষ্টাদশ অধ্যায়', '19': 'ঊনবিংশ অধ্যায়', '20': 'বিংশ অধ্যায়'
+};
+
+// Enhanced helper for chapter normalization to group all variations into one "Standardized Folder"
+function getStandardizedChapterName(chapter: string): string {
   if (!chapter) return 'শিরোনামহীন';
   
   const bengaliToEnglish: Record<string, string> = {
@@ -78,13 +86,16 @@ function getChapterGroupKey(chapter: string): string {
     normalized = normalized.replace(new RegExp(bn, 'g'), en);
   });
   
-  // Extract only numbers if present
-  const matches = normalized.match(/\d+/g);
-  if (matches) return `ch-${matches.join('')}`;
+  // Extract first number if present
+  const match = normalized.match(/\d+/);
+  if (match) {
+    const num = match[0];
+    return BENGALI_ORDINALS[num] || `${toBengaliNumber(num)}তম অধ্যায়`;
+  }
   
-  // Fallback for non-numeric titles
-  normalized = normalized.replace(/(অধ্যায়|অধ্যায়|পরিচ্ছেদ|পাঠ|ম|র্থ|ষ্ঠ|তম|য়|দশ|ঃ|:|\.)/g, '');
-  return normalized.replace(/\s+/g, '').trim() || 'শিরোনামহীন';
+  // Fallback for non-numeric titles: remove common words but keep the essence
+  normalized = normalized.replace(/(অধ্যায়|অধ্যায়|পরিচ্ছেদ|পাঠ|ম|র্থ|ষ্ঠ|তম|য়|দশ|ঃ|:|\.)/g, '').trim();
+  return normalized || 'শিরোনামহীন';
 }
 
 type ViewMode = 'classes' | 'subjects' | 'chapters' | 'types' | 'content';
@@ -154,8 +165,8 @@ export default function MyLibraryPage() {
     }
 
     if (selectedChapter) {
-      qs = qs.filter(q => getChapterGroupKey(q.chapter || '') === selectedChapter);
-      ss = ss.filter(s => getChapterGroupKey(s.topic || '') === selectedChapter);
+      qs = qs.filter(q => getStandardizedChapterName(q.chapter || '') === selectedChapter);
+      ss = ss.filter(s => getStandardizedChapterName(s.topic || '') === selectedChapter);
     }
 
     return { questions: qs, sheets: ss };
@@ -198,28 +209,15 @@ export default function MyLibraryPage() {
   };
 
   const renderChapters = () => {
-    const chapterMap = new Map<string, string>();
-    const allItemsUnderSubject = [...currentItems.questions, ...currentItems.sheets];
-
-    allItemsUnderSubject.forEach(item => {
-      const label = item.chapter || item.topic || 'শিরোনামহীন';
-      const key = getChapterGroupKey(label);
-      if (!chapterMap.has(key)) {
-        chapterMap.set(key, label);
-      } else {
-        const existingLabel = chapterMap.get(key)!;
-        if (label.includes('অধ্যায়') && !existingLabel.includes('অধ্যায়')) {
-          chapterMap.set(key, label);
-        } else if (label.length > existingLabel.length) {
-          chapterMap.set(key, label);
-        }
-      }
-    });
+    const chapters = Array.from(new Set([
+      ...currentItems.questions.map(q => getStandardizedChapterName(q.chapter || '')),
+      ...currentItems.sheets.map(s => getStandardizedChapterName(s.topic || ''))
+    ])).filter(Boolean);
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {Array.from(chapterMap.entries()).map(([key, label]) => (
-          <Card key={key} onClick={() => { setSelectedChapter(key); setViewMode('types'); }} className="cursor-pointer hover:border-primary hover:shadow-md transition-all group border-2">
+        {chapters.map(label => (
+          <Card key={label} onClick={() => { setSelectedChapter(label); setViewMode('types'); }} className="cursor-pointer hover:border-primary hover:shadow-md transition-all group border-2">
             <CardContent className="p-4 flex items-center gap-4">
               <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent group-hover:bg-accent group-hover:text-white transition-all">
                 <Folder className="w-5 h-5" />
@@ -409,7 +407,7 @@ export default function MyLibraryPage() {
           {selectedChapter && (
             <>
               <ChevronRight className="w-3 h-3 shrink-0" />
-              <span className={cn("cursor-pointer hover:text-primary", viewMode === 'types' && "text-primary")} onClick={() => { setViewMode('chapters'); setSelectedChapter(null); setSelectedType(null); setSelectedSubType(null); }}>অধ্যায় / টপিক</span>
+              <span className={cn("cursor-pointer hover:text-primary", viewMode === 'types' && "text-primary")} onClick={() => { setViewMode('chapters'); setSelectedChapter(null); setSelectedType(null); setSelectedSubType(null); }}>অধ্যায়</span>
             </>
           )}
           {selectedType && (
