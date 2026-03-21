@@ -129,7 +129,6 @@ function CreateQuestionContent() {
   
   const softwareDocRef = useMemo(() => doc(db, 'config', 'software'), [db]);
   const { data: softwareConfig } = useDoc(softwareDocRef);
-  const appLogoUrl = softwareConfig?.appLogoUrl || '';
   const appName = softwareConfig?.appName || 'টপ গ্রেড টিউটোরিয়ালস';
   
   const [meta, setMeta] = useState({
@@ -479,17 +478,6 @@ function CreateQuestionContent() {
                 position: relative;
                 z-index: 1;
               }
-              .watermark {
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                opacity: 0.08;
-                width: 70%;
-                max-width: 500px;
-                pointer-events: none;
-                z-index: 0;
-              }
             ` : ''}
             .header { text-align: center; margin-bottom: 6px; position: relative; z-index: 10; }
             .inst-name { font-size: 23px !important; font-weight: 800; }
@@ -545,7 +533,6 @@ function CreateQuestionContent() {
         )}
 
         <div className="paper">
-          {appLogoUrl && <div className="watermark"><img src={appLogoUrl} alt="" className="w-full h-auto" /></div>}
           <div className="header">
             <div className="inst-name">{meta.institution || appName}</div>
             <div className="font-bold text-lg leading-none mt-1">{meta.exam || 'পরীক্ষার নাম'}</div>

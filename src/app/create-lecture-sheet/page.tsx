@@ -80,7 +80,6 @@ function CreateLectureSheetContent() {
   
   const softwareDocRef = useMemo(() => doc(db, 'config', 'software'), [db]);
   const { data: softwareConfig } = useDoc(softwareDocRef);
-  const appLogoUrl = softwareConfig?.appLogoUrl || '';
 
   const [data, setData] = useState({
     institution: 'টপ গ্রেড টিউটোরিয়ালস',
@@ -258,17 +257,6 @@ function CreateLectureSheetContent() {
                 position: relative;
                 z-index: 1;
               }
-              .watermark {
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                opacity: 0.08;
-                width: 70%;
-                max-width: 500px;
-                pointer-events: none;
-                z-index: 0;
-              }
             ` : ''}
             .paper { 
               width: 100% !important; 
@@ -299,7 +287,6 @@ function CreateLectureSheetContent() {
         `}} />
         
         <div className="paper">
-          {appLogoUrl && <div className="watermark"><img src={appLogoUrl} alt="" className="w-full h-auto" /></div>}
           <div className="header">
             <div className="inst-name">{data.institution || 'শিক্ষা প্রতিষ্ঠানের নাম'}</div>
             <div className="meta-info">
