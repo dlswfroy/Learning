@@ -501,9 +501,21 @@ function CreateQuestionContent() {
             .q-item { display: flex; gap: 8px; margin-bottom: 4px; }
             .q-marker { font-weight: bold; min-width: 22px; }
             
-            .mcq-container { column-count: 2; column-gap: 30px; column-fill: auto; }
+            .mcq-container { 
+              column-count: 2; 
+              column-gap: 40px; 
+              column-rule: 1pt solid #000; 
+              column-fill: balance;
+            }
             .mcq-item { margin-bottom: 12px; break-inside: avoid; }
-            .mcq-options { display: grid; grid-template-cols: 1fr 1fr; gap: 2px 10px; margin-top: 3px; padding-left: 20px; font-size: 10pt; }
+            .mcq-options { 
+              display: grid; 
+              grid-template-columns: 1fr 1fr; 
+              gap: 2px 10px; 
+              margin-top: 3px; 
+              padding-left: 20px; 
+              font-size: 10pt; 
+            }
             
             .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
             .math-num { border-bottom: 0.5pt solid black; padding: 0 1px; }
