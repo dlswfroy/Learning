@@ -15,6 +15,7 @@ import { useFirestore, useUser, useDoc } from '@/firebase';
 import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { cn } from '@/lib/utils';
 
 type Question = {
   id: string;
@@ -488,6 +489,21 @@ function CreateQuestionContent() {
                 padding: 0.4in !important; 
                 box-shadow: 0 0 15px rgba(0,0,0,0.1);
                 min-height: 11.69in;
+                position: relative;
+              }
+              .watermark {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%) rotate(-45deg);
+                opacity: 0.05;
+                font-size: 80pt;
+                font-weight: 900;
+                color: #000;
+                pointer-events: none;
+                z-index: 0;
+                white-space: nowrap;
+                text-transform: uppercase;
               }
             ` : ''}
             .paper { 
@@ -495,10 +511,10 @@ function CreateQuestionContent() {
               text-align: justify; 
               color: black !important;
             }
-            .header { text-align: center; margin-bottom: 6px; border-bottom: 1.5pt solid black; padding-bottom: 4px; }
+            .header { text-align: center; margin-bottom: 6px; border-bottom: 1.5pt solid black; padding-bottom: 4px; position: relative; z-index: 10; }
             .inst-name { font-size: 23px !important; font-weight: 800; }
             .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 2px; font-size: 9.5pt; }
-            .section { margin-top: 4px; clear: both; }
+            .section { margin-top: 4px; clear: both; position: relative; z-index: 10; }
             .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 15px; margin: 2px auto; text-transform: uppercase; }
             .instruction { font-style: italic; font-size: 9pt; text-align: center; margin-bottom: 2px; }
             .q-block { margin-bottom: 4px; break-inside: avoid; }
@@ -542,6 +558,7 @@ function CreateQuestionContent() {
           }
         `}} />
         <div className="paper">
+          {isPrintMode && <div className="watermark">{meta.institution?.substring(0, 10)}</div>}
           <div className="header">
             <div className="inst-name">{meta.institution || 'শিক্ষা প্রতিষ্ঠানের নাম'}</div>
             <div className="font-bold text-lg leading-none">{meta.exam || 'পরীক্ষার নাম'}</div>
