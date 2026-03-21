@@ -16,7 +16,7 @@ import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/fires
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { cn } from '@/lib/utils';
-import { performOCR } from '@/ai/flows/ocr-flow';
+import Tesseract from 'tesseract.js';
 
 type Question = {
   id: string;
@@ -65,7 +65,7 @@ function formatMath(text: string) {
 
   formatted = formatted.replace(/\\dot\{([^}]+)\}/g, '<span class="math-dot">$1</span>');
   
-  // Process subscripts/superscripts BEFORE fractions to handle nested cases like \frac{D}{v_{fast}}
+  // FIX: Process subscripts/superscripts BEFORE fractions to handle complex cases like \frac{D}{v_{fast} - v_{slow}}
   formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
@@ -203,13 +203,17 @@ function CreateQuestionContent() {
     if (!file) return;
 
     setIsScanning(true);
-    toast({ title: "স্ক্যান শুরু হয়েছে", description: "এআই ইমেজ থেকে টেক্সট বের করছে..." });
+    toast({ title: "স্ক্যান শুরু হয়েছে", description: "লোকাল স্ক্যানার ইমেজ প্রসেস করছে, অনুগ্রহ করে অপেক্ষা করুন..." });
 
     try {
-      const dataUri = await processImage(file);
-      const result = await performOCR({ photoDataUri: dataUri });
-      if (result && result.text) {
-        setQuestions(prev => prev.map(q => q.id === questionId ? { ...q, content: q.content ? q.content + '\n' + result.text : result.text } : q));
+      // Using Tesseract.js for non-AI local OCR
+      const result = await Tesseract.recognize(file, 'ben+eng', {
+        logger: m => console.log(m)
+      });
+      
+      if (result && result.data.text) {
+        const text = result.data.text.trim();
+        setQuestions(prev => prev.map(q => q.id === questionId ? { ...q, content: q.content ? q.content + '\n' + text : text } : q));
         toast({ title: "সফল!", description: "টেক্সট এক্সট্রাক্ট করা হয়েছে।" });
       }
     } catch (error) {
@@ -424,7 +428,7 @@ function CreateQuestionContent() {
                 className="text-indigo-600 h-8 w-8 hover:bg-indigo-50" 
                 onClick={() => ocrInputRef.current?.click()}
                 disabled={isScanning}
-                title="এআই স্ক্যান (OCR)"
+                title="লোকাল স্ক্যান (Non-AI)"
               >
                 {isScanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanText className="w-4 h-4" />}
               </Button>

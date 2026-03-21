@@ -16,7 +16,7 @@ import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/fires
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { cn } from '@/lib/utils';
-import { performOCR } from '@/ai/flows/ocr-flow';
+import Tesseract from 'tesseract.js';
 
 function toBengaliNumber(n: number | string | undefined | null): string {
   if (n === undefined || n === null || n === '') return '';
@@ -49,7 +49,7 @@ function formatMath(text: string) {
   
   formatted = formatted.replace(/\\dot\{([^}]+)\}/g, '<span class="math-dot">$1</span>');
 
-  // Process subscripts/superscripts BEFORE fractions to handle nested cases like \frac{D}{v_{fast}}
+  // FIX: Process subscripts/superscripts BEFORE fractions to handle complex cases like \frac{D}{v_{fast} - v_{slow}}
   formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
@@ -67,15 +67,6 @@ function formatMath(text: string) {
   
   formatted = formatted.replace(/\\/g, ''); 
   return formatted;
-}
-
-async function processImage(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => resolve(e.target?.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 }
 
 function CreateLectureSheetContent() {
@@ -179,13 +170,17 @@ function CreateLectureSheetContent() {
     if (!file) return;
 
     setIsScanning(true);
-    toast({ title: "স্ক্যান শুরু হয়েছে", description: "এআই ইমেজ থেকে টেক্সট বের করছে, অনুগ্রহ করে অপেক্ষা করুন..." });
+    toast({ title: "স্ক্যান শুরু হয়েছে", description: "লোকাল স্ক্যানার ইমেজ প্রসেস করছে, অনুগ্রহ করে অপেক্ষা করুন..." });
 
     try {
-      const dataUri = await processImage(file);
-      const result = await performOCR({ photoDataUri: dataUri });
-      if (result && result.text) {
-        setData(prev => ({ ...prev, content: prev.content ? prev.content + '\n\n' + result.text : result.text }));
+      // Using Tesseract.js for non-AI local OCR
+      const result = await Tesseract.recognize(file, 'ben+eng', {
+        logger: m => console.log(m)
+      });
+      
+      if (result && result.data.text) {
+        const text = result.data.text.trim();
+        setData(prev => ({ ...prev, content: prev.content ? prev.content + '\n\n' + text : text }));
         toast({ title: "সফল!", description: "টেক্সট এক্সট্রাক্ট করা হয়েছে।" });
       }
     } catch (error) {
@@ -223,9 +218,10 @@ function CreateLectureSheetContent() {
                   disabled={isScanning}
                   variant="outline" 
                   className="gap-2 border-indigo-600 text-indigo-700 font-bold hover:bg-indigo-50"
+                  title="লোকাল স্ক্যান (Non-AI)"
                 >
                   {isScanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanText className="w-4 h-4" />}
-                  এআই স্ক্যান (OCR)
+                  এআই স্ক্যান (Local)
                 </Button>
               </div>
             </div>
