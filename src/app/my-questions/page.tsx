@@ -21,8 +21,7 @@ import {
   Folder,
   BrainCircuit,
   ListChecks,
-  ArrowLeft,
-  Search
+  ArrowLeft
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -43,6 +42,13 @@ import { CLASSES } from '@/lib/constants';
 import { toast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+
+// Helper for Bengali numbers
+function toBengaliNumber(n: number | string | undefined | null): string {
+  if (n === undefined || n === null || n === '') return '';
+  const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+  return n.toString().replace(/\d/g, (digit) => bengaliDigits[parseInt(digit)]);
+}
 
 // Enhanced helper for chapter normalization to group all variations into one "Main Folder"
 function getChapterGroupKey(chapter: string): string {
@@ -195,7 +201,6 @@ export default function MyLibraryPage() {
     const chapterMap = new Map<string, string>();
     const allItemsUnderSubject = [...currentItems.questions, ...currentItems.sheets];
 
-    // Group items and pick the best label (longest or containing 'অধ্যায়')
     allItemsUnderSubject.forEach(item => {
       const label = item.chapter || item.topic || 'শিরোনামহীন';
       const key = getChapterGroupKey(label);
@@ -234,8 +239,11 @@ export default function MyLibraryPage() {
           <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">
             <BrainCircuit className="w-8 h-8" />
           </div>
-          <div>
-            <h3 className="text-xl font-black text-primary">নমুনা প্রশ্ন</h3>
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-black text-primary">নমুনা প্রশ্ন</h3>
+              <Badge className="bg-primary text-white font-bold">{toBengaliNumber(currentItems.questions.length)} টি</Badge>
+            </div>
             <p className="text-xs text-muted-foreground font-bold">সৃজনশীল ও বহুনির্বাচনি প্রশ্ন ব্যাংক</p>
           </div>
         </CardContent>
@@ -245,8 +253,11 @@ export default function MyLibraryPage() {
           <div className="w-16 h-16 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-600 group-hover:bg-orange-500 group-hover:text-white transition-all">
             <BookOpen className="w-8 h-8" />
           </div>
-          <div>
-            <h3 className="text-xl font-black text-orange-600">লেকচার শিট</h3>
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-black text-orange-600">লেকচার শিট</h3>
+              <Badge className="bg-orange-500 text-white font-bold">{toBengaliNumber(currentItems.sheets.length)} টি</Badge>
+            </div>
             <p className="text-xs text-muted-foreground font-bold">অধ্যায় ভিত্তিক লেকচার নোট</p>
           </div>
         </CardContent>
@@ -381,7 +392,6 @@ export default function MyLibraryPage() {
           )}
         </div>
 
-        {/* Breadcrumbs */}
         <div className="flex items-center gap-2 text-xs font-bold overflow-x-auto whitespace-nowrap pb-2 text-muted-foreground">
           <span className={cn("cursor-pointer hover:text-primary", viewMode === 'classes' && "text-primary")} onClick={() => { setViewMode('classes'); setSelectedClass(null); setSelectedSubject(null); setSelectedChapter(null); setSelectedType(null); setSelectedSubType(null); }}>লাইব্রেরি</span>
           {selectedClass && (
@@ -434,10 +444,4 @@ export default function MyLibraryPage() {
       )}
     </div>
   );
-}
-
-function toBengaliNumber(n: number | string | undefined | null): string {
-  if (n === undefined || n === null || n === '') return '';
-  const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
-  return n.toString().replace(/\d/g, (digit) => bengaliDigits[parseInt(digit)]);
 }
