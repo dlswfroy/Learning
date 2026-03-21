@@ -182,7 +182,7 @@ function CreateQuestionContent() {
             const id = Math.random().toString(36).substr(2, 9);
             const commonFields = { id, type: q.type, imageUrl: q.imageUrl || '' };
             if (q.type === 'mcq') return { ...commonFields, content: `${q.mcqQuestion || ''}\nক. ${q.optA || ''}\nখ. ${q.optB || ''}\nগ. ${q.optC || ''}\nঘ. ${q.optD || ''}` };
-            if (q.type === 'creative') return { ...commonFields, content: `${q.stimulus || ''}\nক. ${q.qA || ''}\nখ. ${q.qB || ''}\nগ. ${q.qC || ''}\nঘ. ${q.qD || ''}` };
+            if (q.type === 'creative') return { ...commonFields, content: `${q.stimulus || ''}\nক. ${q.qA || ''}\nখ. ${q.qB || ''}\nগ. ${q.qC || ''}\nঘ. ${q.optD || ''}` };
             return { ...commonFields, content: q.shortText || '' };
           });
           setQuestions(reconstructed);
@@ -480,12 +480,12 @@ function CreateQuestionContent() {
               }
             ` : ''}
             .paper { line-height: 1.1; }
-            .header { text-align: center; margin-bottom: 2px; position: relative; z-index: 10; }
+            .header { text-align: center; margin-bottom: 2px; position: relative; z-index: 10; margin-top: 0 !important; }
             .inst-name { font-size: 23px !important; font-weight: 800; line-height: 1.1; }
             .font-bold { line-height: 1.1; }
             .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 2px; font-size: 10pt; border-top: 1.5pt solid black; padding-top: 2px; line-height: 1.1; }
             .section-label { font-size: 11pt; font-weight: bold; border: 1pt solid black; display: inline-block; padding: 2px 20px; margin: 2px auto; text-transform: uppercase; line-height: 1.1; }
-            .instruction-text { font-size: 8.5pt; font-style: italic; font-weight: 500; margin-bottom: 4px; text-align: justify; line-height: 1.1; }
+            .instruction-text { font-size: 8.5pt; font-style: italic; font-weight: 500; margin-bottom: 4px; text-align: center; line-height: 1.1; }
             .content-area { font-size: 10.5pt; line-height: 1.1; color: black !important; position: relative; z-index: 10; }
             .stimulus-box { margin-bottom: 2px; font-weight: 500; text-align: justify; line-height: 1.1; }
             .questions-list { margin-left: 15px; }
