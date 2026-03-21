@@ -252,10 +252,10 @@ function CreateLectureSheetContent() {
               body { background: #f0f2f5 !important; }
               .paper { 
                 background: white !important; 
-                margin: 20px auto !important; 
+                margin: 0 auto !important; 
                 padding: 0.5in !important; 
                 box-shadow: 0 0 15px rgba(0,0,0,0.1);
-                min-height: 11.69in;
+                min-height: 11in;
                 position: relative;
               }
               .watermark {
@@ -263,7 +263,7 @@ function CreateLectureSheetContent() {
                 top: 50%;
                 left: 50%;
                 transform: translate(-50%, -50%);
-                opacity: 0.06;
+                opacity: 0.08;
                 width: 70%;
                 max-width: 500px;
                 pointer-events: none;
@@ -275,9 +275,7 @@ function CreateLectureSheetContent() {
               text-align: justify; 
               color: black !important;
             }
-            .header { margin-bottom: 8px; border-bottom: 1.5pt solid black; padding-bottom: 5px; position: relative; z-index: 10; }
-            .header-top { display: flex; align-items: center; justify-content: center; gap: 15pt; }
-            .print-logo { max-height: 45pt; width: auto; object-fit: contain; }
+            .header { margin-bottom: 8px; border-bottom: 1.5pt solid black; padding-bottom: 5px; position: relative; z-index: 10; text-align: center; }
             .inst-name { font-size: 23px !important; font-weight: 800; }
             .topic-title { font-size: 13pt; font-weight: bold; margin: 10px 0; text-align: center; text-decoration: underline; }
             .meta-info { display: flex; justify-content: center; gap: 20pt; font-weight: 900; margin-top: 4px; font-size: 10pt; border-top: 0.5pt solid #ddd; padding-top: 5px; }
@@ -296,17 +294,14 @@ function CreateLectureSheetContent() {
           }
           @media print {
             .paper { margin: 0 !important; box-shadow: none !important; padding: 0 !important; }
-            @page { size: A4; margin: 0.5in !important; }
+            @page { size: auto; margin: 0.5in !important; }
           }
         `}} />
         
         <div className="paper">
           {appLogoUrl && <div className="watermark"><img src={appLogoUrl} alt="" className="w-full h-auto" /></div>}
           <div className="header">
-            <div className="header-top">
-              {appLogoUrl && <img src={appLogoUrl} alt="logo" className="print-logo" />}
-              <div className="inst-name">{data.institution || 'শিক্ষা প্রতিষ্ঠানের নাম'}</div>
-            </div>
+            <div className="inst-name">{data.institution || 'শিক্ষা প্রতিষ্ঠানের নাম'}</div>
             <div className="meta-info">
               <div>শ্রেণি: {CLASSES.find(c => c.id === data.classId)?.label || ''} শ্রেণি</div>
               <div>বিষয়: {data.subject}</div>

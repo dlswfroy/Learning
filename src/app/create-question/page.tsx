@@ -472,10 +472,10 @@ function CreateQuestionContent() {
               body { background: #f0f2f5 !important; }
               .paper { 
                 background: white !important; 
-                margin: 20px auto !important; 
+                margin: 0 auto !important; 
                 padding: 0.4in !important; 
                 box-shadow: 0 0 15px rgba(0,0,0,0.1);
-                min-height: 11.69in;
+                min-height: 11in;
                 position: relative;
               }
               .watermark {
@@ -483,7 +483,7 @@ function CreateQuestionContent() {
                 top: 50%;
                 left: 50%;
                 transform: translate(-50%, -50%);
-                opacity: 0.1;
+                opacity: 0.08;
                 width: 70%;
                 max-width: 500px;
                 pointer-events: none;
@@ -519,7 +519,7 @@ function CreateQuestionContent() {
           @media print {
             .paper { margin: 0 !important; box-shadow: none !important; width: 100% !important; height: auto !important; }
             .no-print { display: none !important; }
-            @page { size: A4; margin: 0.4in !important; }
+            @page { size: auto; margin: 0.4in !important; }
           }
         `}} />
         
