@@ -28,7 +28,6 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
@@ -214,7 +213,7 @@ export default function MyLibraryPage() {
         {subjects.map(sub => (
           <Card key={sub} onClick={() => { setSelectedSubject(sub); setViewMode('chapters'); }} className="cursor-pointer hover:border-primary hover:shadow-md transition-all group border-2">
             <CardContent className="p-6 flex flex-col items-center text-center space-y-3">
-              <div className="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-600 group-hover:bg-orange-500 group-hover:text-white transition-all">
+              <div className="w-12 h-12 rounded-xl bg-orange-50/10 flex items-center justify-center text-orange-600 group-hover:bg-orange-500 group-hover:text-white transition-all">
                 <Book className="w-6 h-6" />
               </div>
               <p className="font-bold text-sm">{sub}</p>
@@ -274,13 +273,13 @@ export default function MyLibraryPage() {
       </Card>
       <Card onClick={() => { setSelectedType('sheets'); setViewMode('content'); }} className="cursor-pointer hover:border-orange-500 hover:shadow-lg transition-all group border-l-4 border-l-orange-500">
         <CardContent className="p-8 flex items-center gap-6">
-          <div className="w-16 h-16 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-600 group-hover:bg-orange-500 group-hover:text-white transition-all">
+          <div className="w-16 h-16 rounded-2xl bg-orange-50/10 flex items-center justify-center text-orange-600 group-hover:bg-orange-500 group-hover:text-white transition-all">
             <BookOpen className="w-8 h-8" />
           </div>
           <div className="flex-1">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-black text-orange-600">লেকচার শিট</h3>
-              <Badge className="bg-orange-50 text-white font-bold">{toBengaliNumber(currentItems.sheets.length)} টি</Badge>
+              <Badge className="bg-orange-100 text-black font-bold">{toBengaliNumber(currentItems.sheets.length)} টি</Badge>
             </div>
             <p className="text-xs text-muted-foreground font-bold">অধ্যায় ভিত্তিক লেকচার নোট</p>
           </div>
@@ -337,10 +336,10 @@ export default function MyLibraryPage() {
           </Card>
           <Card onClick={() => setSelectedSubType('mcq')} className="cursor-pointer hover:border-orange-500 border-2 p-6 flex items-center justify-between group">
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-600 group-hover:bg-orange-500 group-hover:text-white transition-all"><ListChecks className="w-5 h-5" /></div>
+              <div className="w-10 h-10 rounded-lg bg-orange-50/10 flex items-center justify-center text-orange-600 group-hover:bg-orange-500 group-hover:text-white transition-all"><ListChecks className="w-5 h-5" /></div>
               <span className="font-bold">বহুনির্বাচনি প্রশ্ন</span>
             </div>
-            <Badge className="font-bold bg-orange-500/10 text-orange-600">{toBengaliNumber(mcqCount)} টি</Badge>
+            <Badge className="font-bold bg-orange-50/10 text-orange-600">{toBengaliNumber(mcqCount)} টি</Badge>
           </Card>
         </div>
       );
@@ -461,7 +460,7 @@ export default function MyLibraryPage() {
 
       {(viewMode === 'content' || viewMode === 'types') && (
         <div className="flex justify-center pt-10">
-           <p className="text-[10px] font-bold text-muted-foreground flex items-center gap-1">
+           <p className="text-[10px] font-bold text-black flex items-center gap-1">
              <LibraryIcon className="w-3 h-3" /> মোট আইটেম: {toBengaliNumber((currentItems.questions.length + currentItems.sheets.length))} টি
            </p>
         </div>
@@ -469,4 +468,3 @@ export default function MyLibraryPage() {
     </div>
   );
 }
-
