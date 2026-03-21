@@ -14,19 +14,15 @@ import {
   Calendar, 
   BookOpen, 
   GraduationCap, 
-  AlertTriangle,
   Library,
   Book,
   Printer,
   ChevronRight,
   Folder,
-  FolderOpen,
-  ArrowLeft,
-  Search,
   BrainCircuit,
   ListChecks,
-  CheckCircle2,
-  X
+  ArrowLeft,
+  Search
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -48,7 +44,7 @@ import { toast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-// Improved helper for chapter normalization to group similar names (Strong Partial Match Logic)
+// Enhanced helper for chapter normalization to group all variations into one "Main Folder"
 function getChapterGroupKey(chapter: string): string {
   if (!chapter) return 'শিরোনামহীন';
   
@@ -59,25 +55,29 @@ function getChapterGroupKey(chapter: string): string {
   
   const ordinalMap: Record<string, string> = {
     'প্রথম': '1', 'দ্বিতীয়': '2', 'তৃতীয়': '3', 'চতুর্থ': '4', 'পঞ্চম': '5',
-    'ষষ্ঠ': '6', 'সপ্তম': '7', 'অষ্টম': '8', 'নবম': '9', 'দশম': '10'
+    'ষষ্ঠ': '6', 'সপ্তম': '7', 'অষ্টম': '8', 'নবম': '9', 'দশম': '10',
+    '১ম': '1', '২য়': '2', '৩য়': '3', '৪র্থ': '4', '৫ম': '5',
+    '৬ষ্ঠ': '6', '৭ম': '7', '৮ম': '8', '৯ম': '9', '১০ম': '10'
   };
 
   let normalized = chapter.toString().toLowerCase().trim();
   
-  // Replace ordinal words with numbers
+  // Replace ordinal words
   Object.entries(ordinalMap).forEach(([bnWord, num]) => {
-    if (normalized.includes(bnWord)) normalized = normalized.replace(new RegExp(bnWord, 'g'), num);
+    normalized = normalized.replace(new RegExp(bnWord, 'g'), num);
   });
   
-  // Replace Bengali digits with English digits
+  // Replace Bengali digits
   Object.entries(bengaliToEnglish).forEach(([bn, en]) => {
     normalized = normalized.replace(new RegExp(bn, 'g'), en);
   });
   
-  // Remove common structural words and characters
-  normalized = normalized.replace(/(অধ্যায়|অধ্যায়|ম|র্থ|ষ্ঠ|তম|য়|দশ|ঃ|:|\.)/g, '');
+  // Extract only numbers if present
+  const matches = normalized.match(/\d+/g);
+  if (matches) return `ch-${matches.join('')}`;
   
-  // Strip all non-alphanumeric/bengali characters and spaces
+  // Fallback for non-numeric titles
+  normalized = normalized.replace(/(অধ্যায়|অধ্যায়|পরিচ্ছেদ|পাঠ|ম|র্থ|ষ্ঠ|তম|য়|দশ|ঃ|:|\.)/g, '');
   return normalized.replace(/\s+/g, '').trim() || 'শিরোনামহীন';
 }
 
@@ -148,9 +148,8 @@ export default function MyLibraryPage() {
     }
 
     if (selectedChapter) {
-      const targetKey = selectedChapter;
-      qs = qs.filter(q => getChapterGroupKey(q.chapter || '') === targetKey);
-      ss = ss.filter(s => getChapterGroupKey(s.topic || '') === targetKey);
+      qs = qs.filter(q => getChapterGroupKey(q.chapter || '') === selectedChapter);
+      ss = ss.filter(s => getChapterGroupKey(s.topic || '') === selectedChapter);
     }
 
     return { questions: qs, sheets: ss };
@@ -194,19 +193,21 @@ export default function MyLibraryPage() {
 
   const renderChapters = () => {
     const chapterMap = new Map<string, string>();
-    
-    // Group everything by the normalized key
-    currentItems.questions.forEach(q => {
-      const key = getChapterGroupKey(q.chapter || '');
+    const allItemsUnderSubject = [...currentItems.questions, ...currentItems.sheets];
+
+    // Group items and pick the best label (longest or containing 'অধ্যায়')
+    allItemsUnderSubject.forEach(item => {
+      const label = item.chapter || item.topic || 'শিরোনামহীন';
+      const key = getChapterGroupKey(label);
       if (!chapterMap.has(key)) {
-        chapterMap.set(key, q.chapter || 'শিরোনামহীন');
-      }
-    });
-    
-    currentItems.sheets.forEach(s => {
-      const key = getChapterGroupKey(s.topic || '');
-      if (!chapterMap.has(key)) {
-        chapterMap.set(key, s.topic || 'শিরোনামহীন');
+        chapterMap.set(key, label);
+      } else {
+        const existingLabel = chapterMap.get(key)!;
+        if (label.includes('অধ্যায়') && !existingLabel.includes('অধ্যায়')) {
+          chapterMap.set(key, label);
+        } else if (label.length > existingLabel.length) {
+          chapterMap.set(key, label);
+        }
       }
     });
 
