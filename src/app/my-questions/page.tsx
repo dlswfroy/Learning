@@ -48,27 +48,36 @@ import { toast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-// Helper for chapter normalization to group similar names (Partial Match Logic)
+// Improved helper for chapter normalization to group similar names (Strong Partial Match Logic)
 function getChapterGroupKey(chapter: string): string {
   if (!chapter) return 'শিরোনামহীন';
+  
   const bengaliToEnglish: Record<string, string> = {
     '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4',
     '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9'
   };
+  
   const ordinalMap: Record<string, string> = {
     'প্রথম': '1', 'দ্বিতীয়': '2', 'তৃতীয়': '3', 'চতুর্থ': '4', 'পঞ্চম': '5',
     'ষষ্ঠ': '6', 'সপ্তম': '7', 'অষ্টম': '8', 'নবম': '9', 'দশম': '10'
   };
 
   let normalized = chapter.toString().toLowerCase().trim();
+  
+  // Replace ordinal words with numbers
   Object.entries(ordinalMap).forEach(([bnWord, num]) => {
-    if (normalized.includes(bnWord)) normalized = normalized.replace(bnWord, num);
+    if (normalized.includes(bnWord)) normalized = normalized.replace(new RegExp(bnWord, 'g'), num);
   });
+  
+  // Replace Bengali digits with English digits
   Object.entries(bengaliToEnglish).forEach(([bn, en]) => {
     normalized = normalized.replace(new RegExp(bn, 'g'), en);
   });
-  // Remove common words/suffixes but keep the core number or topic
-  normalized = normalized.replace(/(অধ্যায়|অধ্যায়|ম|র্থ|ষ্ঠ|তম|য়|দশ|ঃ)/g, '');
+  
+  // Remove common structural words and characters
+  normalized = normalized.replace(/(অধ্যায়|অধ্যায়|ম|র্থ|ষ্ঠ|তম|য়|দশ|ঃ|:|\.)/g, '');
+  
+  // Strip all non-alphanumeric/bengali characters and spaces
   return normalized.replace(/\s+/g, '').trim() || 'শিরোনামহীন';
 }
 
@@ -105,13 +114,11 @@ export default function MyLibraryPage() {
   const { data: rawQuestions, loading: questionsLoading } = useCollection(questionsQuery);
   const { data: rawSheets, loading: sheetsLoading } = useCollection(sheetsQuery);
 
-  // Grouping Logic
   const libraryData = useMemo(() => {
-    const data = {
+    return {
       questions: rawQuestions || [],
       sheets: rawSheets || []
     };
-    return data;
   }, [rawQuestions, rawSheets]);
 
   const handleDelete = async (id: string, type: 'questions' | 'lecture-sheets') => {
@@ -126,7 +133,6 @@ export default function MyLibraryPage() {
     }
   };
 
-  // Filter logic for current view
   const currentItems = useMemo(() => {
     let qs = libraryData.questions;
     let ss = libraryData.sheets;
@@ -150,7 +156,6 @@ export default function MyLibraryPage() {
     return { questions: qs, sheets: ss };
   }, [libraryData, selectedClass, selectedSubject, selectedChapter]);
 
-  // Folder render helpers
   const renderClasses = () => {
     const classIds = Array.from(new Set([...libraryData.questions.map(q => q.classId), ...libraryData.sheets.map(s => s.classId)]));
     return (
@@ -189,13 +194,20 @@ export default function MyLibraryPage() {
 
   const renderChapters = () => {
     const chapterMap = new Map<string, string>();
+    
+    // Group everything by the normalized key
     currentItems.questions.forEach(q => {
       const key = getChapterGroupKey(q.chapter || '');
-      if (!chapterMap.has(key)) chapterMap.set(key, q.chapter || 'শিরোনামহীন');
+      if (!chapterMap.has(key)) {
+        chapterMap.set(key, q.chapter || 'শিরোনামহীন');
+      }
     });
+    
     currentItems.sheets.forEach(s => {
       const key = getChapterGroupKey(s.topic || '');
-      if (!chapterMap.has(key)) chapterMap.set(key, s.topic || 'শিরোনামহীন');
+      if (!chapterMap.has(key)) {
+        chapterMap.set(key, s.topic || 'শিরোনামহীন');
+      }
     });
 
     return (
@@ -275,7 +287,6 @@ export default function MyLibraryPage() {
       );
     }
 
-    // Question Categories
     if (!selectedSubType) {
       const cqCount = currentItems.questions.filter(q => !q.isMcq).length;
       const mcqCount = currentItems.questions.filter(q => q.isMcq).length;
@@ -387,7 +398,7 @@ export default function MyLibraryPage() {
           {selectedChapter && (
             <>
               <ChevronRight className="w-3 h-3 shrink-0" />
-              <span className={cn("cursor-pointer hover:text-primary", viewMode === 'types' && "text-primary")} onClick={() => { setViewMode('chapters'); setSelectedChapter(null); setSelectedType(null); setSelectedSubType(null); }}>{selectedChapter === 'শিরোনামহীন' ? 'শিরোনামহীন' : 'অধ্যায় / টপিক'}</span>
+              <span className={cn("cursor-pointer hover:text-primary", viewMode === 'types' && "text-primary")} onClick={() => { setViewMode('chapters'); setSelectedChapter(null); setSelectedType(null); setSelectedSubType(null); }}>অধ্যায় / টপিক</span>
             </>
           )}
           {selectedType && (
