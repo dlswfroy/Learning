@@ -9,13 +9,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, Plus, Trash2, BookOpen, Save, FileText, ArrowLeft, Loader2, Image as ImageIcon, X } from 'lucide-react';
+import { Printer, Plus, Trash2, BookOpen, Save, FileText, ArrowLeft, Loader2, Image as ImageIcon, X, ScanText } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useDoc } from '@/firebase';
 import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { cn } from '@/lib/utils';
+import { performOCR } from '@/ai/flows/ocr-flow';
 
 type Question = {
   id: string;
@@ -25,42 +26,10 @@ type Question = {
 };
 
 async function processImage(file: File): Promise<string> {
-  if (file.size > 5 * 1024 * 1024) {
-    throw new Error('ফাইল সাইজ ৫ মেগাবাইটের বেশি হতে পারবে না।');
-  }
-
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-        const maxSide = 512;
-
-        if (width > height) {
-          if (width > maxSide) {
-            height *= maxSide / width;
-            width = maxSide;
-          }
-        } else {
-          if (height > maxSide) {
-            width *= maxSide / height;
-            height = maxSide;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.8));
-      };
-      img.onerror = () => reject(new Error('ছবি লোড করা সম্ভব হয়নি।'));
-      img.src = e.target?.result as string;
-    };
-    reader.onerror = () => reject(new Error('ফাইল পড়া সম্ভব হয়নি।'));
+    reader.onload = (e) => resolve(e.target?.result as string);
+    reader.onerror = reject;
     reader.readAsDataURL(file);
   });
 }
@@ -127,6 +96,7 @@ function CreateQuestionContent() {
   
   const [loading, setLoading] = useState(!!editId || source === 'merge');
   const [saving, setSaving] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
   
   const softwareDocRef = useMemo(() => doc(db, 'config', 'software'), [db]);
   const { data: softwareConfig } = useDoc(softwareDocRef);
@@ -140,6 +110,7 @@ function CreateQuestionContent() {
   
   const [questions, setQuestions] = useState<Question[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const ocrInputRef = useRef<HTMLInputElement>(null);
   const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
 
   useEffect(() => { if (!userLoading && !user) router.push('/auth'); }, [user, userLoading, router]);
@@ -224,6 +195,28 @@ function CreateQuestionContent() {
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
       setActiveQuestionId(null);
+    }
+  };
+
+  const handleOCR = async (e: React.ChangeEvent<HTMLInputElement>, questionId: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsScanning(true);
+    toast({ title: "স্ক্যান শুরু হয়েছে", description: "এআই ইমেজ থেকে টেক্সট বের করছে..." });
+
+    try {
+      const dataUri = await processImage(file);
+      const result = await performOCR({ photoDataUri: dataUri });
+      if (result && result.text) {
+        setQuestions(prev => prev.map(q => q.id === questionId ? { ...q, content: q.content ? q.content + '\n' + result.text : result.text } : q));
+        toast({ title: "সফল!", description: "টেক্সট এক্সট্রাক্ট করা হয়েছে।" });
+      }
+    } catch (error) {
+      toast({ variant: "destructive", title: "স্ক্যান ব্যর্থ হয়েছে", description: "আবার চেষ্টা করুন।" });
+    } finally {
+      setIsScanning(false);
+      if (ocrInputRef.current) ocrInputRef.current.value = '';
     }
   };
 
@@ -424,6 +417,17 @@ function CreateQuestionContent() {
         {questions.map((q, idx) => (
           <Card key={q.id} className={`relative border-l-4 ${q.type === 'mcq' ? 'border-l-orange-500' : q.type === 'short' ? 'border-l-accent' : 'border-l-primary'}`}>
             <div className="absolute top-2 right-2 no-print flex gap-1">
+              <input type="file" ref={ocrInputRef} className="hidden" accept="image/*" onChange={(e) => handleOCR(e, q.id)} />
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="text-indigo-600 h-8 w-8 hover:bg-indigo-50" 
+                onClick={() => ocrInputRef.current?.click()}
+                disabled={isScanning}
+                title="এআই স্ক্যান (OCR)"
+              >
+                {isScanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanText className="w-4 h-4" />}
+              </Button>
               <Button 
                 variant="ghost" 
                 size="icon" 
@@ -432,6 +436,7 @@ function CreateQuestionContent() {
                   setActiveQuestionId(q.id);
                   fileInputRef.current?.click();
                 }}
+                title="ছবি যুক্ত করুন"
               >
                 <ImageIcon className="w-4 h-4" />
               </Button>
@@ -442,7 +447,12 @@ function CreateQuestionContent() {
                 <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${q.type === 'mcq' ? 'bg-orange-100 text-orange-600' : q.type === 'short' ? 'bg-accent/10 text-accent' : 'bg-primary/10 text-primary'}`}>{q.type === 'mcq' ? 'বহুনির্বাচনি' : q.type === 'short' ? 'সংক্ষিপ্ত' : 'সৃজনশীল'}</span>
                 <span className="text-sm font-bold">প্রশ্ন নং: {isEnglish ? (idx + 1) : toBengaliNumber(idx + 1)}</span>
               </div>
-              <Textarea placeholder={q.type === 'mcq' ? "প্রশ্ন ও অপশনগুলো ক. খ. গ. ঘ. সহ লিখুন" : "উদ্দীপক ও প্রশ্ন ক. খ. গ. ঘ. সহ লিখুন"} value={q.content || ''} onChange={e => setQuestions(prev => prev.map(item => item.id === q.id ? {...item, content: e.target.value} : item))} className="min-h-[120px] text-sm font-bold" />
+              <Textarea 
+                placeholder={q.type === 'mcq' ? "প্রশ্ন ও অপশনগুলো ক. খ. গ. ঘ. সহ লিখুন অথবা বইয়ের ছবি স্ক্যান করুন" : "উদ্দীপক ও প্রশ্ন ক. খ. গ. ঘ. সহ লিখুন অথবা বইয়ের ছবি স্ক্যান করুন"} 
+                value={q.content || ''} 
+                onChange={e => setQuestions(prev => prev.map(item => item.id === q.id ? {...item, content: e.target.value} : item))} 
+                className="min-h-[120px] text-sm font-bold" 
+              />
               
               {q.imageUrl && (
                 <div className="relative w-full max-w-sm rounded-lg border overflow-hidden bg-muted/20">
@@ -456,6 +466,7 @@ function CreateQuestionContent() {
                 </div>
               )}
             </CardContent>
+            <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
           </Card>
         ))}
 

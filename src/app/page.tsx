@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useUser } from '@/firebase';
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { GraduationCap, ArrowRight, BrainCircuit, Loader2, BookOpen, Library, Users } from 'lucide-react';
+import { GraduationCap, ArrowRight, BrainCircuit, Loader2, BookOpen, Library, Users, NotebookPen } from 'lucide-react';
 import { CLASSES } from '@/lib/constants';
 
 export default function Home() {
@@ -30,8 +30,8 @@ export default function Home() {
 
   return (
     <div className="space-y-8 animate-fade-in">
-      {/* Dashboard Cards - 2 columns on mobile (50% size), 4 on desktop */}
-      <section className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+      {/* Dashboard Cards - 2 rows of 3 columns on desktop */}
+      <section className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
         <Link href="/create-question">
           <Card className="bg-primary/5 border-primary/30 shadow-md overflow-hidden group hover:shadow-lg transition-all border-l-4 border-l-primary h-full">
             <CardHeader className="pb-1 p-3 md:p-4">
@@ -56,6 +56,20 @@ export default function Home() {
             </CardHeader>
             <CardContent className="p-3 md:p-4 pt-0">
               <p className="text-[9px] md:text-[10px] font-bold text-muted-foreground leading-tight">অধ্যায় ভিত্তিক লেকচার নোট তৈরি ও প্রিন্ট করুন।</p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/diary">
+          <Card className="bg-indigo-50 border-indigo-200 shadow-md overflow-hidden group hover:shadow-lg transition-all border-l-4 border-l-indigo-600 h-full">
+            <CardHeader className="pb-1 p-3 md:p-4">
+              <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white mb-2 shadow-inner group-hover:scale-110 transition-transform">
+                <NotebookPen className="w-4 h-4 md:w-5 md:h-5" />
+              </div>
+              <CardTitle className="text-indigo-700 font-black text-sm md:text-base">টিচার্স ডায়েরি</CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 md:p-4 pt-0">
+              <p className="text-[9px] md:text-[10px] font-bold text-muted-foreground leading-tight">আপনার প্রতিদিনের ক্লাস রেকর্ড ও লেসন প্ল্যান লিখে রাখুন।</p>
             </CardContent>
           </Card>
         </Link>

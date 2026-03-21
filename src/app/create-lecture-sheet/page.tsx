@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, Suspense, useMemo } from 'react';
+import { useState, useEffect, Suspense, useMemo, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { CLASSES, getSubjectsForClass } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
@@ -9,13 +9,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, Save, FileText, ArrowLeft, Loader2, BookOpen } from 'lucide-react';
+import { Printer, Save, FileText, ArrowLeft, Loader2, BookOpen, ScanText } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useDoc } from '@/firebase';
 import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { cn } from '@/lib/utils';
+import { performOCR } from '@/ai/flows/ocr-flow';
 
 function toBengaliNumber(n: number | string | undefined | null): string {
   if (n === undefined || n === null || n === '') return '';
@@ -68,6 +69,15 @@ function formatMath(text: string) {
   return formatted;
 }
 
+async function processImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target?.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 function CreateLectureSheetContent() {
   const db = useFirestore();
   const { user, loading: userLoading } = useUser();
@@ -77,7 +87,9 @@ function CreateLectureSheetContent() {
   const isPrintMode = searchParams.get('print') === 'true';
   const [loading, setLoading] = useState(!!editId);
   const [saving, setSaving] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
   const [existingData, setExistingData] = useState<any>(null);
+  const ocrInputRef = useRef<HTMLInputElement>(null);
   
   const softwareDocRef = useMemo(() => doc(db, 'config', 'software'), [db]);
   const { data: softwareConfig } = useDoc(softwareDocRef);
@@ -162,6 +174,28 @@ function CreateLectureSheetContent() {
       });
   };
 
+  const handleOCR = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsScanning(true);
+    toast({ title: "স্ক্যান শুরু হয়েছে", description: "এআই ইমেজ থেকে টেক্সট বের করছে, অনুগ্রহ করে অপেক্ষা করুন..." });
+
+    try {
+      const dataUri = await processImage(file);
+      const result = await performOCR({ photoDataUri: dataUri });
+      if (result && result.text) {
+        setData(prev => ({ ...prev, content: prev.content ? prev.content + '\n\n' + result.text : result.text }));
+        toast({ title: "সফল!", description: "টেক্সট এক্সট্রাক্ট করা হয়েছে।" });
+      }
+    } catch (error) {
+      toast({ variant: "destructive", title: "স্ক্যান ব্যর্থ হয়েছে", description: "আবার চেষ্টা করুন।" });
+    } finally {
+      setIsScanning(false);
+      if (ocrInputRef.current) ocrInputRef.current.value = '';
+    }
+  };
+
   if (loading || userLoading) return <div className="flex flex-col items-center justify-center p-20 min-h-[50vh] font-kalpurush"><Loader2 className="w-12 h-12 animate-spin text-primary mb-4" /><p className="text-muted-foreground font-bold">অ্যাক্সেস চেক করা হচ্ছে...</p></div>;
 
   return (
@@ -179,7 +213,23 @@ function CreateLectureSheetContent() {
         </header>
 
         <Card className="shadow-md">
-          <CardHeader className="bg-primary/5 border-b py-3"><CardTitle className="text-base flex items-center gap-2 font-bold"><FileText className="w-4 h-4 text-primary" /> শিট সংক্রান্ত তথ্য</CardTitle></CardHeader>
+          <CardHeader className="bg-primary/5 border-b py-3">
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-base flex items-center gap-2 font-bold"><FileText className="w-4 h-4 text-primary" /> শিট সংক্রান্ত তথ্য</CardTitle>
+              <div className="flex gap-2">
+                <input type="file" ref={ocrInputRef} className="hidden" accept="image/*" onChange={handleOCR} />
+                <Button 
+                  onClick={() => ocrInputRef.current?.click()} 
+                  disabled={isScanning}
+                  variant="outline" 
+                  className="gap-2 border-indigo-600 text-indigo-700 font-bold hover:bg-indigo-50"
+                >
+                  {isScanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanText className="w-4 h-4" />}
+                  এআই স্ক্যান (OCR)
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
           <CardContent className="pt-6 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="space-y-2">
@@ -264,6 +314,21 @@ function CreateLectureSheetContent() {
               text-align: justify; 
               color: black !important;
               line-height: 1.1;
+              position: relative;
+            }
+            /* Watermark for Lecture Sheets */
+            .paper::before {
+              content: "${softwareConfig?.appName || 'টপ গ্রেড টিউটোরিয়ালস'}";
+              position: fixed;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%) rotate(-45deg);
+              font-size: 80pt;
+              font-weight: 900;
+              color: rgba(0, 0, 0, 0.08);
+              white-space: nowrap;
+              pointer-events: none;
+              z-index: 0;
             }
             .header { margin-bottom: 2px; border-bottom: 1.5pt solid black; padding-bottom: 2px; position: relative; z-index: 10; text-align: center; margin-top: 0 !important; }
             .inst-name { font-size: 23px !important; font-weight: 800; line-height: 1.1; }

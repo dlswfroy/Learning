@@ -26,7 +26,7 @@
       "properties": {
         "institution": { "type": "string" },
         "exam": { "type": "string" },
-        "chapter": { "type": "string", "description": "Specific chapter for chapter-wise saving." },
+        "chapter": { "type": "string" },
         "classId": { "type": "string" },
         "subject": { "type": "string" },
         "time": { "type": "string" },
@@ -84,6 +84,22 @@
       },
       "required": ["userId", "classId", "subject", "topic"]
     },
+    "TeacherDiary": {
+      "title": "Teacher Diary",
+      "description": "Daily teaching records and lesson plans.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "classId": { "type": "string" },
+        "subject": { "type": "string" },
+        "topic": { "type": "string" },
+        "notes": { "type": "string" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["date", "userId"]
+    },
     "Student": {
       "title": "Student",
       "description": "Information about a student.",
@@ -92,7 +108,7 @@
         "id": { "type": "string" },
         "name": { "type": "string" },
         "fatherName": { "type": "string" },
-        "photo": { "type": "string", "description": "Base64 encoded student photo." },
+        "photo": { "type": "string" },
         "classId": { "type": "string" },
         "roll": { "type": "string" },
         "phone": { "type": "string" },
@@ -103,7 +119,7 @@
     },
     "AttendanceRecord": {
       "title": "Attendance Record",
-      "description": "Daily attendance status for a student managed by the teacher.",
+      "description": "Daily attendance status.",
       "type": "object",
       "properties": {
         "studentId": { "type": "string" },
@@ -116,7 +132,7 @@
     },
     "FeeRecord": {
       "title": "Fee Record",
-      "description": "Payment record for student fees collected by teachers.",
+      "description": "Payment record for student fees.",
       "type": "object",
       "properties": {
         "studentId": { "type": "string" },
@@ -172,9 +188,13 @@
       "schema": "LectureSheet",
       "description": "Collection of study materials and lecture notes."
     },
+    "/diary/{diaryId}": {
+      "schema": "TeacherDiary",
+      "description": "Daily teaching diary records."
+    },
     "/students/{studentId}": {
       "schema": "Student",
-      "description": "Collection of students managed by the teacher."
+      "description": "Collection of students."
     },
     "/attendance/{attendanceId}": {
       "schema": "AttendanceRecord",
@@ -182,11 +202,11 @@
     },
     "/fees/{feeId}": {
       "schema": "FeeRecord",
-      "description": "Payment records for student fees managed by users."
+      "description": "Payment records for student fees."
     },
     "/config/admin": {
       "schema": "AdminConfig",
-      "description": "Global config to store the first admin's UID."
+      "description": "Global config for admin."
     },
     "/config/software": {
       "schema": "SoftwareConfig",
