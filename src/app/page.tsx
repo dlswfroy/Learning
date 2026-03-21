@@ -80,7 +80,7 @@ export default function Home() {
               <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-accent flex items-center justify-center text-white mb-2 shadow-inner group-hover:scale-110 transition-transform">
                 <Library className="w-4 h-4 md:w-5 md:h-5" />
               </div>
-              <CardTitle className="text-accent-foreground font-black text-sm md:text-base">আমার লাইব্রেরি</CardTitle>
+              <CardTitle className="text-black font-black text-sm md:text-base">আমার লাইব্রেরি</CardTitle>
             </CardHeader>
             <CardContent className="p-3 md:p-4 pt-0">
               <p className="text-[9px] md:text-[10px] font-bold text-muted-foreground leading-tight">আপনার তৈরি করা প্রশ্ন ও শিটগুলো এখানে পাবেন।</p>
