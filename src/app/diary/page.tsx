@@ -4,11 +4,12 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useFirestore, useUser, useCollection } from '@/firebase';
 import { collection, query, where, addDoc, deleteDoc, doc, serverTimestamp, updateDoc, orderBy } from 'firebase/firestore';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { 
   BookOpen, 
   Plus, 
@@ -17,12 +18,13 @@ import {
   Save, 
   Calendar, 
   GraduationCap, 
-  ChevronRight, 
   Loader2, 
   Search,
   Book,
   ArrowLeft,
-  FileText
+  FileText,
+  AlertTriangle,
+  ExternalLink
 } from 'lucide-react';
 import { CLASSES, getSubjectsForClass } from '@/lib/constants';
 import { toast } from '@/hooks/use-toast';
@@ -67,7 +69,7 @@ export default function TeacherDiaryPage() {
     );
   }, [db, user]);
 
-  const { data: diaryEntries, loading: diaryLoading } = useCollection(diaryQuery);
+  const { data: diaryEntries, loading: diaryLoading, error: diaryError } = useCollection(diaryQuery);
 
   const filteredEntries = useMemo(() => {
     if (!diaryEntries) return [];
@@ -148,6 +150,31 @@ export default function TeacherDiaryPage() {
       <div className="flex flex-col items-center justify-center p-20 min-h-[50vh]">
         <Loader2 className="w-10 h-10 animate-spin text-primary" />
         <p className="mt-4 text-muted-foreground font-bold">ডায়েরি লোড হচ্ছে...</p>
+      </div>
+    );
+  }
+
+  if (diaryError) {
+    return (
+      <div className="max-w-xl mx-auto p-10 text-center space-y-6 font-kalpurush">
+        <AlertTriangle className="w-16 h-16 text-destructive mx-auto animate-bounce" />
+        <div className="space-y-3">
+          <h2 className="text-2xl font-black text-destructive">ডায়েরি লোড হতে সমস্যা হয়েছে</h2>
+          <p className="text-muted-foreground font-bold leading-relaxed">
+            এই ফিচারটি সঠিকভাবে কাজ করার জন্য ডাটাবেসে একটি "ইনডেক্স" প্রয়োজন। নিচের লিঙ্কে ক্লিক করে ইনডেক্সটি তৈরি করুন এবং ২-৩ মিনিট অপেক্ষা করুন।
+          </p>
+        </div>
+        <div className="p-4 bg-muted rounded-xl border text-[10px] break-all font-mono select-all text-left bg-slate-50">
+          https://console.firebase.google.com/v1/r/project/birganj-pouro-high-schoo-9d39d/firestore/indexes?create_composite=Clxwcm9qZWN0cy9iaXJnYW5qLXBvdXJvLWhpZ2gtc2Nob28tOWQzOWQvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2RpYXJ5L2luZGV4ZXMvXxABGgoKBnVzZXJJZBABGggKBGRhdGUQAhoMCghfX25hbWVfXxAC
+        </div>
+        <a 
+          href="https://console.firebase.google.com/v1/r/project/birganj-pouro-high-schoo-9d39d/firestore/indexes?create_composite=Clxwcm9qZWN0cy9iaXJnYW5qLXBvdXJvLWhpZ2gtc2Nob28tOWQzOWQvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2RpYXJ5L2luZGV4ZXMvXxABGgoKBnVzZXJJZBABGggKBGRhdGUQAhoMCghfX25hbWVfXxAC" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 bg-indigo-600 text-white px-8 py-3 rounded-xl font-black hover:bg-indigo-700 transition-all shadow-lg"
+        >
+          <ExternalLink className="w-5 h-5" /> ইনডেক্স তৈরি করুন
+        </a>
       </div>
     );
   }
