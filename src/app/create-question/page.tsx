@@ -180,7 +180,7 @@ function CreateQuestionContent() {
             const id = Math.random().toString(36).substr(2, 9);
             const commonFields = { id, type: q.type, imageUrl: q.imageUrl || '' };
             if (q.type === 'mcq') return { ...commonFields, content: `${q.mcqQuestion || ''}\nক. ${q.optA || ''}\nখ. ${q.optB || ''}\nগ. ${q.optC || ''}\nঘ. ${q.optD || ''}` };
-            if (q.type === 'creative') return { ...commonFields, content: `${q.stimulus || ''}\nক. ${q.qA || ''}\nখ. ${q.qB || ''}\nগ. ${q.qC || ''}\nঘ. ${q.qD || ''}` };
+            if (q.type === 'creative') return { ...commonFields, content: `${q.stimulus || ''}\nক. ${q.qA || ''}\nখ. ${q.qB || ''}\nগ. ${q.qC || ''}\nঘ. ${q.optD || ''}` };
             return { ...commonFields, content: q.shortText || '' };
           });
           setQuestions(reconstructed);
@@ -494,17 +494,108 @@ function CreateQuestionContent() {
             .inst-name { font-size: 23px !important; font-weight: 800; }
             .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 2px; font-size: 9.5pt; }
             .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 15px; margin: 2px auto; text-transform: uppercase; }
+            .content-area { font-size: 10.5pt; line-height: 1.5; color: black !important; }
+            .stimulus-box { margin-bottom: 10px; font-weight: 500; text-align: justify; }
+            .questions-list { margin-left: 15px; }
+            .q-item { display: flex; gap: 8px; margin-bottom: 4px; }
+            .q-marker { font-weight: bold; min-width: 20px; }
+            .mcq-options { display: grid; grid-template-cols: 1fr 1fr 1fr 1fr; gap: 5px; margin-top: 4px; margin-bottom: 8px; padding-left: 20px; }
+          }
+          @media print {
+            .paper { margin: 0 !important; box-shadow: none !important; width: 100% !important; height: auto !important; }
+            .no-print { display: none !important; }
+            @page { size: A4; margin: 0.4in !important; }
           }
         `}} />
+        
+        {isPrintMode && (
+          <div className="no-print flex justify-center py-4 border-b bg-muted/10">
+            <Button variant="outline" onClick={() => router.back()} className="gap-2 font-bold border-primary text-primary">
+              <ArrowLeft className="w-4 h-4" /> লাইব্রেরিতে ফিরে যান
+            </Button>
+          </div>
+        )}
+
         <div className="paper">
-          {isPrintMode && <div className="watermark">{meta.institution?.substring(0, 10)}</div>}
+          {appLogoUrl && <div className="watermark">{meta.institution?.substring(0, 10)}</div>}
           <div className="header">
             <div className="inst-name">{meta.institution || 'শিক্ষা প্রতিষ্ঠানের নাম'}</div>
             <div className="font-bold text-lg leading-none">{meta.exam || 'পরীক্ষার নাম'}</div>
             <div className="font-bold text-sm">শ্রেণি: {CLASSES.find(c => c.id === meta.classId)?.label || ''} | বিষয়: {meta.subject}</div>
             <div className="meta-info"><div>সময়: {meta.time}</div><div>পূর্ণমান: {meta.totalMarks}</div></div>
           </div>
-          {/* Content sections same as before but inside the paper div */}
+
+          <div className="content-area">
+            {questions.some(q => q.type === 'creative') && (
+              <div className="text-center my-4">
+                <div className="section-label">সৃজনশীল প্রশ্ন</div>
+                <p className="text-[10px] font-bold mt-1">[{meta.creativeInstruction || 'যেকোনো ৭টি প্রশ্নের উত্তর দাও'}]</p>
+              </div>
+            )}
+
+            {questions.map((q, idx) => {
+              if (q.type === 'mcq') return null;
+              const p = parseText(q.content);
+              return (
+                <div key={q.id} className="mb-6">
+                  <div className="flex gap-2 font-bold mb-1">
+                    <span>{toBengaliNumber(idx + 1)}.</span>
+                    <div className="stimulus-box" dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} />
+                  </div>
+                  {q.imageUrl && <img src={q.imageUrl} className="max-w-[250px] mx-auto mb-3 border p-1" />}
+                  <div className="questions-list">
+                    <div className="q-item">
+                      <span className="q-marker">ক.</span>
+                      <div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.k) }} />
+                      <span className="font-bold">{toBengaliNumber(meta.marksA)}</span>
+                    </div>
+                    <div className="q-item">
+                      <span className="q-marker">খ.</span>
+                      <div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.kh) }} />
+                      <span className="font-bold">{toBengaliNumber(meta.marksB)}</span>
+                    </div>
+                    <div className="q-item">
+                      <span className="q-marker">গ.</span>
+                      <div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.g) }} />
+                      <span className="font-bold">{toBengaliNumber(meta.marksC)}</span>
+                    </div>
+                    <div className="q-item">
+                      <span className="q-marker">ঘ.</span>
+                      <div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.gh) }} />
+                      <span className="font-bold">{toBengaliNumber(meta.marksD)}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {questions.some(q => q.type === 'mcq') && (
+              <>
+                <div className="page-break" />
+                <div className="text-center my-4">
+                  <div className="section-label">বহুনির্বাচনি প্রশ্ন</div>
+                  <p className="text-[10px] font-bold mt-1">[{meta.mcqInstruction || 'সঠিক উত্তরের বৃত্তটি ভরাট করো'}]</p>
+                </div>
+                {questions.filter(q => q.type === 'mcq').map((q, idx) => {
+                  const p = parseText(q.content);
+                  return (
+                    <div key={q.id} className="mb-2">
+                      <div className="flex gap-2">
+                        <span className="font-bold">{toBengaliNumber(idx + 1)}.</span>
+                        <div dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} />
+                      </div>
+                      <div className="mcq-options">
+                        <div>(ক) {formatMath(p.k)}</div>
+                        <div>(খ) {formatMath(p.kh)}</div>
+                        <div>(গ) {formatMath(p.g)}</div>
+                        <div>(ঘ) {formatMath(p.gh)}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>

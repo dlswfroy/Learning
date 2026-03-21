@@ -14,7 +14,7 @@ import {
   Calendar, 
   BookOpen, 
   GraduationCap, 
-  Library,
+  Library as LibraryIcon,
   Book,
   Printer,
   ChevronRight,
@@ -43,6 +43,20 @@ import { toast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
+// Mapping for standardizing chapter names to Bengali ordinals
+const BENGALI_ORDINALS: Record<string, string> = {
+  '1': 'প্রথম অধ্যায়', '2': 'দ্বিতীয় অধ্যায়', '3': 'তৃতীয় অধ্যায়', '4': 'চতুর্থ অধ্যায়', '5': 'পঞ্চম অধ্যায়',
+  '6': 'ষষ্ঠ অধ্যায়', '7': 'সপ্তম অধ্যায়', '8': 'অষ্টম অধ্যায়', '9': 'নবম অধ্যায়', '10': 'দশম অধ্যায়',
+  '11': 'একাদশ অধ্যায়', '12': 'দ্বাদশ অধ্যায়', '13': 'ত্রয়োদশ অধ্যায়', '14': 'চতুর্দশ অধ্যায়', '15': 'পঞ্চদশ অধ্যায়',
+  '16': 'ষোড়শ অধ্যায়', '17': 'সপ্তদশ অধ্যায়', '18': 'অষ্টাদশ অধ্যায়', '19': 'ঊনবিংশ অধ্যায়', '20': 'বিংশ অধ্যায়',
+  '21': 'একবিংশ অধ্যায়', '22': 'দ্বাবিংশ অধ্যায়', '23': 'ত্রয়োবিংশ অধ্যায়', '24': 'চতুৰবিংশ অধ্যায়', '25': 'পঞ্চবিংশ অধ্যায়',
+  '26': 'ষড়বিংশ অধ্যায়', '27': 'সপ্তবিংশ অধ্যায়', '28': 'অষ্টবিংশ অধ্যায়', '29': 'ঊনত্রিংশ অধ্যায়', '30': 'ত্রিংশ অধ্যায়',
+  '31': 'একত্রিংশ অধ্যায়', '32': 'দ্বাত্রিংশ অধ্যায়', '33': 'ত্রয়োত্রিংশ অধ্যায়', '34': 'চতুস্ত্রিংশ অধ্যায়', '35': 'পঞ্চত্রিংশ অধ্যায়',
+  '36': 'ষটত্রিংশ অধ্যায়', '37': 'সপ্তত্রিংশ অধ্যায়', '38': 'অষ্টত্রিংশ অধ্যায়', '39': 'ঊনচত্বারিংশ অধ্যায়', '40': 'চত্বারিংশ অধ্যায়',
+  '41': 'একচত্বারিংশ অধ্যায়', '42': 'দ্বিচত্বারিংশ অধ্যায়', '43': 'ত্রয়োচত্বারিংশ অধ্যায়', '44': 'চতুশ্চত্বারিংশ অধ্যায়', '45': 'পঞ্চচত্বারিংশ অধ্যায়',
+  '46': 'ষটচত্বারিংশ অধ্যায়', '47': 'সপ্তচত্বারিংশ অধ্যায়', '48': 'অষ্টচত্বারিংশ অধ্যায়', '49': 'ঊনপঞ্চাশত্তম অধ্যায়', '50': 'পঞ্চাশত্তম অধ্যায়'
+};
+
 // Helper for Bengali numbers
 function toBengaliNumber(n: number | string | undefined | null): string {
   if (n === undefined || n === null || n === '') return '';
@@ -50,15 +64,7 @@ function toBengaliNumber(n: number | string | undefined | null): string {
   return n.toString().replace(/\d/g, (digit) => bengaliDigits[parseInt(digit)]);
 }
 
-// Map numbers to Bengali ordinal names
-const BENGALI_ORDINALS: Record<string, string> = {
-  '1': 'প্রথম অধ্যায়', '2': 'দ্বিতীয় অধ্যায়', '3': 'তৃতীয় অধ্যায়', '4': 'চতুর্থ অধ্যায়', '5': 'পঞ্চম অধ্যায়',
-  '6': 'ষষ্ঠ অধ্যায়', '7': 'সপ্তম অধ্যায়', '8': 'অষ্টম অধ্যায়', '9': 'নবম অধ্যায়', '10': 'দশম অধ্যায়',
-  '11': 'একাদশ অধ্যায়', '12': 'দ্বাদশ অধ্যায়', '13': 'ত্রয়োদশ অধ্যায়', '14': 'চতুর্দশ অধ্যায়', '15': 'পঞ্চদশ অধ্যায়',
-  '16': 'ষোড়শ অধ্যায়', '17': 'সপ্তদশ অধ্যায়', '18': 'অষ্টাদশ অধ্যায়', '19': 'ঊনবিংশ অধ্যায়', '20': 'বিংশ অধ্যায়'
-};
-
-// Enhanced helper for chapter normalization to group all variations into one "Standardized Folder"
+// Function to extract number and standardize chapter name
 function getStandardizedChapterName(chapter: string): string {
   if (!chapter) return 'শিরোনামহীন';
   
@@ -67,7 +73,7 @@ function getStandardizedChapterName(chapter: string): string {
     '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9'
   };
   
-  const ordinalMap: Record<string, string> = {
+  const ordinalWords: Record<string, string> = {
     'প্রথম': '1', 'দ্বিতীয়': '2', 'তৃতীয়': '3', 'চতুর্থ': '4', 'পঞ্চম': '5',
     'ষষ্ঠ': '6', 'সপ্তম': '7', 'অষ্টম': '8', 'নবম': '9', 'দশম': '10',
     '১ম': '1', '২য়': '2', '৩য়': '3', '৪র্থ': '4', '৫ম': '5',
@@ -76,26 +82,37 @@ function getStandardizedChapterName(chapter: string): string {
 
   let normalized = chapter.toString().toLowerCase().trim();
   
-  // Replace ordinal words
-  Object.entries(ordinalMap).forEach(([bnWord, num]) => {
+  // Replace ordinal words and Bengali digits to extract standard number
+  Object.entries(ordinalWords).forEach(([bnWord, num]) => {
     normalized = normalized.replace(new RegExp(bnWord, 'g'), num);
   });
   
-  // Replace Bengali digits
   Object.entries(bengaliToEnglish).forEach(([bn, en]) => {
     normalized = normalized.replace(new RegExp(bn, 'g'), en);
   });
   
-  // Extract first number if present
+  // Extract first number found
   const match = normalized.match(/\d+/);
   if (match) {
     const num = match[0];
     return BENGALI_ORDINALS[num] || `${toBengaliNumber(num)}তম অধ্যায়`;
   }
   
-  // Fallback for non-numeric titles: remove common words but keep the essence
+  // Fallback if no number is found: cleanup title
   normalized = normalized.replace(/(অধ্যায়|অধ্যায়|পরিচ্ছেদ|পাঠ|ম|র্থ|ষ্ঠ|তম|য়|দশ|ঃ|:|\.)/g, '').trim();
   return normalized || 'শিরোনামহীন';
+}
+
+// Helper to get numeric order for sorting
+function getChapterOrder(label: string): number {
+  if (label === 'শিরোনামহীন') return 999;
+  const entry = Object.entries(BENGALI_ORDINALS).find(([num, text]) => text === label);
+  if (entry) return parseInt(entry[0]);
+  
+  const match = label.match(/\d+/);
+  if (match) return parseInt(match[0]);
+  
+  return 500; // Sort other titles towards middle/end
 }
 
 type ViewMode = 'classes' | 'subjects' | 'chapters' | 'types' | 'content';
@@ -212,20 +229,29 @@ export default function MyLibraryPage() {
     const chapters = Array.from(new Set([
       ...currentItems.questions.map(q => getStandardizedChapterName(q.chapter || '')),
       ...currentItems.sheets.map(s => getStandardizedChapterName(s.topic || ''))
-    ])).filter(Boolean);
+    ])).filter(Boolean)
+    .sort((a, b) => getChapterOrder(a) - getChapterOrder(b));
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {chapters.map(label => (
-          <Card key={label} onClick={() => { setSelectedChapter(label); setViewMode('types'); }} className="cursor-pointer hover:border-primary hover:shadow-md transition-all group border-2">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent group-hover:bg-accent group-hover:text-white transition-all">
-                <Folder className="w-5 h-5" />
-              </div>
-              <p className="font-bold text-sm truncate flex-1">{label}</p>
-            </CardContent>
-          </Card>
-        ))}
+        {chapters.map(label => {
+          const qCount = currentItems.questions.filter(q => getStandardizedChapterName(q.chapter || '') === label).length;
+          const sCount = currentItems.sheets.filter(s => getStandardizedChapterName(s.topic || '') === label).length;
+          
+          return (
+            <Card key={label} onClick={() => { setSelectedChapter(label); setViewMode('types'); }} className="cursor-pointer hover:border-primary hover:shadow-md transition-all group border-2">
+              <CardContent className="p-4 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4 min-w-0 flex-1">
+                  <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent group-hover:bg-accent group-hover:text-white transition-all">
+                    <Folder className="w-5 h-5" />
+                  </div>
+                  <p className="font-bold text-sm truncate">{label}</p>
+                </div>
+                <Badge className="bg-primary/10 text-primary font-bold">{toBengaliNumber(qCount + sCount)}</Badge>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     );
   };
@@ -254,7 +280,7 @@ export default function MyLibraryPage() {
           <div className="flex-1">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-black text-orange-600">লেকচার শিট</h3>
-              <Badge className="bg-orange-500 text-white font-bold">{toBengaliNumber(currentItems.sheets.length)} টি</Badge>
+              <Badge className="bg-orange-50 text-white font-bold">{toBengaliNumber(currentItems.sheets.length)} টি</Badge>
             </div>
             <p className="text-xs text-muted-foreground font-bold">অধ্যায় ভিত্তিক লেকচার নোট</p>
           </div>
@@ -376,7 +402,7 @@ export default function MyLibraryPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-primary text-white flex items-center justify-center shadow-sm">
-              <Library className="w-7 h-7" />
+              <LibraryIcon className="w-7 h-7" />
             </div>
             <div>
               <h2 className="text-2xl font-bold">আমার লাইব্রেরি</h2>
@@ -436,10 +462,11 @@ export default function MyLibraryPage() {
       {(viewMode === 'content' || viewMode === 'types') && (
         <div className="flex justify-center pt-10">
            <p className="text-[10px] font-bold text-muted-foreground flex items-center gap-1">
-             <Library className="w-3 h-3" /> মোট আইটেম: {toBengaliNumber((currentItems.questions.length + currentItems.sheets.length))} টি
+             <LibraryIcon className="w-3 h-3" /> মোট আইটেম: {toBengaliNumber((currentItems.questions.length + currentItems.sheets.length))} টি
            </p>
         </div>
       )}
     </div>
   );
 }
+
