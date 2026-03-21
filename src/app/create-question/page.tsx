@@ -477,6 +477,7 @@ function CreateQuestionContent() {
                 box-shadow: 0 0 15px rgba(0,0,0,0.1);
                 min-height: 11in;
                 position: relative;
+                z-index: 1;
               }
               .watermark {
                 position: fixed;
