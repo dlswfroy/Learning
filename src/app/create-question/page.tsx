@@ -472,22 +472,22 @@ function CreateQuestionContent() {
               .paper { 
                 background: white !important; 
                 margin: 0 auto !important; 
-                padding: 0.4in !important; 
+                padding: 0 !important; 
                 box-shadow: 0 0 15px rgba(0,0,0,0.1);
                 min-height: 11in;
                 position: relative;
                 z-index: 1;
               }
             ` : ''}
-            .header { text-align: center; margin-bottom: 4px; position: relative; z-index: 10; }
-            .inst-name { font-size: 23px !important; font-weight: 800; }
-            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 4px; font-size: 10pt; border-top: 1.5pt solid black; padding-top: 4px; }
+            .header { text-align: center; margin-bottom: 2px; position: relative; z-index: 10; }
+            .inst-name { font-size: 23px !important; font-weight: 800; line-height: 1.1; }
+            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 2px; font-size: 10pt; border-top: 1.5pt solid black; padding-top: 2px; line-height: 1.1; }
             .section-label { font-size: 11pt; font-weight: bold; border: 1pt solid black; display: inline-block; padding: 2px 20px; margin: 2px auto; text-transform: uppercase; }
-            .instruction-text { font-size: 8.5pt; font-style: italic; font-weight: 500; margin-bottom: 6px; text-align: justify; }
-            .content-area { font-size: 10.5pt; line-height: 1.4; color: black !important; position: relative; z-index: 10; }
-            .stimulus-box { margin-bottom: 4px; font-weight: 500; text-align: justify; }
+            .instruction-text { font-size: 8.5pt; font-style: italic; font-weight: 500; margin-bottom: 4px; text-align: justify; line-height: 1.1; }
+            .content-area { font-size: 10.5pt; line-height: 1.1; color: black !important; position: relative; z-index: 10; }
+            .stimulus-box { margin-bottom: 4px; font-weight: 500; text-align: justify; line-height: 1.1; }
             .questions-list { margin-left: 15px; }
-            .q-item { display: flex; gap: 8px; margin-bottom: 2px; }
+            .q-item { display: flex; gap: 8px; margin-bottom: 2px; line-height: 1.1; }
             .q-marker { font-weight: bold; min-width: 22px; }
             
             .mcq-container { 
@@ -496,7 +496,7 @@ function CreateQuestionContent() {
               column-rule: 1pt solid #000; 
               column-fill: balance;
             }
-            .mcq-item { margin-bottom: 8px; break-inside: avoid; }
+            .mcq-item { margin-bottom: 6px; break-inside: avoid; line-height: 1.1; }
             .mcq-options { 
               display: grid; 
               grid-template-columns: 1fr 1fr; 
@@ -504,6 +504,7 @@ function CreateQuestionContent() {
               margin-top: 2px; 
               padding-left: 20px; 
               font-size: 10pt; 
+              line-height: 1.1;
             }
             
             .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
@@ -520,7 +521,7 @@ function CreateQuestionContent() {
           @media print {
             .paper { margin: 0 !important; box-shadow: none !important; width: 100% !important; height: auto !important; }
             .no-print { display: none !important; }
-            @page { size: auto; margin: 0.4in !important; }
+            @page { size: auto; margin: 0.5in !important; }
           }
         `}} />
         
@@ -609,7 +610,7 @@ function CreateQuestionContent() {
 
             {/* MCQ Section */}
             {questions.some(q => q.type === 'mcq') && (
-              <div className="mt-6">
+              <div className="mt-4">
                 <div className="text-center mb-4">
                   <div className="section-label">বহুনির্বাচনি প্রশ্ন</div>
                   <div className="instruction-text mt-1 mx-4">

@@ -251,7 +251,7 @@ function CreateLectureSheetContent() {
               .paper { 
                 background: white !important; 
                 margin: 0 auto !important; 
-                padding: 0.5in !important; 
+                padding: 0 !important; 
                 box-shadow: 0 0 15px rgba(0,0,0,0.1);
                 min-height: 11in;
                 position: relative;
@@ -263,11 +263,11 @@ function CreateLectureSheetContent() {
               text-align: justify; 
               color: black !important;
             }
-            .header { margin-bottom: 8px; border-bottom: 1.5pt solid black; padding-bottom: 5px; position: relative; z-index: 10; text-align: center; }
-            .inst-name { font-size: 23px !important; font-weight: 800; }
-            .topic-title { font-size: 13pt; font-weight: bold; margin: 10px 0; text-align: center; text-decoration: underline; }
-            .meta-info { display: flex; justify-content: center; gap: 20pt; font-weight: 900; margin-top: 4px; font-size: 10pt; border-top: 0.5pt solid #ddd; padding-top: 5px; }
-            .content-area { white-space: pre-wrap; font-size: 9pt; background: transparent !important; position: relative; z-index: 10; }
+            .header { margin-bottom: 2px; border-bottom: 1.5pt solid black; padding-bottom: 2px; position: relative; z-index: 10; text-align: center; }
+            .inst-name { font-size: 23px !important; font-weight: 800; line-height: 1.1; }
+            .topic-title { font-size: 13pt; font-weight: bold; margin: 6px 0; text-align: center; text-decoration: underline; line-height: 1.1; }
+            .meta-info { display: flex; justify-content: center; gap: 20pt; font-weight: 900; margin-top: 2px; font-size: 10pt; border-top: 0.5pt solid #ddd; padding-top: 2px; line-height: 1.1; }
+            .content-area { white-space: pre-wrap; font-size: 9.5pt; line-height: 1.1; background: transparent !important; position: relative; z-index: 10; }
             
             .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
             .math-num { border-bottom: 0.5pt solid black; padding: 0 1px; }
