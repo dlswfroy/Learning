@@ -47,7 +47,6 @@ export function Navbar() {
     }
   };
 
-  // লগইন পৃষ্ঠায় টপবার দেখাবে না
   if (pathname === '/auth') {
     return null;
   }
@@ -63,7 +62,7 @@ export function Navbar() {
           )}
         </div>
         <div className="flex flex-col">
-          <h1 className="text-3xl md:text-[50px] font-black font-headline tracking-tighter drop-shadow-[0_6px_6px_rgba(0,0,0,1)] leading-tight text-white uppercase scale-y-110 origin-left">
+          <h1 className="text-[27px] md:text-[45px] font-black font-headline tracking-tighter drop-shadow-[0_6px_6px_rgba(0,0,0,1)] leading-tight text-white uppercase scale-y-110 origin-left">
             {appName}
           </h1>
           <p className="text-[10px] md:text-xs font-black text-yellow-400 italic leading-none mt-1 drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]">

@@ -225,7 +225,7 @@ function CreateLectureSheetContent() {
           @media print {
             @page { 
               size: A4; 
-              margin: 0.3in !important; 
+              margin: 0.5in !important; 
             }
             body, html { 
               margin: 0 !important; 
@@ -251,7 +251,7 @@ function CreateLectureSheetContent() {
             .header { margin-bottom: 8px; border-bottom: 1.5pt solid black; padding-bottom: 5px; }
             .header-top { display: flex; align-items: center; justify-content: center; gap: 15pt; margin-bottom: 0px; }
             .print-logo { max-height: 45pt; width: auto; object-fit: contain; }
-            .inst-name { font-size: 22pt; font-weight: 900; }
+            .inst-name { font-size: 20pt; font-weight: 900; }
             .topic-title { font-size: 13pt; font-weight: bold; margin: 10px 0; text-align: center; text-decoration: underline; }
             .meta-info { display: flex; justify-content: center; gap: 20pt; font-weight: 900; margin-top: 4px; font-size: 10pt; border-top: 0.5pt solid #ddd; padding-top: 5px; }
             .content-area { white-space: pre-wrap; font-size: 9pt; background: transparent !important; }

@@ -27,7 +27,6 @@ export default function AuthPage() {
   const db = useFirestore();
   const router = useRouter();
 
-  // Fetch Software Config for Logo and App Name
   const softwareDocRef = useMemo(() => doc(db, 'config', 'software'), [db]);
   const { data: softwareConfig } = useDoc(softwareDocRef);
   const appName = softwareConfig?.appName || 'টপ গ্রেড টিউটোরিয়ালস';
@@ -45,12 +44,10 @@ export default function AuthPage() {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(userCredential.user, { displayName: name });
         
-        // Check if this is the first user ever to assign admin
         const adminDocRef = doc(db, 'config', 'admin');
         const adminDoc = await getDoc(adminDocRef);
         
         if (!adminDoc.exists()) {
-          // First user becomes admin
           await setDoc(adminDocRef, { adminUid: userCredential.user.uid });
           toast({ title: "অভিনন্দন!", description: "আপনি প্রথম ইউজার এবং এডমিন হিসেবে নিযুক্ত হলেন।" });
         } else {
@@ -74,7 +71,6 @@ export default function AuthPage() {
     <div className="flex items-center justify-center min-h-[70vh] px-4 font-kalpurush">
       <Card className="w-full max-w-md shadow-2xl border-primary/10 rounded-3xl overflow-hidden bg-white">
         <CardHeader className="text-center space-y-6 pt-10">
-          {/* Branding Section matching screenshot */}
           <div className="flex flex-col items-center gap-4">
             <div className="bg-white p-3 rounded-2xl shadow-lg border border-primary/5 w-28 h-28 flex items-center justify-center overflow-hidden">
               {appLogoUrl ? (
@@ -83,7 +79,7 @@ export default function AuthPage() {
                 <BookOpenText className="w-16 h-16 text-primary" />
               )}
             </div>
-            <h1 className="text-2xl font-black text-primary tracking-tight">
+            <h1 className="text-[25px] font-black text-primary tracking-tight">
               {appName}
             </h1>
           </div>

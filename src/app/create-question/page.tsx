@@ -461,7 +461,7 @@ function CreateQuestionContent() {
           @media print {
             @page { 
               size: A4; 
-              margin: 0.5in !important; 
+              margin: 0.4in !important; 
             }
             body, html { 
               margin: 0 !important; 
@@ -481,7 +481,7 @@ function CreateQuestionContent() {
               color: black !important;
             }
             .header { text-align: center; margin-bottom: 6px; border-bottom: 1.5pt solid black; padding-bottom: 4px; }
-            .inst-name { font-size: 15pt; font-weight: 800; }
+            .inst-name { font-size: 13.5pt; font-weight: 800; }
             .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 2px; font-size: 9.5pt; }
             .section { margin-top: 4px; clear: both; }
             .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 15px; margin: 2px auto; text-transform: uppercase; }
