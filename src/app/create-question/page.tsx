@@ -94,7 +94,6 @@ function formatMath(text: string) {
     formatted = formatted.replace(new RegExp(key, 'g'), val); 
   });
 
-  // আবৃত দশমিক (Recurring Decimals) formatting
   formatted = formatted.replace(/\\dot\{([^}]+)\}/g, '<span class="math-dot">$1</span>');
   
   let prev;
@@ -131,11 +130,12 @@ function CreateQuestionContent() {
   const softwareDocRef = useMemo(() => doc(db, 'config', 'software'), [db]);
   const { data: softwareConfig } = useDoc(softwareDocRef);
   const appLogoUrl = softwareConfig?.appLogoUrl || '';
+  const appName = softwareConfig?.appName || 'টপ গ্রেড টিউটোরিয়ালস';
   
   const [meta, setMeta] = useState({
     institution: 'টপ গ্রেড টিউটোরিয়ালস', exam: 'সাপ্তাহিক পরীক্ষা', chapter: '', classId: '', subject: '', time: '২ ঘণ্টা ৩০ মিনিট', totalMarks: '১০০',
     creativeInstruction: 'যেকোনো ৭টি প্রশ্নের উত্তর দাও', shortInstruction: 'সকল প্রশ্নের উত্তর দাও',
-    mcqInstruction: 'সঠিক উত্তরের বৃত্তটি ভরাট করো', marksA: 1, marksB: 2, marksC: 3, marksD: 4, shortMarks: 2, mcqMarks: 1
+    mcqInstruction: 'সঠিক উত্তরের বিপরীতের বৃত্তটি বল পয়েন্ট কলম দ্বারা ভরাট কর। সকল প্রশ্নের উত্তর দিতে হবে। প্রশ্নপত্রে কোন প্রকার দাগ দেওয়া যাবে না।', marksA: 1, marksB: 2, marksC: 3, marksD: 4, shortMarks: 2, mcqMarks: 1
   });
   
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -161,7 +161,7 @@ function CreateQuestionContent() {
               subject: data.subject || '', time: data.time || '', totalMarks: data.totalMarks || '',
               creativeInstruction: data.creativeInstruction || '', 
               shortInstruction: data.shortInstruction || 'সকল প্রশ্নের উত্তর দাও',
-              mcqInstruction: data.mcqInstruction || 'সঠিক উত্তরের বৃত্তটি ভরাট করো',
+              mcqInstruction: data.mcqInstruction || 'সঠিক উত্তরের বিপরীতের বৃত্তটি বল পয়েন্ট কলম দ্বারা ভরাট কর। সকল প্রশ্নের উত্তর দিতে হবে। প্রশ্নপত্রে কোন প্রকার দাগ দেওয়া যাবে না।',
               marksA: data.marksA || 1, marksB: data.marksB || 2, marksC: data.marksC || 3, marksD: data.marksD || 4,
               shortMarks: data.shortMarks || 2, mcqMarks: data.mcqMarks || 1
             }));
@@ -183,7 +183,7 @@ function CreateQuestionContent() {
             const id = Math.random().toString(36).substr(2, 9);
             const commonFields = { id, type: q.type, imageUrl: q.imageUrl || '' };
             if (q.type === 'mcq') return { ...commonFields, content: `${q.mcqQuestion || ''}\nক. ${q.optA || ''}\nখ. ${q.optB || ''}\nগ. ${q.optC || ''}\nঘ. ${q.optD || ''}` };
-            if (q.type === 'creative') return { ...commonFields, content: `${q.stimulus || ''}\nক. ${q.qA || ''}\nখ. ${q.qB || ''}\nগ. ${q.qC || ''}\nঘ. ${q.optD || ''}` };
+            if (q.type === 'creative') return { ...commonFields, content: `${q.stimulus || ''}\nক. ${q.qA || ''}\nখ. ${q.qB || ''}\nগ. ${q.qC || ''}\nঘ. ${q.qD || ''}` };
             return { ...commonFields, content: q.shortText || '' };
           });
           setQuestions(reconstructed);
@@ -304,7 +304,7 @@ function CreateQuestionContent() {
       totalMarks: meta.totalMarks || '',
       creativeInstruction: meta.creativeInstruction || '',
       shortInstruction: meta.shortInstruction || '',
-      mcqInstruction: meta.mcqInstruction || 'সঠিক উত্তরের বৃত্তটি ভরাট করো',
+      mcqInstruction: meta.mcqInstruction || '',
       marksA: meta.marksA || 1,
       marksB: meta.marksB || 2,
       marksC: meta.marksC || 3,
@@ -401,7 +401,7 @@ function CreateQuestionContent() {
                 </div>
                 <div className="space-y-4">
                   <div className="space-y-2"><label className="text-xs font-semibold">সংক্ষিপ্ত নির্দেশিকা</label><Input value={meta.shortInstruction || ''} onChange={e => setMeta(prev => ({...prev, shortInstruction: e.target.value}))} className="font-bold" /></div>
-                  <div className="space-y-2"><label className="text-xs font-semibold">এমসিকিউ নির্দেশিকা</label><Input value={meta.mcqInstruction || ''} onChange={e => setMeta(prev => ({...prev, mcqInstruction: e.target.value}))} className="font-bold" /></div>
+                  <div className="space-y-2"><label className="text-xs font-semibold">এমসিকিউ নির্দেশিকা</label><Textarea value={meta.mcqInstruction || ''} onChange={e => setMeta(prev => ({...prev, mcqInstruction: e.target.value}))} className="font-bold text-xs" rows={3} /></div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1"><label className="text-[10px] font-bold">সংক্ষিপ্ত মার্কস</label><Input type="number" value={meta.shortMarks || ''} onChange={e => setMeta(prev => ({...prev, shortMarks: parseInt(e.target.value) || 0}))} className="h-8 font-bold" /></div>
                     <div className="space-y-1"><label className="text-[10px] font-bold">এমসিকিউ মার্কস</label><Input type="number" value={meta.mcqMarks || ''} onChange={e => setMeta(prev => ({...prev, mcqMarks: parseInt(e.target.value) || 0}))} className="h-8 font-bold" /></div>
@@ -483,23 +483,38 @@ function CreateQuestionContent() {
                 top: 50%;
                 left: 50%;
                 transform: translate(-50%, -50%);
-                opacity: 0.06;
+                opacity: 0.1;
                 width: 70%;
                 max-width: 500px;
                 pointer-events: none;
                 z-index: 0;
               }
             ` : ''}
-            .header { text-align: center; margin-bottom: 6px; border-bottom: 1.5pt solid black; padding-bottom: 4px; position: relative; z-index: 10; }
+            .header { text-align: center; margin-bottom: 6px; position: relative; z-index: 10; }
             .inst-name { font-size: 23px !important; font-weight: 800; }
-            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 2px; font-size: 9.5pt; }
-            .section-label { font-size: 10pt; font-weight: bold; border-bottom: 1pt solid black; display: inline-block; padding: 0 15px; margin: 2px auto; text-transform: uppercase; }
+            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 4px; font-size: 10pt; border-top: 1.5pt solid black; padding-top: 4px; }
+            .section-label { font-size: 11pt; font-weight: bold; border: 1pt solid black; display: inline-block; padding: 2px 20px; margin: 4px auto; text-transform: uppercase; }
+            .instruction-text { font-size: 8.5pt; font-style: italic; font-weight: 500; margin-bottom: 10px; text-align: justify; }
             .content-area { font-size: 10.5pt; line-height: 1.5; color: black !important; position: relative; z-index: 10; }
-            .stimulus-box { margin-bottom: 10px; font-weight: 500; text-align: justify; }
+            .stimulus-box { margin-bottom: 8px; font-weight: 500; text-align: justify; }
             .questions-list { margin-left: 15px; }
             .q-item { display: flex; gap: 8px; margin-bottom: 4px; }
-            .q-marker { font-weight: bold; min-width: 20px; }
-            .mcq-options { display: grid; grid-template-cols: 1fr 1fr 1fr 1fr; gap: 5px; margin-top: 4px; margin-bottom: 8px; padding-left: 20px; }
+            .q-marker { font-weight: bold; min-width: 22px; }
+            
+            .mcq-container { column-count: 2; column-gap: 30px; column-fill: auto; }
+            .mcq-item { margin-bottom: 12px; break-inside: avoid; }
+            .mcq-options { display: grid; grid-template-cols: 1fr 1fr; gap: 2px 10px; margin-top: 3px; padding-left: 20px; font-size: 10pt; }
+            
+            .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
+            .math-num { border-bottom: 0.5pt solid black; padding: 0 1px; }
+            .math-den { padding: 0 1px; }
+            .math-dot { position: relative; display: inline-block; }
+            .math-dot::after { content: "·"; position: absolute; top: -0.6em; left: 50%; transform: translateX(-50%); font-weight: bold; font-size: 1.2em; }
+            .math-sqrt { display: inline-flex; align-items: center; }
+            .math-sqrt-stem { border-top: 0.5pt solid black; padding-top: 1px; }
+            .math-sup { font-size: 0.7em; vertical-align: super; }
+            .math-sub { font-size: 0.7em; vertical-align: sub; }
+            .math-text { font-family: 'Kalpurush', sans-serif; font-style: normal; }
           }
           @media print {
             .paper { margin: 0 !important; box-shadow: none !important; width: 100% !important; height: auto !important; }
@@ -519,81 +534,93 @@ function CreateQuestionContent() {
         <div className="paper">
           {appLogoUrl && <div className="watermark"><img src={appLogoUrl} alt="" className="w-full h-auto" /></div>}
           <div className="header">
-            <div className="inst-name">{meta.institution || 'শিক্ষা প্রতিষ্ঠানের নাম'}</div>
-            <div className="font-bold text-lg leading-none">{meta.exam || 'পরীক্ষার নাম'}</div>
-            <div className="font-bold text-sm">শ্রেণি: {CLASSES.find(c => c.id === meta.classId)?.label || ''} | বিষয়: {meta.subject}</div>
-            <div className="meta-info"><div>সময়: {meta.time}</div><div>পূর্ণমান: {meta.totalMarks}</div></div>
+            <div className="inst-name">{meta.institution || appName}</div>
+            <div className="font-bold text-lg leading-none mt-1">{meta.exam || 'পরীক্ষার নাম'}</div>
+            <div className="font-bold text-sm mt-1">শ্রেণি: {CLASSES.find(c => c.id === meta.classId)?.label || ''} | বিষয়: {meta.subject}</div>
+            <div className="meta-info">
+              <div>সময়: {meta.time}</div>
+              <div>পূর্ণমান: {meta.totalMarks}</div>
+            </div>
           </div>
 
-          <div className="content-area">
-            {questions.some(q => q.type === 'creative') && (
-              <div className="text-center my-4">
-                <div className="section-label">সৃজনশীল প্রশ্ন</div>
-                <p className="text-[10px] font-bold mt-1">[{meta.creativeInstruction || 'যেকোনো ৭টি প্রশ্নের উত্তর দাও'}]</p>
-              </div>
-            )}
-
-            {questions.map((q, idx) => {
-              if (q.type === 'mcq') return null;
-              const p = parseText(q.content);
-              return (
-                <div key={q.id} className="mb-6">
-                  <div className="flex gap-2 font-bold mb-1">
-                    <span>{toBengaliNumber(idx + 1)}.</span>
-                    <div className="stimulus-box" dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} />
-                  </div>
-                  {q.imageUrl && <img src={q.imageUrl} className="max-w-[250px] mx-auto mb-3 border p-1" />}
-                  <div className="questions-list">
-                    <div className="q-item">
-                      <span className="q-marker">ক.</span>
-                      <div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.k) }} />
-                      <span className="font-bold">{toBengaliNumber(meta.marksA)}</span>
-                    </div>
-                    <div className="q-item">
-                      <span className="q-marker">খ.</span>
-                      <div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.kh) }} />
-                      <span className="font-bold">{toBengaliNumber(meta.marksB)}</span>
-                    </div>
-                    <div className="q-item">
-                      <span className="q-marker">গ.</span>
-                      <div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.g) }} />
-                      <span className="font-bold">{toBengaliNumber(meta.marksC)}</span>
-                    </div>
-                    <div className="q-item">
-                      <span className="q-marker">ঘ.</span>
-                      <div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.gh) }} />
-                      <span className="font-bold">{toBengaliNumber(meta.marksD)}</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-
-            {questions.some(q => q.type === 'mcq') && (
+          <div className="content-area mt-4">
+            {/* Written/Creative Section */}
+            {questions.some(q => q.type !== 'mcq') && (
               <>
-                <div className="page-break" />
-                <div className="text-center my-4">
-                  <div className="section-label">বহুনির্বাচনি প্রশ্ন</div>
-                  <p className="text-[10px] font-bold mt-1">[{meta.mcqInstruction || 'সঠিক উত্তরের বৃত্তটি ভরাট করো'}]</p>
+                <div className="text-center mb-4">
+                  <div className="section-label">সৃজনশীল প্রশ্ন</div>
+                  <p className="text-[10px] font-bold mt-1">[{meta.creativeInstruction || 'যেকোনো ৭টি প্রশ্নের উত্তর দাও'}]</p>
                 </div>
-                {questions.filter(q => q.type === 'mcq').map((q, idx) => {
+                {questions.filter(q => q.type !== 'mcq').map((q, idx) => {
                   const p = parseText(q.content);
                   return (
-                    <div key={q.id} className="mb-2">
-                      <div className="flex gap-2">
-                        <span className="font-bold">{toBengaliNumber(idx + 1)}.</span>
-                        <div dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} />
+                    <div key={q.id} className="mb-6 break-inside-avoid">
+                      <div className="flex gap-2 font-bold mb-1">
+                        <span>{toBengaliNumber(idx + 1)}.</span>
+                        <div className="stimulus-box" dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} />
                       </div>
-                      <div className="mcq-options">
-                        <div>(ক) {formatMath(p.k)}</div>
-                        <div>(খ) {formatMath(p.kh)}</div>
-                        <div>(গ) {formatMath(p.g)}</div>
-                        <div>(ঘ) {formatMath(p.gh)}</div>
-                      </div>
+                      {q.imageUrl && <img src={q.imageUrl} className="max-w-[250px] mx-auto mb-3 border p-1" />}
+                      {q.type === 'creative' && (
+                        <div className="questions-list">
+                          <div className="q-item">
+                            <span className="q-marker">ক.</span>
+                            <div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.k) }} />
+                            <span className="font-bold">{toBengaliNumber(meta.marksA)}</span>
+                          </div>
+                          <div className="q-item">
+                            <span className="q-marker">খ.</span>
+                            <div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.kh) }} />
+                            <span className="font-bold">{toBengaliNumber(meta.marksB)}</span>
+                          </div>
+                          <div className="q-item">
+                            <span className="q-marker">গ.</span>
+                            <div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.g) }} />
+                            <span className="font-bold">{toBengaliNumber(meta.marksC)}</span>
+                          </div>
+                          <div className="q-item">
+                            <span className="q-marker">ঘ.</span>
+                            <div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.gh) }} />
+                            <span className="font-bold">{toBengaliNumber(meta.marksD)}</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
               </>
+            )}
+
+            {/* MCQ Section */}
+            {questions.some(q => q.type === 'mcq') && (
+              <div className="mt-8">
+                <div className="text-center mb-4">
+                  <div className="section-label">বহুনির্বাচনি প্রশ্ন</div>
+                  <div className="instruction-text mt-2 mx-4">
+                    [ {meta.mcqInstruction || 'সঠিক উত্তরের বিপরীতের বৃত্তটি বল পয়েন্ট কলম দ্বারা ভরাট কর। সকল প্রশ্নের উত্তর দিতে হবে। প্রশ্নপত্রে কোন প্রকার দাগ দেওয়া যাবে না।'} ]
+                  </div>
+                </div>
+                <div className="mcq-container">
+                  {questions.filter(q => q.type === 'mcq').map((q, idx) => {
+                    const p = parseText(q.content);
+                    const qNum = questions.filter(item => item.type !== 'mcq').length + idx + 1;
+                    return (
+                      <div key={q.id} className="mcq-item">
+                        <div className="flex gap-1">
+                          <span className="font-bold">{toBengaliNumber(qNum)}.</span>
+                          <div dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} />
+                        </div>
+                        {q.imageUrl && <img src={q.imageUrl} className="max-w-full h-auto mx-auto my-2 border p-1" />}
+                        <div className="mcq-options">
+                          <div>ক) {formatMath(p.k)}</div>
+                          <div>খ) {formatMath(p.kh)}</div>
+                          <div>গ) {formatMath(p.g)}</div>
+                          <div>ঘ) {formatMath(p.gh)}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             )}
           </div>
         </div>
