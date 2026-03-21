@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings as SettingsIcon, CheckCircle, Trash2, Loader2, Link as LinkIcon, Filter, BookCopy, User, Globe, Save, Camera, FileText } from 'lucide-react';
+import { Settings as SettingsIcon, CheckCircle, Trash2, Loader2, Link as LinkIcon, Filter, BookCopy, User, Globe, Save, Camera, FileText, ShieldCheck } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { toast } from '@/hooks/use-toast';
@@ -102,6 +102,11 @@ export default function SettingsPage() {
   const [appLogoUrl, setAppLogoUrl] = useState('');
   const [savingSoftware, setSavingSoftware] = useState(false);
 
+  const adminDocRef = useMemo(() => doc(db, 'config', 'admin'), [db]);
+  const { data: adminConfig } = useDoc(adminDocRef);
+  const [adminUidInput, setAdminUidInput] = useState('');
+  const [savingAdmin, setSavingAdmin] = useState(false);
+
   const userProfileRef = useMemo(() => user ? doc(db, 'users', user.uid) : null, [db, user]);
   const { data: userProfile } = useDoc(userProfileRef);
 
@@ -127,6 +132,12 @@ export default function SettingsPage() {
       setAppName('টপ গ্রেড টিউটোরিয়ালস');
     }
   }, [softwareConfig]);
+
+  useEffect(() => {
+    if (adminConfig) {
+      setAdminUidInput(adminConfig.adminUid || '');
+    }
+  }, [adminConfig]);
 
   useEffect(() => {
     async function checkAdmin() {
@@ -225,6 +236,22 @@ export default function SettingsPage() {
     }
   };
 
+  const handleUpdateAdmin = async () => {
+    if (!isAdmin || !db) return;
+    setSavingAdmin(true);
+    const data = { adminUid: adminUidInput };
+    try {
+      await setDoc(adminDocRef, data, { merge: true });
+      toast({ title: "সফল", description: "অ্যাডমিন পারমিশন আপডেট করা হয়েছে।" });
+    } catch (e) {
+      errorEmitter.emit('permission-error', new FirestorePermissionError({
+        path: adminDocRef.path, operation: 'write', requestResourceData: data
+      }));
+    } finally {
+      setSavingAdmin(false);
+    }
+  };
+
   const handleSaveBook = async () => {
     if (!classId || !subject || !db || !isAdmin || !pdfUrl) return;
     setUploading(true);
@@ -272,10 +299,11 @@ export default function SettingsPage() {
       </header>
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-6 bg-secondary/50 p-1">
+        <TabsList className={`grid w-full mb-6 bg-secondary/50 p-1 ${isAdmin ? 'grid-cols-4' : 'grid-cols-2'}`}>
           <TabsTrigger value="profile" className="gap-2 font-bold text-xs"><User className="w-3.5 h-3.5" /> প্রোফাইল</TabsTrigger>
           <TabsTrigger value="books" className="gap-2 font-bold text-xs"><BookCopy className="w-3.5 h-3.5" /> বই ব্যবস্থাপনা</TabsTrigger>
           {isAdmin && <TabsTrigger value="software" className="gap-2 font-bold text-xs"><Globe className="w-3.5 h-3.5" /> ব্র্যান্ডিং</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="permissions" className="gap-2 font-bold text-xs"><ShieldCheck className="w-3.5 h-3.5" /> পারমিশন</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="profile" className="space-y-4">
@@ -424,6 +452,38 @@ export default function SettingsPage() {
               <CardFooter className="flex justify-end border-t bg-muted/20 py-3">
                 <Button onClick={handleUpdateSoftware} disabled={savingSoftware} className="gap-2 font-bold h-9 shadow-lg bg-primary">
                   {savingSoftware ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} সেভ করুন
+                </Button>
+              </CardFooter>
+            </Card>
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="permissions" className="space-y-4">
+            <Card className="border-2 border-primary/10">
+              <CardHeader className="p-4"><CardTitle className="text-lg flex items-center gap-2"><ShieldCheck className="w-5 h-5 text-primary" /> অ্যাডমিন পারমিশন</CardTitle></CardHeader>
+              <CardContent className="p-4 space-y-6">
+                <div className="space-y-4">
+                  <div className="p-4 bg-primary/5 rounded-lg border border-primary/10">
+                    <p className="text-sm font-bold text-primary mb-2">আপনার ইউজার আইডি (UID):</p>
+                    <code className="block p-2 bg-white rounded border text-xs font-mono break-all">{user?.uid}</code>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="font-bold">অ্যাডমিন ইউজার আইডি (UID) সেট করুন</Label>
+                    <Input 
+                      value={adminUidInput} 
+                      onChange={e => setAdminUidInput(e.target.value)} 
+                      placeholder="ইউজার ইউআইডি লিখুন" 
+                      className="font-mono text-sm"
+                    />
+                    <p className="text-[10px] text-muted-foreground font-bold italic">সতর্কবার্তা: এখানে অন্য কোনো ইউআইডি দিলে আপনি আপনার অ্যাডমিন এক্সেস হারাতে পারেন।</p>
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter className="flex justify-end border-t bg-muted/20 py-3">
+                <Button onClick={handleUpdateAdmin} disabled={savingAdmin} className="gap-2 font-bold h-9 shadow-md bg-primary">
+                  {savingAdmin ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} পারমিশন আপডেট করুন
                 </Button>
               </CardFooter>
             </Card>
