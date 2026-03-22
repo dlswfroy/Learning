@@ -43,15 +43,25 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 function formatMath(text: string) {
   if (!text) return '';
   let formatted = text.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
+  
+  // Text processing
   formatted = formatted.replace(/\\text\{([^}]+)\}/g, '<span class="math-text">$1</span>');
+
+  // Fractions with recursive support for nesting
   const fracRegex = /\\frac\{((?:[^{}]|\{[^{}]*\})*)\}\s*\{((?:[^{}]|\{[^{}]*\})*)\}/g;
   formatted = formatted.replace(fracRegex, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
+
+  // Square Roots
   formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
   formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>');
+
+  // Subscripts / Superscripts
   formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
   formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
+
+  // Common Symbols
   const symbolMap: Record<string, string> = {
     '\\\\log': 'log', '\\\\triangle': '△', '\\\\angle': '∠', '\\\\circ': '°',
     '\\\\theta': 'θ', '\\\\pi': 'π', '\\\\pm': '±', '\\\\times': '×',
@@ -59,7 +69,7 @@ function formatMath(text: string) {
     '\\\\degree': '°', '\\\\cdot': '·', '\\\\infty': '∞', '\\\\approx': '≈',
     '\\\\sum': '∑', '\\\\prod': '∏', '\\\\alpha': 'α', '\\\\beta': 'β',
     '\\\\gamma': 'γ', '\\\\delta': 'δ', '\\\\sigma': 'σ', '\\\\phi': 'φ', '\\\\omega': 'ω',
-    '\\\\eta': 'η', '\\\\rho': 'ρ', '\\\\lambda': 'λ', '\\\\mu': 'μ',
+    '\\\\eta': 'η', '\\\\rho': 'ρ', '\\\\rho': 'ρ', '\\\\lambda': 'λ', '\\\\mu': 'μ',
     '\\\\in': '∈', '\\\\mathbb\\{N\\}': 'ℕ', '\\\\mathbb\\{R\\}': 'ℝ', '\\\\mathbb\\{Z\\}': 'ℤ',
     '\\\\mathbb\\{Q\\}': 'ℚ', '\\\\subset': '⊂', '\\\\subseteq': '⊆', '\\\\cup': '∪',
     '\\\\cap': '∩', '\\\\emptyset': '∅', '\\\\forall': '∀', '\\\\exists': '∃', 
@@ -67,8 +77,13 @@ function formatMath(text: string) {
     '\\\\leftrightarrow': '↔', '\\\\Leftrightarrow': '⇔', '\\\\to': '→', '\\\\arrow': '→',
     '\\\\left': '', '\\\\right': '', '\\\\\%': '%', '\\\\setminus': '\\', '\\\\backslash': '\\'
   };
-  Object.entries(symbolMap).forEach(([key, val]) => { formatted = formatted.replace(new RegExp(key, 'g'), val); });
+  
+  Object.entries(symbolMap).forEach(([key, val]) => { 
+    formatted = formatted.replace(new RegExp(key, 'g'), val); 
+  });
+
   formatted = formatted.replace(/\\dot\{([^}]+)\}/g, '<span class="math-dot">$1</span>');
+  
   formatted = formatted.replace(/\\/g, '');
   return formatted;
 }
@@ -91,9 +106,17 @@ function CreateQuestionContent() {
   const appName = softwareConfig?.appName || 'টপ গ্রেড টিউটোরিয়ালস';
   
   const [meta, setMeta] = useState({
-    institution: 'টপ গ্রেড টিউটোরিয়ালস', exam: 'সাপ্তাহিক পরীক্ষা', chapter: '', classId: '', subject: '', time: '২ ঘণ্টা ৩০ মিনিট', totalMarks: '১০০',
-    creativeInstruction: 'যেকোনো ৭টি প্রশ্নের উত্তর দাও', shortInstruction: 'সকল প্রশ্নের উত্তর দাও',
-    mcqInstruction: 'সঠিক উত্তরের বিপরীতের বৃত্তটি বল পয়েন্ট কলম দ্বারা ভরাট কর। সকল প্রশ্নের উত্তর দিতে হবে। প্রশ্নপত্রে কোন প্রকার দাগ দেওয়া যাবে না।', marksA: 1, marksB: 2, marksC: 3, marksD: 4, shortMarks: 2, mcqMarks: 1
+    institution: 'টপ গ্রেড টিউটোরিয়ালস', 
+    exam: 'সাপ্তাহিক পরীক্ষা', 
+    chapter: '', 
+    classId: '', 
+    subject: '', 
+    time: '২ ঘণ্টা ৩০ মিনিট', 
+    totalMarks: '১০০',
+    creativeInstruction: 'যেকোনো ৭টি প্রশ্নের উত্তর দাও', 
+    shortInstruction: 'সকল প্রশ্নের উত্তর দাও',
+    mcqInstruction: 'সঠিক উত্তরের বিপরীতের বৃত্তটি বল পয়েন্ট কলম দ্বারা ভরাট কর। সকল প্রশ্নের উত্তর দিতে হবে। প্রশ্নপত্রে কোন প্রকার দাগ দেওয়া যাবে না।', 
+    marksA: 1, marksB: 2, marksC: 3, marksD: 4, shortMarks: 2, mcqMarks: 1
   });
   
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -116,9 +139,14 @@ function CreateQuestionContent() {
             if (data.userId !== user.uid) { router.push('/my-questions'); return; }
             setMeta(prev => ({
               ...prev,
-              institution: data.institution || 'টপ গ্রেড টিউটোরিয়ালস', exam: data.exam || '', chapter: data.chapter || '', classId: data.classId || '',
-              subject: data.subject || '', time: data.time || '', totalMarks: data.totalMarks || '',
-              creativeInstruction: data.creativeInstruction || '', 
+              institution: data.institution || 'টপ গ্রেড টিউটোরিয়ালস', 
+              exam: data.exam || '', 
+              chapter: data.chapter || '', 
+              classId: data.classId || '',
+              subject: data.subject || '', 
+              time: data.time || '', 
+              totalMarks: data.totalMarks || '',
+              creativeInstruction: data.creativeInstruction || 'যেকোনো ৭টি প্রশ্নের উত্তর দাও', 
               shortInstruction: data.shortInstruction || 'সকল প্রশ্নের উত্তর দাও',
               mcqInstruction: data.mcqInstruction || 'সঠিক উত্তরের বিপরীতের বৃত্তটি বল পয়েন্ট কলম দ্বারা ভরাট কর। সকল প্রশ্নের উত্তর দিতে হবে। প্রশ্নপত্রে কোন প্রকার দাগ দেওয়া যাবে না।',
               marksA: data.marksA || 1, marksB: data.marksB || 2, marksC: data.marksC || 3, marksD: data.marksD || 4,
@@ -250,7 +278,11 @@ function CreateQuestionContent() {
     });
     const docId = editId || doc(collection(db, 'questions')).id;
     const data: any = {
-      ...meta, questions: formattedQuestions, userId: user.uid, updatedAt: serverTimestamp(), isMcq: questions.some(q => q.type === 'mcq')
+      ...meta, 
+      questions: formattedQuestions, 
+      userId: user.uid, 
+      updatedAt: serverTimestamp(), 
+      isMcq: questions.some(q => q.type === 'mcq')
     };
     if (!editId) data.createdAt = serverTimestamp();
     const ref = doc(db, 'questions', docId);
@@ -282,6 +314,10 @@ function CreateQuestionContent() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div className="space-y-2"><label className="text-sm font-semibold">প্রতিষ্ঠানের নাম</label><Input value={meta.institution || ''} onChange={e => setMeta(prev => ({...prev, institution: e.target.value}))} className="font-bold" /></div>
               <div className="space-y-2"><label className="text-sm font-semibold">পরীক্ষার নাম</label><Input value={meta.exam || ''} onChange={e => setMeta(prev => ({...prev, exam: e.target.value}))} className="font-bold" /></div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold">অধ্যায় (Chapter)</label>
+                <Input value={meta.chapter || ''} onChange={e => setMeta(prev => ({...prev, chapter: e.target.value}))} placeholder="যেমন: প্রথম অধ্যায়" className="font-bold" />
+              </div>
               <div className="space-y-2"><label className="text-sm font-semibold">সময়</label><Input value={meta.time || ''} onChange={e => setMeta(prev => ({...prev, time: e.target.value}))} className="font-bold" /></div>
               <div className="space-y-2"><label className="text-sm font-semibold">পূর্ণমান</label><Input value={meta.totalMarks || ''} onChange={e => setMeta(prev => ({...prev, totalMarks: e.target.value}))} className="font-bold" /></div>
               <div className="space-y-2"><label className="text-sm font-semibold">শ্রেণি</label><Select onValueChange={v => setMeta(prev => ({...prev, classId: v}))} value={meta.classId}><SelectTrigger className="font-bold"><SelectValue placeholder="শ্রেণি" /></SelectTrigger><SelectContent>{CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}</SelectContent></Select></div>
@@ -289,7 +325,8 @@ function CreateQuestionContent() {
             </div>
             <div className="pt-4 border-t grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2"><label className="text-xs font-semibold">সৃজনশীল নির্দেশিকা</label><Input value={meta.creativeInstruction} onChange={e => setMeta(p => ({...p, creativeInstruction: e.target.value}))} className="font-bold h-8" /></div>
-              <div className="space-y-2"><label className="text-xs font-semibold">এমসিকিউ নির্দেশিকা</label><Input value={meta.mcqInstruction} onChange={e => setMeta(p => ({...p, mcqInstruction: e.target.value}))} className="font-bold h-8" /></div>
+              <div className="space-y-2"><label className="text-xs font-semibold">সংক্ষিপ্ত প্রশ্ন নির্দেশিকা</label><Input value={meta.shortInstruction} onChange={e => setMeta(p => ({...p, shortInstruction: e.target.value}))} className="font-bold h-8" /></div>
+              <div className="space-y-2 col-span-full"><label className="text-xs font-semibold">এমসিকিউ নির্দেশিকা</label><Input value={meta.mcqInstruction} onChange={e => setMeta(p => ({...p, mcqInstruction: e.target.value}))} className="font-bold h-8" /></div>
             </div>
           </CardContent>
         </Card>
@@ -345,13 +382,14 @@ function CreateQuestionContent() {
             .math-den { padding: 0 1px; }
             .math-sqrt { display: inline-flex; align-items: center; }
             .math-sqrt-stem { border-top: 0.5pt solid black; padding-top: 1px; }
+            .math-text { font-family: 'Kalpurush', sans-serif; font-style: normal; }
           }
           @media print { .paper { margin: 0 !important; } @page { size: auto; margin: 0.5in !important; } }
         `}} />
         <div className="paper">
           <div className="header">
             <div className="inst-name">{meta.institution || appName}</div>
-            <div className="font-bold text-lg">{meta.exam}</div>
+            <div className="font-bold text-lg">{meta.exam} {meta.chapter ? `(${meta.chapter})` : ''}</div>
             <div className="font-bold text-sm">শ্রেণি: {CLASSES.find(c => c.id === meta.classId)?.label} | বিষয়: {meta.subject}</div>
             <div className="meta-info"><div>সময়: {meta.time}</div><div>পূর্ণমান: {meta.totalMarks}</div></div>
           </div>
