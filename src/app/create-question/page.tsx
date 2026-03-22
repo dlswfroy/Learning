@@ -42,27 +42,21 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 
 function formatMath(text: string) {
   if (!text) return '';
-  // Cleanup initial wrappers
   let formatted = text.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
   
-  // 1. Text processing first
   formatted = formatted.replace(/\\text\{([^}]+)\}/g, '<span class="math-text">$1</span>');
 
-  // 2. Fractions - Using regex that supports one level of nesting (like \sqrt{...} inside \frac{...}{...})
   const fracRegex = /\\frac\{((?:[^{}]|\{[^{}]*\})*)\}\s*\{((?:[^{}]|\{[^{}]*\})*)\}/g;
   formatted = formatted.replace(fracRegex, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
 
-  // 3. Square Roots
   formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
   formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>');
 
-  // 4. Subscripts / Superscripts
   formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
   formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
 
-  // 5. Symbols
   const symbolMap: Record<string, string> = {
     '\\\\log': 'log', '\\\\triangle': '△', '\\\\angle': '∠', '\\\\circ': '°',
     '\\\\theta': 'θ', '\\\\pi': 'π', '\\\\pm': '±', '\\\\times': '×',
@@ -84,8 +78,6 @@ function formatMath(text: string) {
   });
 
   formatted = formatted.replace(/\\dot\{([^}]+)\}/g, '<span class="math-dot">$1</span>');
-  
-  // 6. Final cleanup of remaining backslashes
   formatted = formatted.replace(/\\/g, '');
   return formatted;
 }
@@ -144,9 +136,9 @@ function CreateQuestionContent() {
             const reconstructed = (data.questions || []).map((q: any) => {
               const id = Math.random().toString(36).substr(2, 9);
               const commonFields = { id, type: q.type, imageUrl: q.imageUrl || '' };
-              if (q.type === 'mcq') return { ...commonFields, content: `${q.mcqQuestion || ''}\nক. ${q.optA || ''}\nখ. ${q.optB || ''}\nগ. ${q.optC || ''}\nঘ. ${q.optD || ''}` };
-              if (q.type === 'creative') return { ...commonFields, content: `${q.stimulus || ''}\nক. ${q.qA || ''}\nখ. ${q.qB || ''}\nগ. ${q.qC || ''}\nঘ. ${q.qD || ''}` };
-              return { ...commonFields, content: q.shortText || '' };
+              if (q.type === 'mcq') return { ...commonFields, content: `${q.mcqQuestion || ''}\nক. ${q.optA || ''}\nখ. ${q.optB || ''}\nগ. ${q.optC || ''}\nঘ. ${q.optD || ''}`.trim() };
+              if (q.type === 'creative') return { ...commonFields, content: `${q.stimulus || ''}\nক. ${q.qA || ''}\nখ. ${q.qB || ''}\nগ. ${q.qC || ''}\nঘ. ${q.qD || ''}`.trim() };
+              return { ...commonFields, content: (q.shortText || '').trim() };
             });
             setQuestions(reconstructed);
           }
@@ -158,9 +150,9 @@ function CreateQuestionContent() {
           const reconstructed = mergedData.map((q: any) => {
             const id = Math.random().toString(36).substr(2, 9);
             const commonFields = { id, type: q.type, imageUrl: q.imageUrl || '' };
-            if (q.type === 'mcq') return { ...commonFields, content: `${q.mcqQuestion || ''}\nক. ${q.optA || ''}\nখ. ${q.optB || ''}\nগ. ${q.optC || ''}\nঘ. ${q.optD || ''}` };
-            if (q.type === 'creative') return { ...commonFields, content: `${q.stimulus || ''}\nক. ${q.qA || ''}\nখ. ${q.qB || ''}\nগ. ${q.qC || ''}\nঘ. ${q.qD || ''}` };
-            return { ...commonFields, content: q.shortText || '' };
+            if (q.type === 'mcq') return { ...commonFields, content: `${q.mcqQuestion || ''}\nক. ${q.optA || ''}\nখ. ${q.optB || ''}\nগ. ${q.optC || ''}\nঘ. ${q.optD || ''}`.trim() };
+            if (q.type === 'creative') return { ...commonFields, content: `${q.stimulus || ''}\nক. ${q.qA || ''}\nখ. ${q.qB || ''}\nগ. ${q.qC || ''}\nঘ. ${q.qD || ''}`.trim() };
+            return { ...commonFields, content: (q.shortText || '').trim() };
           });
           setQuestions(reconstructed);
           sessionStorage.removeItem('merged_questions_data');
@@ -231,35 +223,54 @@ function CreateQuestionContent() {
   const parseText = (text: string) => {
     const parts = { main: '', k: '', kh: '', g: '', gh: '' };
     if (!text) return parts;
-    const cleanText = text.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
+    const cleanText = text.trim();
     const markers = ['ক', 'খ', 'গ', 'ঘ'];
-    let firstMarkerPos = -1;
+    
     const findMarkerPos = (m: string, fromIndex: number = 0) => {
-      const patterns = [ m + '.', m + ')', m + ' .', m + ' )', m + '.\n', m + ')\n', '\n' + m + '.', '\n' + m + ')' ];
+      const patterns = [ m + '.', m + ')', m + ' .', m + ' )' ];
       let minIdx = -1;
       for (const p of patterns) {
-        const idx = cleanText.indexOf(p, fromIndex);
-        if (idx !== -1 && (minIdx === -1 || idx < minIdx)) minIdx = idx;
+        let idx = cleanText.indexOf(p, fromIndex);
+        if (idx !== -1) {
+          if (idx > 0 && cleanText[idx-1] === '(') idx--;
+          else if (idx > 1 && cleanText[idx-1] === ' ' && cleanText[idx-2] === '(') idx -= 2;
+          if (minIdx === -1 || idx < minIdx) minIdx = idx;
+        }
       }
       return minIdx;
     };
+
+    let firstMarkerPos = -1;
     for (const m of markers) {
       const pos = findMarkerPos(m);
       if (pos !== -1 && (firstMarkerPos === -1 || pos < firstMarkerPos)) firstMarkerPos = pos;
     }
+
     if (firstMarkerPos !== -1) {
       parts.main = cleanText.substring(0, firstMarkerPos).trim();
       const extract = (m: string) => {
         const startIdx = findMarkerPos(m);
         if (startIdx === -1) return '';
         let markerEnd = startIdx;
-        while (markerEnd < cleanText.length && (cleanText[markerEnd] === ' ' || cleanText[markerEnd] === '\n' || markers.includes(cleanText[markerEnd]) || ['.', ')'].includes(cleanText[markerEnd]))) markerEnd++;
+        while (markerEnd < cleanText.length && (
+          cleanText[markerEnd] === ' ' || 
+          cleanText[markerEnd] === '\n' || 
+          cleanText[markerEnd] === '(' ||
+          markers.includes(cleanText[markerEnd]) || 
+          ['.', ')'].includes(cleanText[markerEnd])
+        )) markerEnd++;
         let end = cleanText.length;
-        for (const otherM of markers) { if (otherM === m) continue; const e = findMarkerPos(otherM, markerEnd); if (e !== -1 && e < end) end = e; }
+        for (const otherM of markers) { 
+          if (otherM === m) continue; 
+          const e = findMarkerPos(otherM, markerEnd); 
+          if (e !== -1 && e < end) end = e; 
+        }
         return cleanText.substring(markerEnd, end).trim();
       };
       parts.k = extract('ক'); parts.kh = extract('খ'); parts.g = extract('গ'); parts.gh = extract('ঘ');
-    } else { parts.main = cleanText.trim(); }
+    } else { 
+      parts.main = cleanText.trim(); 
+    }
     return parts;
   };
 
@@ -568,7 +579,6 @@ function CreateQuestionContent() {
           </div>
 
           <div className="content-area mt-1">
-            {/* Creative Section */}
             {questions.some(q => q.type === 'creative') && (
               <div className="mb-4">
                 <div className="text-center mb-1">
@@ -620,7 +630,6 @@ function CreateQuestionContent() {
               </div>
             )}
 
-            {/* Short Section */}
             {questions.some(q => q.type === 'short') && (
               <div className="mb-4">
                 <div className="text-center mb-1">
@@ -639,7 +648,6 @@ function CreateQuestionContent() {
               </div>
             )}
 
-            {/* MCQ Section */}
             {questions.some(q => q.type === 'mcq') && (
               <div className="mt-2">
                 <div className="text-center mb-2">
