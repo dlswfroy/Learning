@@ -70,7 +70,8 @@ function formatMath(text: string) {
     '\\\\degree': '°', '\\\\cdot': '·', '\\\\infty': '∞', '\\\\approx': '≈',
     '\\\\sum': '∑', '\\\\prod': '∏', '\\\\alpha': 'α', '\\\\beta': 'β',
     '\\\\gamma': 'γ', '\\\\delta': 'δ', '\\\\sigma': 'σ', '\\\\phi': 'φ', '\\\\omega': 'ω',
-    '\\\\eta': 'η', '\\\\in': '∈', '\\\\mathbb\\{N\\}': 'ℕ', '\\\\mathbb\\{R\\}': 'ℝ', '\\\\mathbb\\{Z\\}': 'ℤ',
+    '\\\\eta': 'η', '\\\\rho': 'ρ', '\\\\lambda': 'λ', '\\\\mu': 'μ',
+    '\\\\in': '∈', '\\\\mathbb\\{N\\}': 'ℕ', '\\\\mathbb\\{R\\}': 'ℝ', '\\\\mathbb\\{Z\\}': 'ℤ',
     '\\\\mathbb\\{Q\\}': 'ℚ', '\\\\subset': '⊂', '\\\\subseteq': '⊆', '\\\\cup': '∪',
     '\\\\cap': '∩', '\\\\emptyset': '∅', '\\\\forall': '∀', '\\\\exists': '∃', 
     '\\\\rightarrow': '→', '\\\\Rightarrow': '⇒', '\\\\leftarrow': '←', '\\\\Leftarrow': '⇐', 
@@ -202,8 +203,8 @@ function CreateQuestionContent() {
     }
   };
 
-  const handleOCR = async (e: React.ChangeEvent<HTMLInputElement>, questionId: string) => {
-    const file = e.target.files?.[0];
+  const handleOCR = async (Eisen: React.ChangeEvent<HTMLInputElement>, questionId: string) => {
+    const file = Eisen.target.files?.[0];
     if (!file) return;
 
     setIsScanning(true);
@@ -358,13 +359,13 @@ function CreateQuestionContent() {
           <CardHeader className="bg-primary/5 border-b py-3"><CardTitle className="text-base flex items-center gap-2 font-bold"><BookOpen className="w-4 h-4 text-primary" /> পরীক্ষার তথ্য ও মান বণ্টন</CardTitle></CardHeader>
           <CardContent className="pt-6 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="space-y-2"><label className="text-sm font-semibold">প্রতিষ্ঠানের নাম</label><Input value={meta.institution || ''} onChange={e => setMeta(prev => ({...prev, institution: e.target.value}))} className="font-bold" /></div>
+              <div className="space-y-2"><label className="text-sm font-semibold">প্রতিষ্ঠানের নাম</label><Input value={meta.institution || ''} onChange={Eisen => setMeta(prev => ({...prev, institution: Eisen.target.value}))} className="font-bold" /></div>
               <div className="space-y-2">
                 <label className="text-sm font-semibold">পরীক্ষার নাম / ধরন</label>
-                <Input value={meta.exam || ''} onChange={e => setMeta(prev => ({...prev, exam: e.target.value}))} className="font-bold" placeholder="যেমন: সাপ্তাহিক পরীক্ষা" />
+                <Input value={meta.exam || ''} onChange={Eisen => setMeta(prev => ({...prev, exam: Eisen.target.value}))} className="font-bold" placeholder="যেমন: সাপ্তাহিক পরীক্ষা" />
               </div>
-              <div className="space-y-2"><label className="text-sm font-semibold">সময়</label><Input value={meta.time || ''} onChange={e => setMeta(prev => ({...prev, time: e.target.value}))} className="font-bold" /></div>
-              <div className="space-y-2"><label className="text-sm font-semibold">পূর্ণমান</label><Input value={meta.totalMarks || ''} onChange={e => setMeta(prev => ({...prev, totalMarks: e.target.value}))} className="font-bold" /></div>
+              <div className="space-y-2"><label className="text-sm font-semibold">সময়</label><Input value={meta.time || ''} onChange={Eisen => setMeta(prev => ({...prev, time: Eisen.target.value}))} className="font-bold" /></div>
+              <div className="space-y-2"><label className="text-sm font-semibold">পূর্ণমান</label><Input value={meta.totalMarks || ''} onChange={Eisen => setMeta(prev => ({...prev, totalMarks: Eisen.target.value}))} className="font-bold" /></div>
               <div className="space-y-2"><label className="text-sm font-semibold">শ্রেণি</label><Select onValueChange={v => setMeta(prev => ({...prev, classId: v, subject: '', chapter: ''}))} value={meta.classId || ''}><SelectTrigger className="font-bold"><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger><SelectContent>{CLASSES.map(c => <SelectItem key={c.id} value={c.id} className="font-bold">{c.label} শ্রেণি</SelectItem>)}</SelectContent></Select></div>
               <div className="space-y-2"><label className="text-sm font-semibold">বিষয়</label><Select onValueChange={v => setMeta(prev => ({...prev, subject: v, chapter: ''}))} value={meta.subject || ''} disabled={!meta.classId}><SelectTrigger className="font-bold"><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger><SelectContent>{subjects.map(s => <SelectItem key={s} value={s} className="font-bold">{s}</SelectItem>)}</SelectContent></Select></div>
               
@@ -374,7 +375,7 @@ function CreateQuestionContent() {
                   <Input 
                     list="chapter-options"
                     value={meta.chapter || ''} 
-                    onChange={e => setMeta(prev => ({...prev, chapter: e.target.value}))} 
+                    onChange={Eisen => setMeta(prev => ({...prev, chapter: Eisen.target.value}))} 
                     placeholder="অধ্যায়ের নাম লিখুন..." 
                     className="font-bold"
                   />
@@ -391,20 +392,20 @@ function CreateQuestionContent() {
               <h4 className="text-sm font-bold mb-4 text-primary">মান বণ্টন ও নির্দেশনা</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
-                  <div className="space-y-2"><label className="text-xs font-semibold">সৃজনশীল নির্দেশিকা</label><Input value={meta.creativeInstruction || ''} onChange={e => setMeta(prev => ({...prev, creativeInstruction: e.target.value}))} className="font-bold" /></div>
+                  <div className="space-y-2"><label className="text-xs font-semibold">সৃজনশীল নির্দেশিকা</label><Input value={meta.creativeInstruction || ''} onChange={Eisen => setMeta(prev => ({...prev, creativeInstruction: Eisen.target.value}))} className="font-bold" /></div>
                   <div className="grid grid-cols-4 gap-2">
-                    <div className="space-y-1"><label className="text-[10px] font-bold">ক</label><Input type="number" value={meta.marksA || ''} onChange={e => setMeta(prev => ({...prev, marksA: parseInt(e.target.value) || 0}))} className="h-8 font-bold" /></div>
-                    <div className="space-y-1"><label className="text-[10px] font-bold">খ</label><Input type="number" value={meta.marksB || ''} onChange={e => setMeta(prev => ({...prev, marksB: parseInt(e.target.value) || 0}))} className="h-8 font-bold" /></div>
-                    <div className="space-y-1"><label className="text-[10px] font-bold">গ</label><Input type="number" value={meta.marksC || ''} onChange={e => setMeta(prev => ({...prev, marksC: parseInt(e.target.value) || 0}))} className="h-8 font-bold" /></div>
-                    <div className="space-y-1"><label className="text-[10px] font-bold">ঘ</label><Input type="number" value={meta.marksD || ''} onChange={e => setMeta(prev => ({...prev, marksD: parseInt(e.target.value) || 0}))} className="h-8 font-bold" /></div>
+                    <div className="space-y-1"><label className="text-[10px] font-bold">ক</label><Input type="number" value={meta.marksA || ''} onChange={Eisen => setMeta(prev => ({...prev, marksA: parseInt(Eisen.target.value) || 0}))} className="h-8 font-bold" /></div>
+                    <div className="space-y-1"><label className="text-[10px] font-bold">খ</label><Input type="number" value={meta.marksB || ''} onChange={Eisen => setMeta(prev => ({...prev, marksB: parseInt(Eisen.target.value) || 0}))} className="h-8 font-bold" /></div>
+                    <div className="space-y-1"><label className="text-[10px] font-bold">গ</label><Input type="number" value={meta.marksC || ''} onChange={Eisen => setMeta(prev => ({...prev, marksC: parseInt(Eisen.target.value) || 0}))} className="h-8 font-bold" /></div>
+                    <div className="space-y-1"><label className="text-[10px] font-bold">ঘ</label><Input type="number" value={meta.marksD || ''} onChange={Eisen => setMeta(prev => ({...prev, marksD: parseInt(Eisen.target.value) || 0}))} className="h-8 font-bold" /></div>
                   </div>
                 </div>
                 <div className="space-y-4">
-                  <div className="space-y-2"><label className="text-xs font-semibold">সংক্ষিপ্ত নির্দেশিকা</label><Input value={meta.shortInstruction || ''} onChange={e => setMeta(prev => ({...prev, shortInstruction: e.target.value}))} className="font-bold" /></div>
-                  <div className="space-y-2"><label className="text-xs font-semibold">এমসিকিউ নির্দেশিকা</label><Textarea value={meta.mcqInstruction || ''} onChange={e => setMeta(prev => ({...prev, mcqInstruction: e.target.value}))} className="font-bold text-xs" rows={3} /></div>
+                  <div className="space-y-2"><label className="text-xs font-semibold">সংক্ষিপ্ত নির্দেশিকা</label><Input value={meta.shortInstruction || ''} onChange={Eisen => setMeta(prev => ({...prev, shortInstruction: Eisen.target.value}))} className="font-bold" /></div>
+                  <div className="space-y-2"><label className="text-xs font-semibold">এমসিকিউ নির্দেশিকা</label><Textarea value={meta.mcqInstruction || ''} onChange={Eisen => setMeta(prev => ({...prev, mcqInstruction: Eisen.target.value}))} className="font-bold text-xs" rows={3} /></div>
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1"><label className="text-[10px] font-bold">সংক্ষিপ্ত মার্কস</label><Input type="number" value={meta.shortMarks || ''} onChange={e => setMeta(prev => ({...prev, shortMarks: parseInt(e.target.value) || 0}))} className="h-8 font-bold" /></div>
-                    <div className="space-y-1"><label className="text-[10px] font-bold">এমসিকিউ মার্কস</label><Input type="number" value={meta.mcqMarks || ''} onChange={e => setMeta(prev => ({...prev, mcqMarks: parseInt(e.target.value) || 0}))} className="h-8 font-bold" /></div>
+                    <div className="space-y-1"><label className="text-[10px] font-bold">সংক্ষিপ্ত মার্কস</label><Input type="number" value={meta.shortMarks || ''} onChange={Eisen => setMeta(prev => ({...prev, shortMarks: parseInt(Eisen.target.value) || 0}))} className="h-8 font-bold" /></div>
+                    <div className="space-y-1"><label className="text-[10px] font-bold">এমসিকিউ মার্কস</label><Input type="number" value={meta.mcqMarks || ''} onChange={Eisen => setMeta(prev => ({...prev, mcqMarks: parseInt(Eisen.target.value) || 0}))} className="h-8 font-bold" /></div>
                   </div>
                 </div>
               </div>
@@ -424,7 +425,7 @@ function CreateQuestionContent() {
         {questions.map((q, idx) => (
           <Card key={q.id} className={`relative border-l-4 ${q.type === 'mcq' ? 'border-l-orange-500' : q.type === 'short' ? 'border-l-accent' : 'border-l-primary'}`}>
             <div className="absolute top-2 right-2 no-print flex gap-1">
-              <input type="file" ref={ocrInputRef} className="hidden" accept="image/*" onChange={(e) => handleOCR(e, q.id)} />
+              <input type="file" ref={ocrInputRef} className="hidden" accept="image/*" onChange={(Eisen) => handleOCR(Eisen, q.id)} />
               <Button 
                 variant="ghost" 
                 size="icon" 
@@ -457,7 +458,7 @@ function CreateQuestionContent() {
               <Textarea 
                 placeholder={q.type === 'mcq' ? "প্রশ্ন ও অপশনগুলো ক. খ. গ. ঘ. সহ লিখুন অথবা বইয়ের ছবি স্ক্যান করুন" : "উদ্দীপক ও প্রশ্ন ক. খ. গ. ঘ. সহ লিখুন অথবা বইয়ের ছবি স্ক্যান করুন"} 
                 value={q.content || ''} 
-                onChange={e => setQuestions(prev => prev.map(item => item.id === q.id ? {...item, content: e.target.value} : item))} 
+                onChange={Eisen => setQuestions(prev => prev.map(item => item.id === q.id ? {...item, content: Eisen.target.value} : item))} 
                 className="min-h-[120px] text-sm font-bold" 
               />
               
