@@ -7,27 +7,67 @@ import { CLASSES } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { BookOpen, HelpCircle, FileText, Download, Loader2, BookCopy, Printer } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { BookOpen, HelpCircle, FileText, Download, Loader2, BookCopy, Printer, X, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
-import { useFirestore, useCollection } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { notFound, useRouter } from 'next/navigation';
+import { useFirestore, useCollection, useDoc } from '@/firebase';
+import { collection, query, where, doc } from 'firebase/firestore';
 
-function toBengaliNumber(n: number | string): string {
+function toBengaliNumber(n: number | string | undefined | null): string {
+  if (n === undefined || n === null || n === '') return '';
   const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
   return n.toString().replace(/\d/g, (digit) => bengaliDigits[parseInt(digit)]);
+}
+
+function formatMath(text: string) {
+  if (!text) return '';
+  let formatted = text.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
+  
+  formatted = formatted.replace(/\\text\{([^}]+)\}/g, '<span class="math-text">$1</span>');
+  formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
+  formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
+  formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
+  formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
+
+  const fracRegex = /\\frac\{((?:[^{}]|\{[^{}]*\})*)\}\s*\{((?:[^{}]|\{[^{}]*\})*)\}/g;
+  formatted = formatted.replace(fracRegex, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
+
+  formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
+  formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>');
+
+  const symbolMap: Record<string, string> = {
+    '\\\\log': 'log', '\\\\triangle': '△', '\\\\angle': '∠', '\\\\circ': '°',
+    '\\\\theta': 'θ', '\\\\pi': 'π', '\\\\pm': '±', '\\\\times': '×',
+    '\\\\neq': '≠', '\\\\ne': '≠', '\\\\leq': '≤', '\\\\geq': '≥',
+    '\\\\degree': '°', '\\\\cdot': '·', '\\\\infty': '∞', '\\\\approx': '≈',
+    '\\\\sum': '∑', '\\\\prod': '∏', '\\\\alpha': 'α', '\\\\beta': 'β',
+    '\\\\gamma': 'γ', '\\\\delta': 'δ', '\\\\sigma': 'σ', '\\\\phi': 'φ', '\\\\omega': 'ω',
+    '\\\\eta': 'η', '\\\\in': '∈', '\\\\mathbb\\{N\\}': 'ℕ', '\\\\mathbb\\{R\\}': 'ℝ', '\\\\mathbb\\{Z\\}': 'ℤ',
+    '\\\\mathbb\\{Q\\}': 'ℚ', '\\\\subset': '⊂', '\\\\subseteq': '⊆', '\\\\cup': '∪',
+    '\\\\cap': '∩', '\\\\emptyset': '∅', '\\\\forall': '∀', '\\\\exists': '∃', 
+    '\\\\left': '', '\\\\right': '', '\\\\\%': '%', '\\\\setminus': '\\', '\\\\backslash': '\\'
+  };
+  
+  Object.entries(symbolMap).forEach(([key, val]) => { 
+    formatted = formatted.replace(new RegExp(key, 'g'), val); 
+  });
+
+  formatted = formatted.replace(/\\dot\{([^}]+)\}/g, '<span class="math-dot">$1</span>');
+  formatted = formatted.replace(/\\/g, '');
+  return formatted;
 }
 
 function naturalSort(a: any, b: any) {
   const nameA = a.chapterName || a.fileName || "";
   const nameB = b.chapterName || b.fileName || "";
-  // Use numeric sorting for chapters like "গদ্য-১", "গদ্য-১০"
   return nameA.localeCompare(nameB, 'bn', { numeric: true, sensitivity: 'base' });
 }
 
 export default function SubjectPage() {
   const params = useParams();
   const db = useFirestore();
+  const router = useRouter();
   
   const id = params.id as string;
   const encodedSubject = params.subject as string;
@@ -35,11 +75,16 @@ export default function SubjectPage() {
   
   const currentClass = CLASSES.find(c => c.id === id);
   
+  const [viewingNote, setViewingNote] = useState<any>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const softwareDocRef = useMemo(() => doc(db, 'config', 'software'), [db]);
+  const { data: softwareConfig } = useDoc(softwareDocRef);
+
   if (!currentClass) {
     notFound();
   }
 
-  // Book Query
   const bookQuery = useMemo(() => {
     if (!db || !id || !subject) return null;
     return query(
@@ -49,7 +94,6 @@ export default function SubjectPage() {
     );
   }, [db, id, subject]);
 
-  // Sheets Query (Notes)
   const sheetsQuery = useMemo(() => {
     if (!db || !id || !subject) return null;
     return query(
@@ -67,6 +111,11 @@ export default function SubjectPage() {
     const list = books?.filter(b => b.isGuide) || [];
     return [...list].sort(naturalSort);
   }, [books]);
+
+  const handleOpenNote = (note: any) => {
+    setViewingNote(note);
+    setIsDialogOpen(true);
+  };
 
   const renderTextbookList = (bookList: any[]) => {
     if (bookList.length === 0) {
@@ -148,7 +197,7 @@ export default function SubjectPage() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in font-kalpurush">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Link href={`/class/${id}`} className="p-2 hover:bg-secondary rounded-full transition-colors text-primary">
@@ -160,7 +209,7 @@ export default function SubjectPage() {
           </div>
         </div>
         <Link href={`/create-question?classId=${id}&subject=${encodeURIComponent(subject)}`}>
-          <Button className="w-full md:w-auto gap-2 shadow-md bg-accent text-white hover:bg-accent/90">
+          <Button className="w-full md:w-auto gap-2 shadow-md bg-accent text-white hover:bg-accent/90 font-bold">
             <HelpCircle className="w-4 h-4" />
             AI প্রশ্ন তৈরি করুন
           </Button>
@@ -183,7 +232,7 @@ export default function SubjectPage() {
         {loadingBooks ? (
           <div className="flex flex-col items-center justify-center p-20">
             <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground font-medium">বই খোঁজা হচ্ছে...</p>
+            <p className="text-muted-foreground font-bold">বই খোঁজা হচ্ছে...</p>
           </div>
         ) : (
           <>
@@ -202,7 +251,7 @@ export default function SubjectPage() {
                     <CardTitle className="text-base font-bold flex items-center gap-2">
                       <FileText className="w-4 h-4 text-primary" /> অধ্যায় ভিত্তিক নোট
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className="font-bold">
                       {loadingSheets ? "লোড হচ্ছে..." : (sheets && sheets.length > 0 ? `${toBengaliNumber(sheets.length)}টি নোট পাওয়া গেছে` : "কোনো নোট পাওয়া যায়নি")}
                     </CardDescription>
                   </CardHeader>
@@ -212,16 +261,19 @@ export default function SubjectPage() {
                         <div key={sheet.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/20 group hover:border-primary/40 transition-all">
                           <span className="text-sm font-bold truncate flex-1 pr-4">{sheet.topic}</span>
                           <div className="flex gap-2">
-                            <Link href={`/create-lecture-sheet?id=${sheet.id}`}>
-                              <Button size="sm" variant="outline" className="h-8 gap-2 font-bold border-primary text-primary">
-                                <BookOpen className="w-3.5 h-3.5" /> পড়ুন
-                              </Button>
-                            </Link>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="h-8 gap-2 font-bold border-primary text-primary"
+                              onClick={() => handleOpenNote(sheet)}
+                            >
+                              <BookOpen className="w-3.5 h-3.5" /> পড়ুন
+                            </Button>
                           </div>
                         </div>
                       ))
                     ) : (
-                      !loadingSheets && <p className="text-xs text-muted-foreground italic text-center py-4">এই বিষয়ের কোনো নোট এখনো তৈরি করা হয়নি।</p>
+                      !loadingSheets && <p className="text-xs text-muted-foreground italic text-center py-4 font-bold">এই বিষয়ের কোনো নোট এখনো তৈরি করা হয়নি।</p>
                     )}
                   </CardContent>
                 </Card>
@@ -231,7 +283,7 @@ export default function SubjectPage() {
                     <CardTitle className="text-base font-bold flex items-center gap-2">
                       <Download className="w-4 h-4 text-primary" /> বিগত বছরের প্রশ্ন
                     </CardTitle>
-                    <CardDescription>শীঘ্রই আসছে...</CardDescription>
+                    <CardDescription className="font-bold">শীঘ্রই আসছে...</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <Button variant="secondary" className="w-full font-bold" disabled>ডাউনলোড</Button>
@@ -242,6 +294,76 @@ export default function SubjectPage() {
           </>
         )}
       </Tabs>
+
+      {/* Note Viewer Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 border-none shadow-2xl font-kalpurush">
+          <div className="sticky top-0 z-50 bg-white border-b p-4 flex justify-between items-center shadow-sm">
+            <h3 className="font-bold text-primary flex items-center gap-2">
+              <FileText className="w-5 h-5" /> নোট প্রিভিউ
+            </h3>
+            <div className="flex gap-2">
+              <Link href={`/create-lecture-sheet?id=${viewingNote?.id}&print=true`}>
+                <Button size="sm" variant="secondary" className="gap-2 font-bold">
+                  <Printer className="w-4 h-4" /> প্রিন্ট করুন
+                </Button>
+              </Link>
+              <Button size="sm" variant="ghost" onClick={() => setIsDialogOpen(false)}>
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+          </div>
+          
+          <div className="p-8 bg-slate-50 min-h-screen">
+            <div className="paper-preview bg-white shadow-xl mx-auto p-[0.5in] relative overflow-hidden min-h-[11in] w-full" style={{ lineHeight: '1.1' }}>
+              {/* Watermark */}
+              <div 
+                className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden"
+                style={{ opacity: 0.08, transform: 'rotate(-45deg)', whiteSpace: 'nowrap' }}
+              >
+                <span className="text-[80pt] font-black text-black">
+                  {softwareConfig?.appName || 'টপ গ্রেড টিউটোরিয়ালস'}
+                </span>
+              </div>
+
+              <div className="relative z-10 space-y-4">
+                <header className="text-center border-b-2 border-black pb-1 mb-2">
+                  <h1 className="font-black text-[23px] text-black leading-tight">
+                    {viewingNote?.institution || softwareConfig?.appName || 'শিক্ষা প্রতিষ্ঠানের নাম'}
+                  </h1>
+                  <div className="flex justify-center gap-8 text-[10pt] font-bold mt-1">
+                    <span>শ্রেণি: {CLASSES.find(c => c.id === viewingNote?.classId)?.label || ''} শ্রেণি</span>
+                    <span>বিষয়: {viewingNote?.subject}</span>
+                  </div>
+                </header>
+                
+                <h2 className="text-[13pt] font-bold text-center underline uppercase mb-4">
+                  {viewingNote?.topic || 'লেকচার শিট'}
+                </h2>
+
+                <div 
+                  className="content-area text-[10.5pt] text-justify whitespace-pre-wrap"
+                  dangerouslySetInnerHTML={{ __html: formatMath(viewingNote?.content || '') }}
+                />
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <style jsx global>{`
+        .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
+        .math-num { border-bottom: 0.5pt solid black; padding: 0 1px; }
+        .math-den { padding: 0 1px; }
+        .math-dot { position: relative; display: inline-block; }
+        .math-dot::after { content: "·"; position: absolute; top: -0.6em; left: 50%; transform: translateX(-50%); font-weight: bold; font-size: 1.2em; }
+        .math-sqrt { display: inline-flex; align-items: center; }
+        .math-sqrt-stem { border-top: 0.5pt solid black; padding-top: 1px; }
+        .math-sup { font-size: 0.7em; vertical-align: super; }
+        .math-sub { font-size: 0.7em; vertical-align: sub; }
+        .math-text { font-family: 'Kalpurush', sans-serif; font-style: normal; }
+        .paper-preview { color: black !important; }
+      `}</style>
     </div>
   );
 }
