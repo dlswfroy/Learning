@@ -32,23 +32,19 @@ function formatMath(text: string) {
   // 1. Text processing first
   formatted = formatted.replace(/\\text\{([^}]+)\}/g, '<span class="math-text">$1</span>');
 
-  // 2. Subscripts / Superscripts (Do this early to remove braces that might confuse fraction regex)
+  // 2. Fractions - Using regex that supports one level of nesting (like \sqrt{...} inside \frac{...}{...})
+  const fracRegex = /\\frac\{((?:[^{}]|\{[^{}]*\})*)\}\s*\{((?:[^{}]|\{[^{}]*\})*)\}/g;
+  formatted = formatted.replace(fracRegex, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
+
+  // 3. Square Roots
+  formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
+  formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>');
+
+  // 4. Subscripts / Superscripts
   formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
   formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
-
-  // 3. Square Roots (Do this before fractions to remove nested braces)
-  formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
-  formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>');
-
-  // 4. Fractions (Loop to handle nesting, now simpler since inner braces are replaced by tags)
-  let prev;
-  const fracRegex = /\\frac\{([^}]+)\}\s*\{([^}]+)\}/g;
-  do {
-    prev = formatted;
-    formatted = formatted.replace(fracRegex, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
-  } while (formatted !== prev);
 
   // 5. Symbols
   const symbolMap: Record<string, string> = {

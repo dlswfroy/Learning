@@ -48,23 +48,19 @@ function formatMath(text: string) {
   // 1. Text processing first
   formatted = formatted.replace(/\\text\{([^}]+)\}/g, '<span class="math-text">$1</span>');
 
-  // 2. Subscripts / Superscripts (Do this early to remove braces that might confuse fraction regex)
+  // 2. Fractions - Using regex that supports one level of nesting (like \sqrt{...} inside \frac{...}{...})
+  const fracRegex = /\\frac\{((?:[^{}]|\{[^{}]*\})*)\}\s*\{((?:[^{}]|\{[^{}]*\})*)\}/g;
+  formatted = formatted.replace(fracRegex, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
+
+  // 3. Square Roots
+  formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
+  formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>');
+
+  // 4. Subscripts / Superscripts
   formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
   formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
-
-  // 3. Square Roots (Do this before fractions to remove nested braces)
-  formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
-  formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>');
-
-  // 4. Fractions (Loop to handle nesting, now simpler since inner braces are replaced by tags)
-  let prev;
-  const fracRegex = /\\frac\{([^}]+)\}\s*\{([^}]+)\}/g;
-  do {
-    prev = formatted;
-    formatted = formatted.replace(fracRegex, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
-  } while (formatted !== prev);
 
   // 5. Symbols
   const symbolMap: Record<string, string> = {
@@ -500,7 +496,7 @@ function CreateQuestionContent() {
                 z-index: 1;
               }
             ` : ''}
-            .paper { line-height: 1.1; }
+            .paper { line-height: 1.1; width: 100% !important; text-align: justify; color: black !important; }
             .header { text-align: center; margin-bottom: 2px; position: relative; z-index: 10; margin-top: 0 !important; }
             .inst-name { font-size: 23px !important; font-weight: 800; line-height: 1.1; }
             .font-bold { line-height: 1.1; }
@@ -523,6 +519,7 @@ function CreateQuestionContent() {
             .mcq-options { 
               display: grid; 
               grid-template-columns: 1fr 1fr; 
+              grid-auto-flow: row;
               gap: 1px 10px; 
               margin-top: 1px; 
               padding-left: 20px; 
@@ -542,7 +539,7 @@ function CreateQuestionContent() {
             .math-text { font-family: 'Kalpurush', sans-serif; font-style: normal; }
           }
           @media print {
-            .paper { margin: 0 !important; box-shadow: none !important; width: 100% !important; height: auto !important; padding-top: 0 !important; }
+            .paper { margin: 0 !important; box-shadow: none !important; width: 100% !important; height: auto !important; padding: 0 !important; }
             .no-print { display: none !important; }
             @page { size: auto; margin: 0.5in !important; }
           }
@@ -659,10 +656,10 @@ function CreateQuestionContent() {
                         </div>
                         {q.imageUrl && <img src={q.imageUrl} className="max-w-full h-auto mx-auto my-0.5 border p-0.5" />}
                         <div className="mcq-options">
-                          <div>ক) {formatMath(p.k)}</div>
-                          <div>খ) {formatMath(p.kh)}</div>
-                          <div>গ) {formatMath(p.g)}</div>
-                          <div>ঘ) {formatMath(p.gh)}</div>
+                          <div className="flex gap-1">ক) <span dangerouslySetInnerHTML={{ __html: formatMath(p.k) }} /></div>
+                          <div className="flex gap-1">খ) <span dangerouslySetInnerHTML={{ __html: formatMath(p.kh) }} /></div>
+                          <div className="flex gap-1">গ) <span dangerouslySetInnerHTML={{ __html: formatMath(p.g) }} /></div>
+                          <div className="flex gap-1">ঘ) <span dangerouslySetInnerHTML={{ __html: formatMath(p.gh) }} /></div>
                         </div>
                       </div>
                     );
