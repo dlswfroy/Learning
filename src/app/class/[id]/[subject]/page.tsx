@@ -355,6 +355,7 @@ export default function SubjectPage() {
 
                 <div 
                   className="content-area text-[10.5pt] text-justify whitespace-pre-wrap"
+                  style={{ lineHeight: '1.1' }}
                   dangerouslySetInnerHTML={{ __html: formatMath(viewingNote?.content || '') }}
                 />
               </div>
@@ -374,7 +375,7 @@ export default function SubjectPage() {
         .math-sup { font-size: 0.7em; vertical-align: super; }
         .math-sub { font-size: 0.7em; vertical-align: sub; }
         .math-text { font-family: 'Kalpurush', sans-serif; font-style: normal; }
-        .paper-preview { color: black !important; }
+        .paper-preview { color: black !important; line-height: 1.1; }
       `}</style>
     </div>
   );

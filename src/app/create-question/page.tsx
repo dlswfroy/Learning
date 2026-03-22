@@ -69,7 +69,7 @@ function formatMath(text: string) {
     '\\\\degree': '°', '\\\\cdot': '·', '\\\\infty': '∞', '\\\\approx': '≈',
     '\\\\sum': '∑', '\\\\prod': '∏', '\\\\alpha': 'α', '\\\\beta': 'β',
     '\\\\gamma': 'γ', '\\\\delta': 'δ', '\\\\sigma': 'σ', '\\\\phi': 'φ', '\\\\omega': 'ω',
-    '\\\\eta': 'η', '\\\\rho': 'ρ', '\\\\rho': 'ρ', '\\\\lambda': 'λ', '\\\\mu': 'μ',
+    '\\\\eta': 'η', '\\\\rho': 'ρ', '\\\\lambda': 'λ', '\\\\mu': 'μ',
     '\\\\in': '∈', '\\\\mathbb\\{N\\}': 'ℕ', '\\\\mathbb\\{R\\}': 'ℝ', '\\\\mathbb\\{Z\\}': 'ℤ',
     '\\\\mathbb\\{Q\\}': 'ℚ', '\\\\subset': '⊂', '\\\\subseteq': '⊆', '\\\\cup': '∪',
     '\\\\cap': '∩', '\\\\emptyset': '∅', '\\\\forall': '∀', '\\\\exists': '∃', 
@@ -395,14 +395,14 @@ function CreateQuestionContent() {
           </div>
           <div className="content-area mt-2">
             {questions.some(q => q.type === 'creative') && (
-              <div className="mb-4">
-                <div className="text-center mb-2"><div className="section-label">সৃজনশীল প্রশ্ন</div><p className="text-[10px] font-bold">[{meta.creativeInstruction}]</p></div>
+              <div className="mb-2">
+                <div className="text-center mb-1"><div className="section-label">সৃজনশীল প্রশ্ন</div><p className="text-[10px] font-bold">[{meta.creativeInstruction}]</p></div>
                 {questions.filter(q => q.type === 'creative').map((q, idx) => {
                   const p = parseText(q.content);
                   return (
-                    <div key={q.id} className="mb-4 break-inside-avoid">
+                    <div key={q.id} className="mb-1 break-inside-avoid" style={{ line-height: '1.1' }}>
                       <div className="flex gap-2 font-bold"><span>{toBengaliNumber(idx + 1)}.</span><div dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} /></div>
-                      {q.imageUrl && <img src={q.imageUrl} className="max-w-[200px] mx-auto my-2 border" />}
+                      {q.imageUrl && <img src={q.imageUrl} className="max-w-[200px] mx-auto my-1 border" />}
                       <div className="ml-5">
                         {p.k && <div className="flex gap-2"><span>ক.</span><div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.k) }} /><span>{toBengaliNumber(meta.marksA)}</span></div>}
                         {p.kh && <div className="flex gap-2"><span>খ.</span><div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.kh) }} /><span>{toBengaliNumber(meta.marksB)}</span></div>}
@@ -415,21 +415,21 @@ function CreateQuestionContent() {
               </div>
             )}
             {questions.some(q => q.type === 'short') && (
-              <div className="mb-4">
-                <div className="text-center mb-2"><div className="section-label">সংক্ষিপ্ত প্রশ্ন</div><p className="text-[10px] font-bold">[{meta.shortInstruction}]</p></div>
+              <div className="mb-2">
+                <div className="text-center mb-1"><div className="section-label">সংক্ষিপ্ত প্রশ্ন</div><p className="text-[10px] font-bold">[{meta.shortInstruction}]</p></div>
                 {questions.filter(q => q.type === 'short').map((q, idx) => (
-                  <div key={q.id} className="mb-1 flex gap-2"><span className="font-bold">{toBengaliNumber(idx + 1)}.</span><div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(q.content) }} /><span>{toBengaliNumber(meta.shortMarks)}</span></div>
+                  <div key={q.id} className="mb-1 flex gap-2" style={{ line-height: '1.1' }}><span className="font-bold">{toBengaliNumber(idx + 1)}.</span><div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(q.content) }} /><span>{toBengaliNumber(meta.shortMarks)}</span></div>
                 ))}
               </div>
             )}
             {questions.some(q => q.type === 'mcq') && (
-              <div className="mt-2">
-                <div className="text-center mb-2"><div className="section-label">বহুনির্বাচনি প্রশ্ন</div><p className="text-[10px] font-bold">[{meta.mcqInstruction}]</p></div>
+              <div className="mt-1">
+                <div className="text-center mb-1"><div className="section-label">বহুনির্বাচনি প্রশ্ন</div><p className="text-[10px] font-bold">[{meta.mcqInstruction}]</p></div>
                 <div className="mcq-container">
                   {questions.filter(q => q.type === 'mcq').map((q, idx) => {
                     const p = parseText(q.content);
                     return (
-                      <div key={q.id} className="mcq-item mb-4 break-inside-avoid">
+                      <div key={q.id} className="mcq-item mb-2 break-inside-avoid" style={{ line-height: '1.1' }}>
                         <div className="flex gap-2 font-bold"><span>{toBengaliNumber(idx + 1)}.</span><div dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} /></div>
                         <div className="mcq-options">
                           <div>ক) <span dangerouslySetInnerHTML={{ __html: formatMath(p.k) }} /></div>
