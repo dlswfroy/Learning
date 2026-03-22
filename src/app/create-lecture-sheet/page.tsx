@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, Suspense, useMemo, useRef } from 'react';
@@ -49,21 +48,23 @@ function formatMath(text: string) {
   
   formatted = formatted.replace(/\\dot\{([^}]+)\}/g, '<span class="math-dot">$1</span>');
 
-  // FIX: Process subscripts/superscripts BEFORE fractions to handle complex cases like \frac{D}{v_{fast} - v_{slow}}
+  // FIX: Process subscripts/superscripts BEFORE fractions to handle complex cases
   formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
   formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
 
   let prev;
-  const simpleFracRegex = /\\frac\{([^{}]+)\}\s*\{([^{}]+)\}/g;
+  // Improved fracRegex to allow nested braces like \sqrt{6}
+  const fracRegex = /\\frac\{((?:[^{}]|\{[^{}]*\})*)\}\s*\{((?:[^{}]|\{[^{}]*\})*)\}/g;
   do {
     prev = formatted;
-    formatted = formatted.replace(simpleFracRegex, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
+    formatted = formatted.replace(fracRegex, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
   } while (formatted !== prev);
   
-  formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
-  formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>');
+  // Improved sqrtRegex to allow nested braces
+  formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{((?:[^{}]|\{[^{}]*\})*)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
+  formatted = formatted.replace(/\\sqrt\{((?:[^{}]|\{[^{}]*\})*)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>');
   
   formatted = formatted.replace(/\\/g, ''); 
   return formatted;
@@ -173,7 +174,6 @@ function CreateLectureSheetContent() {
     toast({ title: "স্ক্যান শুরু হয়েছে", description: "লোকাল স্ক্যানার ইমেজ প্রসেস করছে, অনুগ্রহ করে অপেক্ষা করুন..." });
 
     try {
-      // Using Tesseract.js for non-AI local OCR
       const result = await Tesseract.recognize(file, 'ben+eng', {
         logger: m => console.log(m)
       });
@@ -230,7 +230,7 @@ function CreateLectureSheetContent() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="space-y-2">
                 <label className="text-sm font-semibold">প্রতিষ্ঠানের নাম</label>
-                <Input value={data.institution || ''} onChange={e => setData(prev => ({...prev, institution: e.target.value}))} />
+                <input className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm" value={data.institution || ''} onChange={e => setData(prev => ({...prev, institution: e.target.value}))} />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-semibold">শ্রেণি</label>
@@ -259,7 +259,7 @@ function CreateLectureSheetContent() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-semibold">টপিক / শিরোনাম</label>
-              <Input value={data.topic || ''} onChange={e => setData(prev => ({...prev, topic: e.target.value}))} placeholder="যেমন: গাণিতিক সূত্রাবলী বা সেট থিওরি আলোচনা" />
+              <input className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm" value={data.topic || ''} onChange={e => setData(prev => ({...prev, topic: e.target.value}))} placeholder="যেমন: গাণিতিক সূত্রাবলী বা সেট থিওরি আলোচনা" />
             </div>
           </CardContent>
         </Card>
