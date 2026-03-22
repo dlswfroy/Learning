@@ -22,20 +22,27 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 
 function formatMath(text: string) {
   if (!text) return '';
+  // Initial cleanup of markers
   let formatted = text.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
   
+  // 1. Text processing
   formatted = formatted.replace(/\\text\{([^}]+)\}/g, '<span class="math-text">$1</span>');
-  formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
-  formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
-  formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
-  formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
 
+  // 2. Fractions - Using a regex that supports one level of nesting (like \sqrt{...} inside \frac{...}{...})
   const fracRegex = /\\frac\{((?:[^{}]|\{[^{}]*\})*)\}\s*\{((?:[^{}]|\{[^{}]*\})*)\}/g;
   formatted = formatted.replace(fracRegex, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
 
+  // 3. Square Roots
   formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
   formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>');
 
+  // 4. Subscripts / Superscripts
+  formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
+  formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
+  formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
+  formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
+
+  // 5. Common Symbols mapping
   const symbolMap: Record<string, string> = {
     '\\\\log': 'log', '\\\\triangle': '△', '\\\\angle': '∠', '\\\\circ': '°',
     '\\\\theta': 'θ', '\\\\pi': 'π', '\\\\pm': '±', '\\\\times': '×',
@@ -54,6 +61,8 @@ function formatMath(text: string) {
   });
 
   formatted = formatted.replace(/\\dot\{([^}]+)\}/g, '<span class="math-dot">$1</span>');
+  
+  // 6. Cleanup of any remaining backslashes
   formatted = formatted.replace(/\\/g, '');
   return formatted;
 }
@@ -298,10 +307,10 @@ export default function SubjectPage() {
       {/* Note Viewer Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 border-none shadow-2xl font-kalpurush">
-          <div className="sticky top-0 z-50 bg-white border-b p-4 flex justify-between items-center shadow-sm">
-            <h3 className="font-bold text-primary flex items-center gap-2">
+          <DialogHeader className="sticky top-0 z-50 bg-white border-b p-4 flex justify-between items-center shadow-sm">
+            <DialogTitle className="font-bold text-primary flex items-center gap-2">
               <FileText className="w-5 h-5" /> নোট প্রিভিউ
-            </h3>
+            </DialogTitle>
             <div className="flex gap-2">
               <Link href={`/create-lecture-sheet?id=${viewingNote?.id}&print=true`}>
                 <Button size="sm" variant="secondary" className="gap-2 font-bold">
@@ -312,11 +321,11 @@ export default function SubjectPage() {
                 <X className="w-5 h-5" />
               </Button>
             </div>
-          </div>
+          </DialogHeader>
           
           <div className="p-8 bg-slate-50 min-h-screen">
             <div className="paper-preview bg-white shadow-xl mx-auto p-[0.5in] relative overflow-hidden min-h-[11in] w-full" style={{ lineHeight: '1.1' }}>
-              {/* Watermark */}
+              {/* Watermark for Lecture Sheets */}
               <div 
                 className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden"
                 style={{ opacity: 0.08, transform: 'rotate(-45deg)', whiteSpace: 'nowrap' }}
