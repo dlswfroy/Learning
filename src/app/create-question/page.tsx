@@ -190,7 +190,6 @@ function CreateQuestionContent() {
   }, [isPrintMode, loading, userLoading, questions]);
 
   const subjects = useMemo(() => meta.classId ? getSubjectsForClass(meta.classId) : [], [meta.classId]);
-  const chapterSuggestions = useMemo(() => (meta.classId && meta.subject) ? getChaptersForSubject(meta.classId, meta.subject) : [], [meta.classId, meta.subject]);
 
   const handleAddQuestion = (type: 'creative' | 'short' | 'mcq') => {
     setQuestions(prev => [...prev, { id: Math.random().toString(36).substr(2, 9), type, content: '', imageUrl: '' }]);
@@ -374,7 +373,7 @@ function CreateQuestionContent() {
             .inst-name { font-size: 23px !important; font-weight: 800; line-height: 1.1; }
             .meta-info { display: flex; justify-content: space-between; font-weight: bold; font-size: 10pt; border-top: 1.5pt solid black; padding-top: 2px; }
             .section-label { font-size: 11pt; font-weight: bold; border: 1pt solid black; display: inline-block; padding: 2px 20px; margin: 4px auto; }
-            .content-area { font-size: 10.5pt; line-height: 1.1; color: black !important; }
+            .content-area { font-size: 10.5pt; lineHeight: 1.1; color: black !important; }
             .mcq-container { column-count: 2; column-gap: 40px; column-rule: 1pt solid #000; }
             .mcq-options { display: grid; grid-template-columns: 1fr 1fr; gap: 1px 10px; padding-left: 20px; font-size: 10pt; }
             .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
@@ -400,7 +399,7 @@ function CreateQuestionContent() {
                 {questions.filter(q => q.type === 'creative').map((q, idx) => {
                   const p = parseText(q.content);
                   return (
-                    <div key={q.id} className="mb-1 break-inside-avoid" style={{ line-height: '1.1' }}>
+                    <div key={q.id} className="mb-1 break-inside-avoid" style={{ lineHeight: '1.1' }}>
                       <div className="flex gap-2 font-bold"><span>{toBengaliNumber(idx + 1)}.</span><div dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} /></div>
                       {q.imageUrl && <img src={q.imageUrl} className="max-w-[200px] mx-auto my-1 border" />}
                       <div className="ml-5">
@@ -418,7 +417,7 @@ function CreateQuestionContent() {
               <div className="mb-2">
                 <div className="text-center mb-1"><div className="section-label">সংক্ষিপ্ত প্রশ্ন</div><p className="text-[10px] font-bold">[{meta.shortInstruction}]</p></div>
                 {questions.filter(q => q.type === 'short').map((q, idx) => (
-                  <div key={q.id} className="mb-1 flex gap-2" style={{ line-height: '1.1' }}><span className="font-bold">{toBengaliNumber(idx + 1)}.</span><div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(q.content) }} /><span>{toBengaliNumber(meta.shortMarks)}</span></div>
+                  <div key={q.id} className="mb-1 flex gap-2" style={{ lineHeight: '1.1' }}><span className="font-bold">{toBengaliNumber(idx + 1)}.</span><div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(q.content) }} /><span>{toBengaliNumber(meta.shortMarks)}</span></div>
                 ))}
               </div>
             )}
@@ -429,7 +428,7 @@ function CreateQuestionContent() {
                   {questions.filter(q => q.type === 'mcq').map((q, idx) => {
                     const p = parseText(q.content);
                     return (
-                      <div key={q.id} className="mcq-item mb-2 break-inside-avoid" style={{ line-height: '1.1' }}>
+                      <div key={q.id} className="mcq-item mb-2 break-inside-avoid" style={{ lineHeight: '1.1' }}>
                         <div className="flex gap-2 font-bold"><span>{toBengaliNumber(idx + 1)}.</span><div dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} /></div>
                         <div className="mcq-options">
                           <div>ক) <span dangerouslySetInnerHTML={{ __html: formatMath(p.k) }} /></div>

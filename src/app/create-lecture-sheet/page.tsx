@@ -334,7 +334,7 @@ function CreateLectureSheetContent() {
             .inst-name { font-size: 23px !important; font-weight: 800; line-height: 1.1; }
             .topic-title { font-size: 13pt; font-weight: bold; margin: 4px 0; text-align: center; text-decoration: underline; line-height: 1.1; }
             .meta-info { display: flex; justify-content: center; gap: 20pt; font-weight: 900; margin-top: 2px; font-size: 10pt; border-top: 0.5pt solid #ddd; padding-top: 2px; line-height: 1.1; }
-            .content-area { white-space: pre-wrap; font-size: 10.5pt; line-height: 1.1; background: transparent !important; position: relative; z-index: 10; }
+            .content-area { white-space: pre-wrap; font-size: 10.5pt; lineHeight: 1.1; background: transparent !important; position: relative; z-index: 10; }
             
             .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
             .math-num { border-bottom: 0.5pt solid black; padding: 0 1px; }
@@ -362,7 +362,7 @@ function CreateLectureSheetContent() {
             </div>
           </div>
           <div className="topic-title">{data.topic || 'লেকচার শিট'}</div>
-          <div className="content-area" dangerouslySetInnerHTML={{ __html: formatMath(data.content) }} />
+          <div className="content-area" dangerouslySetInnerHTML={{ __html: formatMath(data.content) }} style={{ lineHeight: '1.1' }} />
         </div>
       </div>
     </div>
