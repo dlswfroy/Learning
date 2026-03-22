@@ -3,7 +3,7 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { useFirestore, useUser, useCollection } from '@/firebase';
-import { collection, query, where, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, where, deleteDoc, doc, getDocs } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
@@ -21,7 +21,9 @@ import {
   Folder,
   BrainCircuit,
   ListChecks,
-  ArrowLeft
+  ArrowLeft,
+  CheckCircle2,
+  X
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -42,76 +44,33 @@ import { toast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-// Mapping for standardizing chapter names to Bengali ordinals
 const BENGALI_ORDINALS: Record<string, string> = {
   '1': 'প্রথম অধ্যায়', '2': 'দ্বিতীয় অধ্যায়', '3': 'তৃতীয় অধ্যায়', '4': 'চতুর্থ অধ্যায়', '5': 'পঞ্চম অধ্যায়',
   '6': 'ষষ্ঠ অধ্যায়', '7': 'সপ্তম অধ্যায়', '8': 'অষ্টম অধ্যায়', '9': 'নবম অধ্যায়', '10': 'দশম অধ্যায়',
   '11': 'একাদশ অধ্যায়', '12': 'দ্বাদশ অধ্যায়', '13': 'ত্রয়োদশ অধ্যায়', '14': 'চতুর্দশ অধ্যায়', '15': 'পঞ্চদশ অধ্যায়',
   '16': 'ষোড়শ অধ্যায়', '17': 'সপ্তদশ অধ্যায়', '18': 'অষ্টাদশ অধ্যায়', '19': 'ঊনবিংশ অধ্যায়', '20': 'বিংশ অধ্যায়',
-  '21': 'একবিংশ অধ্যায়', '22': 'দ্বাবিংশ অধ্যায়', '23': 'ত্রয়োবিংশ অধ্যায়', '24': 'চতুৰবিংশ অধ্যায়', '25': 'পঞ্চবিংশ অধ্যায়',
-  '26': 'ষড়বিংশ অধ্যায়', '27': 'সপ্তবিংশ অধ্যায়', '28': 'অষ্টবিংশ অধ্যায়', '29': 'ঊনত্রিংশ অধ্যায়', '30': 'ত্রিংশ অধ্যায়',
-  '31': 'একত্রিংশ অধ্যায়', '32': 'দ্বাত্রিংশ অধ্যায়', '33': 'ত্রয়োত্রিংশ অধ্যায়', '34': 'চতুস্ত্রিংশ অধ্যায়', '35': 'পঞ্চত্রিংশ অধ্যায়',
-  '36': 'ষটত্রিংশ অধ্যায়', '37': 'সপ্তত্রিংশ অধ্যায়', '38': 'অষ্টত্রিংশ অধ্যায়', '39': 'ঊনচত্বারিংশ অধ্যায়', '40': 'চত্বারিংশ অধ্যায়',
-  '41': 'একচত্বারিংশ অধ্যায়', '42': 'দ্বিচত্বারিংশ অধ্যায়', '43': 'ত্রয়োচত্বারিংশ অধ্যায়', '44': 'চতুশ্চত্বারিংশ অধ্যায়', '45': 'পঞ্চচত্বারিংশ অধ্যায়',
-  '46': 'ষটচত্বারিংশ অধ্যায়', '47': 'সপ্তচত্বারিংশ অধ্যায়', '48': 'অষ্টচত্বারিংশ অধ্যায়', '49': 'ঊনপঞ্চাশত্তম অধ্যায়', '50': 'পঞ্চাশত্তম অধ্যায়'
 };
 
-// Helper for Bengali numbers
 function toBengaliNumber(n: number | string | undefined | null): string {
   if (n === undefined || n === null || n === '') return '';
   const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
   return n.toString().replace(/\d/g, (digit) => bengaliDigits[parseInt(digit)]);
 }
 
-// Function to extract number and standardize chapter name
 function getStandardizedChapterName(chapter: string): string {
   if (!chapter) return 'শিরোনামহীন';
-  
-  const bengaliToEnglish: Record<string, string> = {
-    '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4',
-    '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9'
-  };
-  
-  const ordinalWords: Record<string, string> = {
-    'প্রথম': '1', 'দ্বিতীয়': '2', 'তৃতীয়': '3', 'চতুর্থ': '4', 'পঞ্চম': '5',
-    'ষষ্ঠ': '6', 'সপ্তম': '7', 'অষ্টম': '8', 'নবম': '9', 'দশম': '10',
-    '১ম': '1', '২য়': '2', '৩য়': '3', '৪র্থ': '4', '৫ম': '5',
-    '৬ষ্ঠ': '6', '৭ম': '7', '৮ম': '8', '৯ম': '9', '১০ম': '10'
-  };
-
+  const ordinalWords: Record<string, string> = { 'প্রথম': '1', 'দ্বিতীয়': '2', 'তৃতীয়': '3', '১ম': '1', '২য়': '2' };
   let normalized = chapter.toString().toLowerCase().trim();
-  
-  // Replace ordinal words and Bengali digits to extract standard number
-  Object.entries(ordinalWords).forEach(([bnWord, num]) => {
-    normalized = normalized.replace(new RegExp(bnWord, 'g'), num);
-  });
-  
-  Object.entries(bengaliToEnglish).forEach(([bn, en]) => {
-    normalized = normalized.replace(new RegExp(bn, 'g'), en);
-  });
-  
-  // Extract first number found
+  Object.entries(ordinalWords).forEach(([bnWord, num]) => { normalized = normalized.replace(new RegExp(bnWord, 'g'), num); });
   const match = normalized.match(/\d+/);
-  if (match) {
-    const num = match[0];
-    return BENGALI_ORDINALS[num] || `${toBengaliNumber(num)}তম অধ্যায়`;
-  }
-  
-  // Fallback if no number is found: cleanup title
-  normalized = normalized.replace(/(অধ্যায়|অধ্যায়|পরিচ্ছেদ|পাঠ|ম|র্থ|ষ্ঠ|তম|য়|দশ|ঃ|:|\.)/g, '').trim();
+  if (match) return BENGALI_ORDINALS[match[0]] || `${toBengaliNumber(match[0])}তম অধ্যায়`;
   return normalized || 'শিরোনামহীন';
 }
 
-// Helper to get numeric order for sorting
 function getChapterOrder(label: string): number {
   if (label === 'শিরোনামহীন') return 999;
   const entry = Object.entries(BENGALI_ORDINALS).find(([num, text]) => text === label);
-  if (entry) return parseInt(entry[0]);
-  
-  const match = label.match(/\d+/);
-  if (match) return parseInt(match[0]);
-  
-  return 500; // Sort other titles towards middle/end
+  return entry ? parseInt(entry[0]) : 500;
 }
 
 type ViewMode = 'classes' | 'subjects' | 'chapters' | 'types' | 'content';
@@ -128,65 +87,77 @@ export default function MyLibraryPage() {
   const [selectedType, setSelectedType] = useState<'questions' | 'sheets' | null>(null);
   const [selectedSubType, setSelectedSubType] = useState<'creative' | 'mcq' | 'all' | null>(null);
 
-  const [deleting, setDeleting] = useState<string | null>(null);
+  // Selection states
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
+  const [merging, setMerging] = useState(false);
 
-  useEffect(() => {
-    if (!userLoading && !user) router.push('/auth');
-  }, [user, userLoading, router]);
+  useEffect(() => { if (!userLoading && !user) router.push('/auth'); }, [user, userLoading, router]);
 
-  const questionsQuery = useMemo(() => {
-    if (!db || !user) return null;
-    return query(collection(db, 'questions'), where('userId', '==', user.uid));
-  }, [db, user]);
-
-  const sheetsQuery = useMemo(() => {
-    if (!db || !user) return null;
-    return query(collection(db, 'lecture-sheets'), where('userId', '==', user.uid));
-  }, [db, user]);
+  const questionsQuery = useMemo(() => db && user ? query(collection(db, 'questions'), where('userId', '==', user.uid)) : null, [db, user]);
+  const sheetsQuery = useMemo(() => db && user ? query(collection(db, 'lecture-sheets'), where('userId', '==', user.uid)) : null, [db, user]);
 
   const { data: rawQuestions, loading: questionsLoading } = useCollection(questionsQuery);
   const { data: rawSheets, loading: sheetsLoading } = useCollection(sheetsQuery);
 
-  const libraryData = useMemo(() => {
-    return {
-      questions: rawQuestions || [],
-      sheets: rawSheets || []
-    };
-  }, [rawQuestions, rawSheets]);
+  const libraryData = useMemo(() => ({ questions: rawQuestions || [], sheets: rawSheets || [] }), [rawQuestions, rawSheets]);
+
+  const currentItems = useMemo(() => {
+    let qs = libraryData.questions;
+    let ss = libraryData.sheets;
+    if (selectedClass) { qs = qs.filter(q => q.classId === selectedClass); ss = ss.filter(s => s.classId === selectedClass); }
+    if (selectedSubject) { qs = qs.filter(q => q.subject === selectedSubject); ss = ss.filter(s => s.subject === selectedSubject); }
+    if (selectedChapter) { 
+      qs = qs.filter(q => getStandardizedChapterName(q.chapter || '') === selectedChapter);
+      ss = ss.filter(s => getStandardizedChapterName(s.topic || '') === selectedChapter);
+    }
+    return { questions: qs, sheets: ss };
+  }, [libraryData, selectedClass, selectedSubject, selectedChapter]);
+
+  const toggleSelection = (id: string) => {
+    if (!isSelecting) return;
+    setSelectedDocIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
+  const handleMergeAndCreate = async () => {
+    if (selectedDocIds.length < 1) return;
+    setMerging(true);
+    try {
+      const mergedQuestions: any[] = [];
+      const promises = selectedDocIds.map(id => getDocs(query(collection(db!, 'questions'), where('userId', '==', user!.uid))));
+      const results = await Promise.all(promises);
+      
+      results.forEach(snap => {
+        snap.docs.forEach(doc => {
+          if (selectedDocIds.includes(doc.id)) {
+            const data = doc.data();
+            if (data.questions) mergedQuestions.push(...data.questions);
+          }
+        });
+      });
+
+      if (mergedQuestions.length === 0) {
+        toast({ variant: "destructive", title: "ত্রুটি", description: "কোনো প্রশ্ন পাওয়া যায়নি।" });
+        return;
+      }
+
+      sessionStorage.setItem('merged_questions_data', JSON.stringify(mergedQuestions));
+      router.push('/create-question?source=merge');
+    } catch (e) {
+      toast({ variant: "destructive", title: "ত্রুটি", description: "প্রশ্ন একত্রীকরণ ব্যর্থ হয়েছে।" });
+    } finally {
+      setMerging(false);
+    }
+  };
 
   const handleDelete = async (id: string, type: 'questions' | 'lecture-sheets') => {
-    setDeleting(id);
     try {
       await deleteDoc(doc(db!, type, id));
       toast({ title: "সফল", description: "আইটেমটি মুছে ফেলা হয়েছে।" });
     } catch (e) {
       toast({ variant: "destructive", title: "ত্রুটি", description: "মুছে ফেলা সম্ভব হয়নি।" });
-    } finally {
-      setDeleting(null);
     }
   };
-
-  const currentItems = useMemo(() => {
-    let qs = libraryData.questions;
-    let ss = libraryData.sheets;
-
-    if (selectedClass) {
-      qs = qs.filter(q => q.classId === selectedClass);
-      ss = ss.filter(s => s.classId === selectedClass);
-    }
-
-    if (selectedSubject) {
-      qs = qs.filter(q => q.subject === selectedSubject);
-      ss = ss.filter(s => s.subject === selectedSubject);
-    }
-
-    if (selectedChapter) {
-      qs = qs.filter(q => getStandardizedChapterName(q.chapter || '') === selectedChapter);
-      ss = ss.filter(s => getStandardizedChapterName(s.topic || '') === selectedChapter);
-    }
-
-    return { questions: qs, sheets: ss };
-  }, [libraryData, selectedClass, selectedSubject, selectedChapter]);
 
   const renderClasses = () => {
     const classIds = Array.from(new Set([...libraryData.questions.map(q => q.classId), ...libraryData.sheets.map(s => s.classId)]));
@@ -228,15 +199,13 @@ export default function MyLibraryPage() {
     const chapters = Array.from(new Set([
       ...currentItems.questions.map(q => getStandardizedChapterName(q.chapter || '')),
       ...currentItems.sheets.map(s => getStandardizedChapterName(s.topic || ''))
-    ])).filter(Boolean)
-    .sort((a, b) => getChapterOrder(a) - getChapterOrder(b));
+    ])).filter(Boolean).sort((a, b) => getChapterOrder(a) - getChapterOrder(b));
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {chapters.map(label => {
           const qCount = currentItems.questions.filter(q => getStandardizedChapterName(q.chapter || '') === label).length;
           const sCount = currentItems.sheets.filter(s => getStandardizedChapterName(s.topic || '') === label).length;
-          
           return (
             <Card key={label} onClick={() => { setSelectedChapter(label); setViewMode('types'); }} className="cursor-pointer hover:border-primary hover:shadow-md transition-all group border-2">
               <CardContent className="p-4 flex items-center justify-between gap-4">
@@ -322,7 +291,7 @@ export default function MyLibraryPage() {
       );
     }
 
-    if (!selectedSubType) {
+    if (!selectedSubType && !isSelecting) {
       const cqCount = currentItems.questions.filter(q => !q.isMcq).length;
       const mcqCount = currentItems.questions.filter(q => q.isMcq).length;
       return (
@@ -345,40 +314,69 @@ export default function MyLibraryPage() {
       );
     }
 
-    const filteredQs = currentItems.questions.filter(q => selectedSubType === 'creative' ? !q.isMcq : q.isMcq);
+    const filteredQs = isSelecting ? currentItems.questions : currentItems.questions.filter(q => selectedSubType === 'creative' ? !q.isMcq : q.isMcq);
+    
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredQs.map(q => (
-          <Card key={q.id} className="hover:border-primary/40 transition-all shadow-sm bg-white">
-            <CardHeader className="pb-3">
-              <div className="flex justify-between items-start">
-                 <CardTitle className="text-base font-bold truncate pr-4">{q.chapter || q.exam}</CardTitle>
-                 <div className="flex gap-2">
-                   <Link href={`/create-question?id=${q.id}`}><Button variant="ghost" size="icon" className="h-8 w-8 text-primary"><Edit className="w-4 h-4" /></Button></Link>
-                   <AlertDialog>
-                     <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive"><Trash2 className="w-4 h-4" /></Button></AlertDialogTrigger>
-                     <AlertDialogContent className="font-kalpurush">
-                       <AlertDialogHeader><AlertDialogTitle className="font-bold">মুছে ফেলবেন?</AlertDialogTitle></AlertDialogHeader>
-                       <AlertDialogFooter>
-                         <AlertDialogCancel>বাতিল</AlertDialogCancel>
-                         <AlertDialogAction onClick={() => handleDelete(q.id, 'questions')} className="bg-destructive text-white">মুছে ফেলুন</AlertDialogAction>
-                       </AlertDialogFooter>
-                     </AlertDialogContent>
-                   </AlertDialog>
-                 </div>
-              </div>
-            </CardHeader>
-            <CardFooter className="pt-0 flex justify-between items-center text-[10px] font-bold text-muted-foreground">
-              <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {q.updatedAt?.toDate ? format(q.updatedAt.toDate(), 'dd MMM, yy', { locale: bn }) : ''}</span>
-              <Link href={`/create-question?id=${q.id}&print=true`}><Button size="sm" variant="outline" className="h-7 text-[10px] font-bold gap-1 border-primary text-primary"><Printer className="w-3 h-3" /> প্রিন্ট</Button></Link>
-            </CardFooter>
-          </Card>
-        ))}
+        {filteredQs.map(q => {
+          const isSelected = selectedDocIds.includes(q.id);
+          return (
+            <Card 
+              key={q.id} 
+              onClick={() => isSelecting && toggleSelection(q.id)}
+              className={cn(
+                "transition-all shadow-sm bg-white border-2",
+                isSelecting ? "cursor-pointer" : "hover:border-primary/40",
+                isSelected ? "border-primary bg-primary/5" : "border-border"
+              )}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex justify-between items-start">
+                   <div className="flex items-center gap-3 pr-4 min-w-0">
+                     {isSelecting && (
+                       <div className={cn("w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center", isSelected ? "bg-primary border-primary text-white" : "border-muted-foreground/30")}>
+                         {isSelected && <CheckCircle2 className="w-4 h-4" />}
+                       </div>
+                     )}
+                     <CardTitle className="text-base font-bold truncate">
+                       {q.chapter || q.exam}
+                     </CardTitle>
+                   </div>
+                   {!isSelecting && (
+                     <div className="flex gap-2">
+                       <Link href={`/create-question?id=${q.id}`}><Button variant="ghost" size="icon" className="h-8 w-8 text-primary"><Edit className="w-4 h-4" /></Button></Link>
+                       <AlertDialog>
+                         <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive"><Trash2 className="w-4 h-4" /></Button></AlertDialogTrigger>
+                         <AlertDialogContent className="font-kalpurush">
+                           <AlertDialogHeader><AlertDialogTitle className="font-bold">মুছে ফেলবেন?</AlertDialogTitle></AlertDialogHeader>
+                           <AlertDialogFooter>
+                             <AlertDialogCancel>বাতিল</AlertDialogCancel>
+                             <AlertDialogAction onClick={() => handleDelete(q.id, 'questions')} className="bg-destructive text-white">মুছে ফেলুন</AlertDialogAction>
+                           </AlertDialogFooter>
+                         </AlertDialogContent>
+                       </AlertDialog>
+                     </div>
+                   )}
+                </div>
+              </CardHeader>
+              <CardFooter className="pt-0 flex justify-between items-center text-[10px] font-bold text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <Badge variant="outline" className="text-[8px] h-4 font-bold">{q.isMcq ? 'এমসিকিউ' : 'সৃজনশীল'}</Badge>
+                  <Calendar className="w-3 h-3 ml-1" /> {q.updatedAt?.toDate ? format(q.updatedAt.toDate(), 'dd MMM, yy', { locale: bn }) : ''}
+                </span>
+                {!isSelecting && (
+                  <Link href={`/create-question?id=${q.id}&print=true`}><Button size="sm" variant="outline" className="h-7 text-[10px] font-bold gap-1 border-primary text-primary"><Printer className="w-3 h-3" /> প্রিন্ট</Button></Link>
+                )}
+              </CardFooter>
+            </Card>
+          );
+        })}
       </div>
     );
   };
 
   const handleBack = () => {
+    if (isSelecting) { setIsSelecting(false); setSelectedDocIds([]); return; }
     if (selectedSubType) { setSelectedSubType(null); return; }
     if (viewMode === 'content') { setViewMode('types'); setSelectedType(null); return; }
     if (viewMode === 'types') { setViewMode('chapters'); setSelectedChapter(null); return; }
@@ -396,7 +394,7 @@ export default function MyLibraryPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 animate-fade-in pb-20 font-kalpurush">
+    <div className="max-w-5xl mx-auto space-y-6 animate-fade-in pb-32 font-kalpurush">
       <header className="flex flex-col gap-4 border-b pb-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -408,31 +406,44 @@ export default function MyLibraryPage() {
               <p className="text-xs text-muted-foreground font-bold">আপনার সব সংগ্রহ এখানে ফোল্ডার আকারে সাজানো আছে</p>
             </div>
           </div>
-          {viewMode !== 'classes' && (
-            <Button variant="outline" size="sm" onClick={handleBack} className="gap-2 font-bold border-primary text-primary">
-              <ArrowLeft className="w-4 h-4" /> ফিরে যান
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {viewMode === 'content' && selectedType === 'questions' && (
+              <Button 
+                variant={isSelecting ? "destructive" : "secondary"} 
+                size="sm" 
+                onClick={() => { setIsSelecting(!isSelecting); setSelectedDocIds([]); }}
+                className="gap-2 font-bold"
+              >
+                {isSelecting ? <X className="w-4 h-4" /> : <ListChecks className="w-4 h-4" />}
+                {isSelecting ? "বাতিল করুন" : "প্রশ্ন বাছাই করুন"}
+              </Button>
+            )}
+            {viewMode !== 'classes' && (
+              <Button variant="outline" size="sm" onClick={handleBack} className="gap-2 font-bold border-primary text-primary">
+                <ArrowLeft className="w-4 h-4" /> ফিরে যান
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-2 text-xs font-bold overflow-x-auto whitespace-nowrap pb-2 text-muted-foreground">
-          <span className={cn("cursor-pointer hover:text-primary", viewMode === 'classes' && "text-primary")} onClick={() => { setViewMode('classes'); setSelectedClass(null); setSelectedSubject(null); setSelectedChapter(null); setSelectedType(null); setSelectedSubType(null); }}>লাইব্রেরি</span>
+          <span className={cn("cursor-pointer hover:text-primary", viewMode === 'classes' && "text-primary")} onClick={() => { setViewMode('classes'); setSelectedClass(null); setSelectedSubject(null); setSelectedChapter(null); setSelectedType(null); setSelectedSubType(null); setIsSelecting(false); }}>লাইব্রেরি</span>
           {selectedClass && (
             <>
               <ChevronRight className="w-3 h-3 shrink-0" />
-              <span className={cn("cursor-pointer hover:text-primary", viewMode === 'subjects' && "text-primary")} onClick={() => { setViewMode('subjects'); setSelectedSubject(null); setSelectedChapter(null); setSelectedType(null); setSelectedSubType(null); }}>{CLASSES.find(c => c.id === selectedClass)?.label} শ্রেণি</span>
+              <span className={cn("cursor-pointer hover:text-primary", viewMode === 'subjects' && "text-primary")} onClick={() => { setViewMode('subjects'); setSelectedSubject(null); setSelectedChapter(null); setSelectedType(null); setSelectedSubType(null); setIsSelecting(false); }}>{CLASSES.find(c => c.id === selectedClass)?.label} শ্রেণি</span>
             </>
           )}
           {selectedSubject && (
             <>
               <ChevronRight className="w-3 h-3 shrink-0" />
-              <span className={cn("cursor-pointer hover:text-primary", viewMode === 'chapters' && "text-primary")} onClick={() => { setViewMode('chapters'); setSelectedSubject(null); setSelectedChapter(null); setSelectedType(null); setSelectedSubType(null); }}>{selectedSubject}</span>
+              <span className={cn("cursor-pointer hover:text-primary", viewMode === 'chapters' && "text-primary")} onClick={() => { setViewMode('chapters'); setSelectedSubject(null); setSelectedChapter(null); setSelectedType(null); setSelectedSubType(null); setIsSelecting(false); }}>{selectedSubject}</span>
             </>
           )}
           {selectedChapter && (
             <>
               <ChevronRight className="w-3 h-3 shrink-0" />
-              <span className={cn("cursor-pointer hover:text-primary", viewMode === 'types' && "text-primary")} onClick={() => { setViewMode('chapters'); setSelectedChapter(null); setSelectedType(null); setSelectedSubType(null); }}>অধ্যায়</span>
+              <span className={cn("cursor-pointer hover:text-primary", viewMode === 'types' && "text-primary")} onClick={() => { setViewMode('chapters'); setSelectedChapter(null); setSelectedType(null); setSelectedSubType(null); setIsSelecting(false); }}>অধ্যায়</span>
             </>
           )}
           {selectedType && (
@@ -441,10 +452,16 @@ export default function MyLibraryPage() {
               <span className={cn("cursor-pointer hover:text-primary", !selectedSubType && "text-primary")} onClick={() => { setViewMode('content'); setSelectedSubType(null); }}>{selectedType === 'questions' ? 'নমুনা প্রশ্ন' : 'লেকচার শিট'}</span>
             </>
           )}
-          {selectedSubType && (
+          {selectedSubType && !isSelecting && (
             <>
               <ChevronRight className="w-3 h-3 shrink-0" />
               <span className="text-primary">{selectedSubType === 'creative' ? 'সৃজনশীল' : 'বহুনির্বাচনি'}</span>
+            </>
+          )}
+          {isSelecting && (
+            <>
+              <ChevronRight className="w-3 h-3 shrink-0" />
+              <span className="text-primary">প্রশ্ন বাছাই</span>
             </>
           )}
         </div>
@@ -458,7 +475,28 @@ export default function MyLibraryPage() {
         {viewMode === 'content' && renderFiles()}
       </div>
 
-      {(viewMode === 'content' || viewMode === 'types') && (
+      {isSelecting && selectedDocIds.length > 0 && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 w-full max-w-lg px-4 animate-in slide-in-from-bottom-10">
+          <Card className="bg-primary text-white shadow-2xl border-none p-4 flex items-center justify-between">
+            <div className="font-bold flex items-center gap-3">
+              <Badge variant="secondary" className="bg-white text-primary font-black">
+                {toBengaliNumber(selectedDocIds.length)} টি
+              </Badge>
+              <span>প্রশ্ন সেট সিলেক্ট করা হয়েছে</span>
+            </div>
+            <Button 
+              onClick={handleMergeAndCreate} 
+              disabled={merging}
+              className="bg-white text-primary hover:bg-slate-100 font-black shadow-lg"
+            >
+              {merging ? <Loader2 className="w-4 h-4 animate-spin" /> : <BrainCircuit className="w-4 h-4 mr-2" />}
+              বোর্ড প্রশ্ন তৈরি করুন
+            </Button>
+          </Card>
+        </div>
+      )}
+
+      {!isSelecting && (viewMode === 'content' || viewMode === 'types') && (
         <div className="flex justify-center pt-10">
            <p className="text-[10px] font-bold text-black flex items-center gap-1">
              <LibraryIcon className="w-3 h-3" /> মোট আইটেম: {toBengaliNumber((currentItems.questions.length + currentItems.sheets.length))} টি

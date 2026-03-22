@@ -43,20 +43,15 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 function formatMath(text: string) {
   if (!text) return '';
   let formatted = text.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
-  
   formatted = formatted.replace(/\\text\{([^}]+)\}/g, '<span class="math-text">$1</span>');
-
   const fracRegex = /\\frac\{((?:[^{}]|\{[^{}]*\})*)\}\s*\{((?:[^{}]|\{[^{}]*\})*)\}/g;
   formatted = formatted.replace(fracRegex, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
-
   formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
   formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>');
-
   formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
   formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
-
   const symbolMap: Record<string, string> = {
     '\\\\log': 'log', '\\\\triangle': '△', '\\\\angle': '∠', '\\\\circ': '°',
     '\\\\theta': 'θ', '\\\\pi': 'π', '\\\\pm': '±', '\\\\times': '×',
@@ -72,11 +67,7 @@ function formatMath(text: string) {
     '\\\\leftrightarrow': '↔', '\\\\Leftrightarrow': '⇔', '\\\\to': '→', '\\\\arrow': '→',
     '\\\\left': '', '\\\\right': '', '\\\\\%': '%', '\\\\setminus': '\\', '\\\\backslash': '\\'
   };
-  
-  Object.entries(symbolMap).forEach(([key, val]) => { 
-    formatted = formatted.replace(new RegExp(key, 'g'), val); 
-  });
-
+  Object.entries(symbolMap).forEach(([key, val]) => { formatted = formatted.replace(new RegExp(key, 'g'), val); });
   formatted = formatted.replace(/\\dot\{([^}]+)\}/g, '<span class="math-dot">$1</span>');
   formatted = formatted.replace(/\\/g, '');
   return formatted;
@@ -165,9 +156,7 @@ function CreateQuestionContent() {
 
   useEffect(() => {
     if (isPrintMode && !loading && !userLoading && questions.length > 0) {
-      const timer = setTimeout(() => {
-        window.print();
-      }, 800);
+      const timer = setTimeout(() => { window.print(); }, 800);
       return () => clearTimeout(timer);
     }
   }, [isPrintMode, loading, userLoading, questions]);
@@ -182,7 +171,6 @@ function CreateQuestionContent() {
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !activeQuestionId) return;
-
     try {
       const base64 = await processImage(file);
       setQuestions(prev => prev.map(q => q.id === activeQuestionId ? { ...q, imageUrl: base64 } : q));
@@ -198,15 +186,10 @@ function CreateQuestionContent() {
   const handleOCR = async (Eisen: React.ChangeEvent<HTMLInputElement>, questionId: string) => {
     const file = Eisen.target.files?.[0];
     if (!file) return;
-
     setIsScanning(true);
-    toast({ title: "স্ক্যান শুরু হয়েছে", description: "লোকাল স্ক্যানার ইমেজ প্রসেস করছে, অনুগ্রহ করে অপেক্ষা করুন..." });
-
+    toast({ title: "স্ক্যান শুরু হয়েছে", description: "লোকাল স্ক্যানার ইমেজ প্রসেস করছে..." });
     try {
-      const result = await Tesseract.recognize(file, 'ben+eng', {
-        logger: m => console.log(m)
-      });
-      
+      const result = await Tesseract.recognize(file, 'ben+eng');
       if (result && result.data.text) {
         const text = result.data.text.trim();
         setQuestions(prev => prev.map(q => q.id === questionId ? { ...q, content: q.content ? q.content + '\n' + text : text } : q));
@@ -225,132 +208,59 @@ function CreateQuestionContent() {
     if (!text) return parts;
     const cleanText = text.trim();
     const markers = ['ক', 'খ', 'গ', 'ঘ'];
-    
     const findMarkerPos = (m: string, fromIndex: number = 0) => {
-      const patterns = [ m + '.', m + ')', m + ' .', m + ' )' ];
+      const patterns = [ m + '.', m + ')', m + ' .', m + ' )', '(' + m + ')', '(' + m + ' )' ];
       let minIdx = -1;
       for (const p of patterns) {
         let idx = cleanText.indexOf(p, fromIndex);
-        if (idx !== -1) {
-          if (idx > 0 && cleanText[idx-1] === '(') idx--;
-          else if (idx > 1 && cleanText[idx-1] === ' ' && cleanText[idx-2] === '(') idx -= 2;
-          if (minIdx === -1 || idx < minIdx) minIdx = idx;
-        }
+        if (idx !== -1) { if (minIdx === -1 || idx < minIdx) minIdx = idx; }
       }
       return minIdx;
     };
-
     let firstMarkerPos = -1;
     for (const m of markers) {
       const pos = findMarkerPos(m);
       if (pos !== -1 && (firstMarkerPos === -1 || pos < firstMarkerPos)) firstMarkerPos = pos;
     }
-
     if (firstMarkerPos !== -1) {
       parts.main = cleanText.substring(0, firstMarkerPos).trim();
       const extract = (m: string) => {
         const startIdx = findMarkerPos(m);
         if (startIdx === -1) return '';
         let markerEnd = startIdx;
-        while (markerEnd < cleanText.length && (
-          cleanText[markerEnd] === ' ' || 
-          cleanText[markerEnd] === '\n' || 
-          cleanText[markerEnd] === '(' ||
-          markers.includes(cleanText[markerEnd]) || 
-          ['.', ')'].includes(cleanText[markerEnd])
-        )) markerEnd++;
+        while (markerEnd < cleanText.length && (cleanText[markerEnd] === ' ' || cleanText[markerEnd] === '\n' || cleanText[markerEnd] === '(' || markers.includes(cleanText[markerEnd]) || ['.', ')'].includes(cleanText[markerEnd]))) markerEnd++;
         let end = cleanText.length;
-        for (const otherM of markers) { 
-          if (otherM === m) continue; 
-          const e = findMarkerPos(otherM, markerEnd); 
-          if (e !== -1 && e < end) end = e; 
-        }
+        for (const otherM of markers) { if (otherM === m) continue; const e = findMarkerPos(otherM, markerEnd); if (e !== -1 && e < end) end = e; }
         return cleanText.substring(markerEnd, end).trim();
       };
       parts.k = extract('ক'); parts.kh = extract('খ'); parts.g = extract('গ'); parts.gh = extract('ঘ');
-    } else { 
-      parts.main = cleanText.trim(); 
-    }
+    } else { parts.main = cleanText.trim(); }
     return parts;
   };
 
   const handleSaveToDb = () => {
     if (!user || !db) { toast({ title: "লগইন প্রয়োজন", variant: "destructive" }); return; }
     setSaving(true);
-    
     const formattedQuestions = questions.map(q => {
       const p = parseText(q.content || '');
       const common = { type: q.type, imageUrl: q.imageUrl || '' };
-      if (q.type === 'creative') {
-        return { 
-          ...common,
-          stimulus: p.main || '', 
-          qA: p.k || '', 
-          qB: p.kh || '', 
-          qC: p.g || '', 
-          qD: p.gh || '' 
-        };
-      }
-      if (q.type === 'mcq') {
-        return { 
-          ...common,
-          mcqQuestion: p.main || '', 
-          optA: p.k || '', 
-          optB: p.kh || '', 
-          optC: p.g || '', 
-          optD: p.gh || '' 
-        };
-      }
+      if (q.type === 'creative') return { ...common, stimulus: p.main || '', qA: p.k || '', qB: p.kh || '', qC: p.g || '', qD: p.gh || '' };
+      if (q.type === 'mcq') return { ...common, mcqQuestion: p.main || '', optA: p.k || '', optB: p.kh || '', optC: p.g || '', optD: p.gh || '' };
       return { ...common, shortText: q.content || '' };
     });
-
     const docId = editId || doc(collection(db, 'questions')).id;
-    
     const data: any = {
-      institution: meta.institution || 'টপ গ্রেড টিউটোরিয়ালস',
-      exam: meta.exam || '',
-      chapter: meta.chapter || '',
-      classId: meta.classId || '',
-      subject: meta.subject || '',
-      time: meta.time || '',
-      totalMarks: meta.totalMarks || '',
-      creativeInstruction: meta.creativeInstruction || '',
-      shortInstruction: meta.shortInstruction || '',
-      mcqInstruction: meta.mcqInstruction || '',
-      marksA: meta.marksA || 1,
-      marksB: meta.marksB || 2,
-      marksC: meta.marksC || 3,
-      marksD: meta.marksD || 4,
-      shortMarks: meta.shortMarks || 2,
-      mcqMarks: meta.mcqMarks || 1,
-      questions: formattedQuestions,
-      userId: user.uid,
-      updatedAt: serverTimestamp(),
-      isMcq: questions.some(q => q.type === 'mcq')
+      ...meta, questions: formattedQuestions, userId: user.uid, updatedAt: serverTimestamp(), isMcq: questions.some(q => q.type === 'mcq')
     };
-
-    if (!editId) {
-      data.createdAt = serverTimestamp();
-    }
-
+    if (!editId) data.createdAt = serverTimestamp();
     const ref = doc(db, 'questions', docId);
     setDoc(ref, data, { merge: true })
-      .then(() => { 
-        setSaving(false); 
-        toast({ title: "সফল!", description: "ডাটাবেসে সেভ হয়েছে।" }); 
-        if (!editId) router.replace(`/create-question?id=${docId}`); 
-      })
-      .catch(async () => { 
-        setSaving(false); 
-        errorEmitter.emit('permission-error', new FirestorePermissionError({ 
-          path: ref.path, operation: 'write', requestResourceData: data 
-        })); 
-      });
+      .then(() => { setSaving(false); toast({ title: "সফল!", description: "সেভ হয়েছে।" }); if (!editId) router.replace(`/create-question?id=${docId}`); })
+      .catch(async () => { setSaving(false); errorEmitter.emit('permission-error', new FirestorePermissionError({ path: ref.path, operation: 'write', requestResourceData: data })); });
   };
 
   const isEnglish = meta.subject?.toLowerCase().includes('english') || meta.subject?.toLowerCase().includes('ইংরেজি');
-
-  if (loading || userLoading) return <div className="flex flex-col items-center justify-center p-20 min-h-[50vh] font-kalpurush"><Loader2 className="w-12 h-12 animate-spin text-primary mb-4" /><p className="text-muted-foreground font-bold">অ্যাক্সেস চেক করা হচ্ছে...</p></div>;
+  if (loading || userLoading) return <div className="flex flex-col items-center justify-center p-20 min-h-[50vh] font-kalpurush"><Loader2 className="w-12 h-12 animate-spin text-primary mb-4" /><p className="text-muted-foreground font-bold">লোড হচ্ছে...</p></div>;
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-32 font-kalpurush">
@@ -361,7 +271,7 @@ function CreateQuestionContent() {
             <h2 className="text-2xl font-bold text-primary">প্রশ্নপত্র নির্মাতা</h2>
           </div>
           <div className="flex gap-2">
-            <Button variant="ghost" onClick={() => router.push('/my-questions')} className="gap-2 font-bold"><ArrowLeft className="w-4 h-4" /> ফিরে যান</Button>
+            <Button variant="ghost" onClick={() => router.push('/my-questions')} className="gap-2 font-bold"><ArrowLeft className="w-4 h-4" /> লাইব্রেরি</Button>
             <Button variant="secondary" onClick={() => window.print()} className="gap-2 font-bold"><Printer className="w-4 h-4" /> প্রিন্ট</Button>
           </div>
         </header>
@@ -370,56 +280,16 @@ function CreateQuestionContent() {
           <CardHeader className="bg-primary/5 border-b py-3"><CardTitle className="text-base flex items-center gap-2 font-bold"><BookOpen className="w-4 h-4 text-primary" /> পরীক্ষার তথ্য ও মান বণ্টন</CardTitle></CardHeader>
           <CardContent className="pt-6 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="space-y-2"><label className="text-sm font-semibold">প্রতিষ্ঠানের নাম</label><Input value={meta.institution || ''} onChange={Eisen => setMeta(prev => ({...prev, institution: Eisen.target.value}))} className="font-bold" /></div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold">পরীক্ষার নাম / ধরন</label>
-                <Input value={meta.exam || ''} onChange={Eisen => setMeta(prev => ({...prev, exam: Eisen.target.value}))} className="font-bold" placeholder="যেমন: সাপ্তাহিক পরীক্ষা" />
-              </div>
-              <div className="space-y-2"><label className="text-sm font-semibold">সময়</label><Input value={meta.time || ''} onChange={Eisen => setMeta(prev => ({...prev, time: Eisen.target.value}))} className="font-bold" /></div>
-              <div className="space-y-2"><label className="text-sm font-semibold">পূর্ণমান</label><Input value={meta.totalMarks || ''} onChange={Eisen => setMeta(prev => ({...prev, totalMarks: Eisen.target.value}))} className="font-bold" /></div>
-              <div className="space-y-2"><label className="text-sm font-semibold">শ্রেণি</label><Select onValueChange={v => setMeta(prev => ({...prev, classId: v, subject: '', chapter: ''}))} value={meta.classId || ''}><SelectTrigger className="font-bold"><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger><SelectContent>{CLASSES.map(c => <SelectItem key={c.id} value={c.id} className="font-bold">{c.label} শ্রেণি</SelectItem>)}</SelectContent></Select></div>
-              <div className="space-y-2"><label className="text-sm font-semibold">বিষয়</label><Select onValueChange={v => setMeta(prev => ({...prev, subject: v, chapter: ''}))} value={meta.subject || ''} disabled={!meta.classId}><SelectTrigger className="font-bold"><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger><SelectContent>{subjects.map(s => <SelectItem key={s} value={s} className="font-bold">{s}</SelectItem>)}</SelectContent></Select></div>
-              
-              <div className="space-y-2">
-                <label className="text-sm font-semibold">অধ্যায় (টাইপ করুন বা সিলেক্ট করুন)</label>
-                <div className="relative">
-                  <Input 
-                    list="chapter-options"
-                    value={meta.chapter || ''} 
-                    onChange={Eisen => setMeta(prev => ({...prev, chapter: Eisen.target.value}))} 
-                    placeholder="অধ্যায়ের নাম লিখুন..." 
-                    className="font-bold"
-                  />
-                  <datalist id="chapter-options">
-                    {chapterSuggestions.map(ch => (
-                      <option key={ch} value={ch} />
-                    ))}
-                  </datalist>
-                </div>
-              </div>
+              <div className="space-y-2"><label className="text-sm font-semibold">প্রতিষ্ঠানের নাম</label><Input value={meta.institution || ''} onChange={e => setMeta(prev => ({...prev, institution: e.target.value}))} className="font-bold" /></div>
+              <div className="space-y-2"><label className="text-sm font-semibold">পরীক্ষার নাম</label><Input value={meta.exam || ''} onChange={e => setMeta(prev => ({...prev, exam: e.target.value}))} className="font-bold" /></div>
+              <div className="space-y-2"><label className="text-sm font-semibold">সময়</label><Input value={meta.time || ''} onChange={e => setMeta(prev => ({...prev, time: e.target.value}))} className="font-bold" /></div>
+              <div className="space-y-2"><label className="text-sm font-semibold">পূর্ণমান</label><Input value={meta.totalMarks || ''} onChange={e => setMeta(prev => ({...prev, totalMarks: e.target.value}))} className="font-bold" /></div>
+              <div className="space-y-2"><label className="text-sm font-semibold">শ্রেণি</label><Select onValueChange={v => setMeta(prev => ({...prev, classId: v}))} value={meta.classId}><SelectTrigger className="font-bold"><SelectValue placeholder="শ্রেণি" /></SelectTrigger><SelectContent>{CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}</SelectContent></Select></div>
+              <div className="space-y-2"><label className="text-sm font-semibold">বিষয়</label><Select onValueChange={v => setMeta(prev => ({...prev, subject: v}))} value={meta.subject} disabled={!meta.classId}><SelectTrigger className="font-bold"><SelectValue placeholder="বিষয়" /></SelectTrigger><SelectContent>{subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
             </div>
-            
-            <div className="pt-4 border-t">
-              <h4 className="text-sm font-bold mb-4 text-primary">মান বণ্টন ও নির্দেশনা</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div className="space-y-2"><label className="text-xs font-semibold">সৃজনশীল নির্দেশিকা</label><Input value={meta.creativeInstruction || ''} onChange={Eisen => setMeta(prev => ({...prev, creativeInstruction: Eisen.target.value}))} className="font-bold" /></div>
-                  <div className="grid grid-cols-4 gap-2">
-                    <div className="space-y-1"><label className="text-[10px] font-bold">ক</label><Input type="number" value={meta.marksA || ''} onChange={Eisen => setMeta(prev => ({...prev, marksA: parseInt(Eisen.target.value) || 0}))} className="h-8 font-bold" /></div>
-                    <div className="space-y-1"><label className="text-[10px] font-bold">খ</label><Input type="number" value={meta.marksB || ''} onChange={Eisen => setMeta(prev => ({...prev, marksB: parseInt(Eisen.target.value) || 0}))} className="h-8 font-bold" /></div>
-                    <div className="space-y-1"><label className="text-[10px] font-bold">গ</label><Input type="number" value={meta.marksC || ''} onChange={Eisen => setMeta(prev => ({...prev, marksC: parseInt(Eisen.target.value) || 0}))} className="h-8 font-bold" /></div>
-                    <div className="space-y-1"><label className="text-[10px] font-bold">ঘ</label><Input type="number" value={meta.marksD || ''} onChange={Eisen => setMeta(prev => ({...prev, marksD: parseInt(Eisen.target.value) || 0}))} className="h-8 font-bold" /></div>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <div className="space-y-2"><label className="text-xs font-semibold">সংক্ষিপ্ত নির্দেশিকা</label><Input value={meta.shortInstruction || ''} onChange={Eisen => setMeta(prev => ({...prev, shortInstruction: Eisen.target.value}))} className="font-bold" /></div>
-                  <div className="space-y-2"><label className="text-xs font-semibold">এমসিকিউ নির্দেশিকা</label><Textarea value={meta.mcqInstruction || ''} onChange={Eisen => setMeta(prev => ({...prev, mcqInstruction: Eisen.target.value}))} className="font-bold text-xs" rows={3} /></div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1"><label className="text-[10px] font-bold">সংক্ষিপ্ত মার্কস</label><Input type="number" value={meta.shortMarks || ''} onChange={Eisen => setMeta(prev => ({...prev, shortMarks: parseInt(Eisen.target.value) || 0}))} className="h-8 font-bold" /></div>
-                    <div className="space-y-1"><label className="text-[10px] font-bold">এমসিকিউ মার্কস</label><Input type="number" value={meta.mcqMarks || ''} onChange={Eisen => setMeta(prev => ({...prev, mcqMarks: parseInt(Eisen.target.value) || 0}))} className="h-8 font-bold" /></div>
-                  </div>
-                </div>
-              </div>
+            <div className="pt-4 border-t grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2"><label className="text-xs font-semibold">সৃজনশীল নির্দেশিকা</label><Input value={meta.creativeInstruction} onChange={e => setMeta(p => ({...p, creativeInstruction: e.target.value}))} className="font-bold h-8" /></div>
+              <div className="space-y-2"><label className="text-xs font-semibold">এমসিকিউ নির্দেশিকা</label><Input value={meta.mcqInstruction} onChange={e => setMeta(p => ({...p, mcqInstruction: e.target.value}))} className="font-bold h-8" /></div>
             </div>
           </CardContent>
         </Card>
@@ -436,29 +306,9 @@ function CreateQuestionContent() {
         {questions.map((q, idx) => (
           <Card key={q.id} className={`relative border-l-4 ${q.type === 'mcq' ? 'border-l-orange-500' : q.type === 'short' ? 'border-l-accent' : 'border-l-primary'}`}>
             <div className="absolute top-2 right-2 no-print flex gap-1">
-              <input type="file" ref={ocrInputRef} className="hidden" accept="image/*" onChange={(Eisen) => handleOCR(Eisen, q.id)} />
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="text-indigo-600 h-8 w-8 hover:bg-indigo-50" 
-                onClick={() => ocrInputRef.current?.click()}
-                disabled={isScanning}
-                title="লোকাল স্ক্যান (Non-AI)"
-              >
-                {isScanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanText className="w-4 h-4" />}
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="text-primary h-8 w-8" 
-                onClick={() => {
-                  setActiveQuestionId(q.id);
-                  fileInputRef.current?.click();
-                }}
-                title="ছবি যুক্ত করুন"
-              >
-                <ImageIcon className="w-4 h-4" />
-              </Button>
+              <input type="file" ref={ocrInputRef} className="hidden" accept="image/*" onChange={(e) => handleOCR(e, q.id)} />
+              <Button variant="ghost" size="icon" className="text-indigo-600 h-8 w-8" onClick={() => ocrInputRef.current?.click()} disabled={isScanning} title="স্ক্যান"><ScanText className="w-4 h-4" /></Button>
+              <Button variant="ghost" size="icon" className="text-primary h-8 w-8" onClick={() => { setActiveQuestionId(q.id); fileInputRef.current?.click(); }} title="ছবি"><ImageIcon className="w-4 h-4" /></Button>
               <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => setQuestions(prev => prev.filter(item => item.id !== q.id))}><Trash2 className="w-4 h-4" /></Button>
             </div>
             <CardContent className="pt-6 space-y-4">
@@ -466,24 +316,8 @@ function CreateQuestionContent() {
                 <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${q.type === 'mcq' ? 'bg-orange-100 text-orange-600' : q.type === 'short' ? 'bg-accent/10 text-accent' : 'bg-primary/10 text-primary'}`}>{q.type === 'mcq' ? 'বহুনির্বাচনি' : q.type === 'short' ? 'সংক্ষিপ্ত' : 'সৃজনশীল'}</span>
                 <span className="text-sm font-bold">প্রশ্ন নং: {isEnglish ? (idx + 1) : toBengaliNumber(idx + 1)}</span>
               </div>
-              <Textarea 
-                placeholder={q.type === 'mcq' ? "প্রশ্ন ও অপশনগুলো ক. খ. গ. ঘ. সহ লিখুন অথবা বইয়ের ছবি স্ক্যান করুন" : "উদ্দীপক ও প্রশ্ন ক. খ. গ. ঘ. সহ লিখুন অথবা বইয়ের ছবি স্ক্যান করুন"} 
-                value={q.content || ''} 
-                onChange={Eisen => setQuestions(prev => prev.map(item => item.id === q.id ? {...item, content: Eisen.target.value} : item))} 
-                className="min-h-[120px] text-sm font-bold" 
-              />
-              
-              {q.imageUrl && (
-                <div className="relative w-full max-w-sm rounded-lg border overflow-hidden bg-muted/20">
-                  <img src={q.imageUrl} alt="Question Diagram" className="w-full h-auto object-contain" />
-                  <button 
-                    onClick={() => setQuestions(prev => prev.map(item => item.id === q.id ? { ...item, imageUrl: '' } : item))}
-                    className="absolute top-1 right-1 bg-destructive text-white p-1 rounded-full shadow-lg"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              )}
+              <Textarea placeholder="উদ্দীপক ও প্রশ্ন ক. খ. গ. ঘ. সহ লিখুন..." value={q.content} onChange={e => setQuestions(prev => prev.map(item => item.id === q.id ? {...item, content: e.target.value} : item))} className="min-h-[120px] text-sm font-bold" />
+              {q.imageUrl && <div className="relative w-40 rounded border overflow-hidden"><img src={q.imageUrl} className="w-full h-auto" /><button onClick={() => setQuestions(prev => prev.map(item => item.id === q.id ? {...item, imageUrl: ''} : item))} className="absolute top-0 right-0 bg-red-500 text-white p-0.5"><X className="w-3 h-3" /></button></div>}
             </CardContent>
             <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
           </Card>
@@ -498,179 +332,72 @@ function CreateQuestionContent() {
       <div className={cn("print-only font-kalpurush", isPrintMode && "block")}>
         <style dangerouslySetInnerHTML={{ __html: `
           @media print, screen {
-            ${isPrintMode ? `
-              body { background: #f0f2f5 !important; }
-              .paper { 
-                background: white !important; 
-                margin: 0 auto !important; 
-                padding: 0 !important; 
-                box-shadow: 0 0 15px rgba(0,0,0,0.1);
-                min-height: 11in;
-                position: relative;
-                z-index: 1;
-              }
-            ` : ''}
             .paper { line-height: 1.1; width: 100% !important; text-align: justify; color: black !important; }
-            .header { text-align: center; margin-bottom: 2px; position: relative; z-index: 10; margin-top: 0 !important; }
+            .header { text-align: center; margin-bottom: 2px; }
             .inst-name { font-size: 23px !important; font-weight: 800; line-height: 1.1; }
-            .font-bold { line-height: 1.1; }
-            .meta-info { display: flex; justify-content: space-between; font-weight: bold; margin-top: 2px; font-size: 10pt; border-top: 1.5pt solid black; padding-top: 2px; line-height: 1.1; }
-            .section-label { font-size: 11pt; font-weight: bold; border: 1pt solid black; display: inline-block; padding: 2px 20px; margin: 2px auto; text-transform: uppercase; line-height: 1.1; }
-            .instruction-text { font-size: 8.5pt; font-style: italic; font-weight: 500; margin-bottom: 4px; text-align: center; line-height: 1.1; }
-            .content-area { font-size: 10.5pt; line-height: 1.1; color: black !important; position: relative; z-index: 10; }
-            .stimulus-box { margin-bottom: 2px; font-weight: 500; text-align: justify; line-height: 1.1; }
-            .questions-list { margin-left: 15px; }
-            .q-item { display: flex; gap: 8px; margin-bottom: 1px; line-height: 1.1; }
-            .q-marker { font-weight: bold; min-width: 22px; }
-            
-            .mcq-container { 
-              column-count: 2; 
-              column-gap: 40px; 
-              column-rule: 1pt solid #000; 
-              column-fill: balance;
-            }
-            .mcq-item { margin-bottom: 4px; break-inside: avoid; line-height: 1.1; }
-            .mcq-options { 
-              display: grid; 
-              grid-template-columns: 1fr 1fr; 
-              grid-auto-flow: row;
-              gap: 1px 10px; 
-              margin-top: 1px; 
-              padding-left: 20px; 
-              font-size: 10pt; 
-              line-height: 1.1;
-            }
-            
+            .meta-info { display: flex; justify-content: space-between; font-weight: bold; font-size: 10pt; border-top: 1.5pt solid black; padding-top: 2px; }
+            .section-label { font-size: 11pt; font-weight: bold; border: 1pt solid black; display: inline-block; padding: 2px 20px; margin: 4px auto; }
+            .content-area { font-size: 10.5pt; line-height: 1.1; color: black !important; }
+            .mcq-container { column-count: 2; column-gap: 40px; column-rule: 1pt solid #000; }
+            .mcq-options { display: grid; grid-template-columns: 1fr 1fr; gap: 1px 10px; padding-left: 20px; font-size: 10pt; }
             .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
             .math-num { border-bottom: 0.5pt solid black; padding: 0 1px; }
             .math-den { padding: 0 1px; }
-            .math-dot { position: relative; display: inline-block; }
-            .math-dot::after { content: "·"; position: absolute; top: -0.6em; left: 50%; transform: translateX(-50%); font-weight: bold; font-size: 1.2em; }
             .math-sqrt { display: inline-flex; align-items: center; }
             .math-sqrt-stem { border-top: 0.5pt solid black; padding-top: 1px; }
-            .math-sup { font-size: 0.7em; vertical-align: super; }
-            .math-sub { font-size: 0.7em; vertical-align: sub; }
-            .math-text { font-family: 'Kalpurush', sans-serif; font-style: normal; }
           }
-          @media print {
-            .paper { margin: 0 !important; box-shadow: none !important; width: 100% !important; height: auto !important; padding: 0 !important; }
-            .no-print { display: none !important; }
-            @page { size: auto; margin: 0.5in !important; }
-          }
+          @media print { .paper { margin: 0 !important; } @page { size: auto; margin: 0.5in !important; } }
         `}} />
-        
-        {isPrintMode && (
-          <div className="no-print flex justify-center py-4 border-b bg-muted/10">
-            <Button variant="outline" onClick={() => router.back()} className="gap-2 font-bold border-primary text-primary">
-              <ArrowLeft className="w-4 h-4" /> লাইব্রেরিতে ফিরে যান
-            </Button>
-          </div>
-        )}
-
         <div className="paper">
           <div className="header">
             <div className="inst-name">{meta.institution || appName}</div>
-            <div className="font-bold text-lg leading-none mt-1">{meta.exam || 'পরীক্ষার নাম'}</div>
-            <div className="font-bold text-sm mt-1">শ্রেণি: {CLASSES.find(c => c.id === meta.classId)?.label || ''} | বিষয়: {meta.subject}</div>
-            <div className="meta-info">
-              <div>সময়: {meta.time}</div>
-              <div>পূর্ণমান: {meta.totalMarks}</div>
-            </div>
+            <div className="font-bold text-lg">{meta.exam}</div>
+            <div className="font-bold text-sm">শ্রেণি: {CLASSES.find(c => c.id === meta.classId)?.label} | বিষয়: {meta.subject}</div>
+            <div className="meta-info"><div>সময়: {meta.time}</div><div>পূর্ণমান: {meta.totalMarks}</div></div>
           </div>
-
-          <div className="content-area mt-1">
+          <div className="content-area mt-2">
             {questions.some(q => q.type === 'creative') && (
               <div className="mb-4">
-                <div className="text-center mb-1">
-                  <div className="section-label">সৃজনশীল প্রশ্ন</div>
-                  <p className="text-[10px] font-bold mt-0.5">[{meta.creativeInstruction || 'যেকোনো ৭টি প্রশ্নের উত্তর দাও'}]</p>
-                </div>
+                <div className="text-center mb-2"><div className="section-label">সৃজনশীল প্রশ্ন</div><p className="text-[10px] font-bold">[{meta.creativeInstruction}]</p></div>
                 {questions.filter(q => q.type === 'creative').map((q, idx) => {
                   const p = parseText(q.content);
                   return (
-                    <div key={q.id} className="mb-2 break-inside-avoid">
-                      <div className="flex gap-2 font-bold mb-0.5">
-                        <span>{toBengaliNumber(idx + 1)}.</span>
-                        <div className="stimulus-box" dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} />
-                      </div>
-                      {q.imageUrl && <img src={q.imageUrl} className="max-w-[250px] mx-auto mb-1 border p-0.5" />}
-                      <div className="questions-list">
-                        {p.k && (
-                          <div className="q-item">
-                            <span className="q-marker">ক.</span>
-                            <div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.k) }} />
-                            <span className="font-bold">{toBengaliNumber(meta.marksA)}</span>
-                          </div>
-                        )}
-                        {p.kh && (
-                          <div className="q-item">
-                            <span className="q-marker">খ.</span>
-                            <div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.kh) }} />
-                            <span className="font-bold">{toBengaliNumber(meta.marksB)}</span>
-                          </div>
-                        )}
-                        {p.g && (
-                          <div className="q-item">
-                            <span className="q-marker">গ.</span>
-                            <div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.g) }} />
-                            <span className="font-bold">{toBengaliNumber(meta.marksC)}</span>
-                          </div>
-                        )}
-                        {p.gh && (
-                          <div className="q-item">
-                            <span className="q-marker">ঘ.</span>
-                            <div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.gh) }} />
-                            <span className="font-bold">{toBengaliNumber(meta.marksD)}</span>
-                          </div>
-                        )}
+                    <div key={q.id} className="mb-4 break-inside-avoid">
+                      <div className="flex gap-2 font-bold"><span>{toBengaliNumber(idx + 1)}.</span><div dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} /></div>
+                      {q.imageUrl && <img src={q.imageUrl} className="max-w-[200px] mx-auto my-2 border" />}
+                      <div className="ml-5">
+                        {p.k && <div className="flex gap-2"><span>ক.</span><div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.k) }} /><span>{toBengaliNumber(meta.marksA)}</span></div>}
+                        {p.kh && <div className="flex gap-2"><span>খ.</span><div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.kh) }} /><span>{toBengaliNumber(meta.marksB)}</span></div>}
+                        {p.g && <div className="flex gap-2"><span>গ.</span><div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.g) }} /><span>{toBengaliNumber(meta.marksC)}</span></div>}
+                        {p.gh && <div className="flex gap-2"><span>ঘ.</span><div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.gh) }} /><span>{toBengaliNumber(meta.marksD)}</span></div>}
                       </div>
                     </div>
                   );
                 })}
               </div>
             )}
-
             {questions.some(q => q.type === 'short') && (
               <div className="mb-4">
-                <div className="text-center mb-1">
-                  <div className="section-label">সংক্ষিপ্ত প্রশ্ন</div>
-                  <p className="text-[10px] font-bold mt-0.5">[{meta.shortInstruction || 'সকল প্রশ্নের উত্তর দাও'}]</p>
-                </div>
-                {questions.filter(q => q.type === 'short').map((q, idx) => {
-                  return (
-                    <div key={q.id} className="mb-1 break-inside-avoid flex gap-2">
-                      <span className="font-bold">{toBengaliNumber(idx + 1)}.</span>
-                      <div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(q.content) }} />
-                      <span className="font-bold ml-auto">{toBengaliNumber(meta.shortMarks)}</span>
-                    </div>
-                  );
-                })}
+                <div className="text-center mb-2"><div className="section-label">সংক্ষিপ্ত প্রশ্ন</div><p className="text-[10px] font-bold">[{meta.shortInstruction}]</p></div>
+                {questions.filter(q => q.type === 'short').map((q, idx) => (
+                  <div key={q.id} className="mb-1 flex gap-2"><span className="font-bold">{toBengaliNumber(idx + 1)}.</span><div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(q.content) }} /><span>{toBengaliNumber(meta.shortMarks)}</span></div>
+                ))}
               </div>
             )}
-
             {questions.some(q => q.type === 'mcq') && (
               <div className="mt-2">
-                <div className="text-center mb-2">
-                  <div className="section-label">বহুনির্বাচনি প্রশ্ন</div>
-                  <div className="instruction-text mt-0.5 mx-4">
-                    [ {meta.mcqInstruction || 'সঠিক উত্তরের বিপরীতের বৃত্তটি বল পয়েন্ট কলম দ্বারা ভরাট কর। সকল প্রশ্নের উত্তর দিতে হবে। প্রশ্নপত্রে কোন প্রকার দাগ দেওয়া যাবে না।'} ]
-                  </div>
-                </div>
+                <div className="text-center mb-2"><div className="section-label">বহুনির্বাচনি প্রশ্ন</div><p className="text-[10px] font-bold">[{meta.mcqInstruction}]</p></div>
                 <div className="mcq-container">
                   {questions.filter(q => q.type === 'mcq').map((q, idx) => {
                     const p = parseText(q.content);
                     return (
-                      <div key={q.id} className="mcq-item">
-                        <div className="flex gap-1">
-                          <span className="font-bold">{toBengaliNumber(idx + 1)}.</span>
-                          <div dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} />
-                        </div>
-                        {q.imageUrl && <img src={q.imageUrl} className="max-w-full h-auto mx-auto my-0.5 border p-0.5" />}
+                      <div key={q.id} className="mcq-item mb-4 break-inside-avoid">
+                        <div className="flex gap-2 font-bold"><span>{toBengaliNumber(idx + 1)}.</span><div dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} /></div>
                         <div className="mcq-options">
-                          <div className="flex gap-1">ক) <span dangerouslySetInnerHTML={{ __html: formatMath(p.k) }} /></div>
-                          <div className="flex gap-1">খ) <span dangerouslySetInnerHTML={{ __html: formatMath(p.kh) }} /></div>
-                          <div className="flex gap-1">গ) <span dangerouslySetInnerHTML={{ __html: formatMath(p.g) }} /></div>
-                          <div className="flex gap-1">ঘ) <span dangerouslySetInnerHTML={{ __html: formatMath(p.gh) }} /></div>
+                          <div>ক) <span dangerouslySetInnerHTML={{ __html: formatMath(p.k) }} /></div>
+                          <div>খ) <span dangerouslySetInnerHTML={{ __html: formatMath(p.kh) }} /></div>
+                          <div>গ) <span dangerouslySetInnerHTML={{ __html: formatMath(p.g) }} /></div>
+                          <div>ঘ) <span dangerouslySetInnerHTML={{ __html: formatMath(p.gh) }} /></div>
                         </div>
                       </div>
                     );
