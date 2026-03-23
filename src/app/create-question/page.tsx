@@ -37,7 +37,7 @@ import {
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useDoc, useCollection } from '@/firebase';
-import { collection, setDoc, doc, getDoc, serverTimestamp, query, where } from 'firebase/firestore';
+import { collection, setDoc, doc, getDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { cn } from '@/lib/utils';
@@ -72,24 +72,19 @@ function formatMath(text: string) {
   if (!text) return '';
   let formatted = text.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
   
-  // Text processing
   formatted = formatted.replace(/\\text\{([^}]+)\}/g, '<span class="math-text">$1</span>');
 
-  // Fractions with recursive support for nesting
   const fracRegex = /\\frac\{((?:[^{}]|\{[^{}]*\})*)\}\s*\{((?:[^{}]|\{[^{}]*\})*)\}/g;
   formatted = formatted.replace(fracRegex, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
 
-  // Square Roots
   formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
   formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>');
 
-  // Subscripts / Superscripts
   formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
   formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
 
-  // Common Symbols
   const symbolMap: Record<string, string> = {
     '\\\\log': 'log', '\\\\triangle': '△', '\\\\angle': '∠', '\\\\circ': '°',
     '\\\\theta': 'θ', '\\\\pi': 'π', '\\\\pm': '±', '\\\\times': '×',
@@ -111,7 +106,6 @@ function formatMath(text: string) {
   });
 
   formatted = formatted.replace(/\\dot\{([^}]+)\}/g, '<span class="math-dot">$1</span>');
-  
   formatted = formatted.replace(/\\/g, '');
   return formatted;
 }
@@ -154,7 +148,6 @@ function CreateQuestionContent() {
   const ocrInputRef = useRef<HTMLInputElement>(null);
   const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
 
-  // Exam Questions (Bank) States
   const [selectedBankSubject, setSelectedBankSubject] = useState('');
   const [selectedBankClass, setSelectedBankClass] = useState('');
   const [selectedChapters, setSelectedChapters] = useState<string[]>([]);
@@ -309,7 +302,11 @@ function CreateQuestionContent() {
     const cleanText = text.trim();
     const markers = ['ক', 'খ', 'গ', 'ঘ'];
     const findMarkerPos = (m: string, fromIndex: number = 0) => {
-      const patterns = [ m + '.', m + ')', m + ' .', m + ' )', '(' + m + ')', '(' + m + ' )' ];
+      const patterns = [ 
+        m + '.', m + ')', m + ' .', m + ' )', 
+        '(' + m + ')', '(' + m + ' )',
+        '\n' + m + '.', '\n' + m + ')', '\n' + '(' + m + ')'
+      ];
       let minIdx = -1;
       for (const p of patterns) {
         let idx = cleanText.indexOf(p, fromIndex);
@@ -328,7 +325,13 @@ function CreateQuestionContent() {
         const startIdx = findMarkerPos(m);
         if (startIdx === -1) return '';
         let markerEnd = startIdx;
-        while (markerEnd < cleanText.length && (cleanText[markerEnd] === ' ' || cleanText[markerEnd] === '\n' || cleanText[markerEnd] === '(' || markers.includes(cleanText[markerEnd]) || ['.', ')'].includes(cleanText[markerEnd]))) markerEnd++;
+        while (markerEnd < cleanText.length && (
+          cleanText[markerEnd] === ' ' || 
+          cleanText[markerEnd] === '\n' || 
+          cleanText[markerEnd] === '(' || 
+          markers.includes(cleanText[markerEnd]) || 
+          ['.', ')'].includes(cleanText[markerEnd])
+        )) markerEnd++;
         let end = cleanText.length;
         for (const otherM of markers) { if (otherM === m) continue; const e = findMarkerPos(otherM, markerEnd); if (e !== -1 && e < end) end = e; }
         return cleanText.substring(markerEnd, end).trim();
@@ -469,6 +472,12 @@ function CreateQuestionContent() {
                   </div>
                 </div>
 
+                <div className="pt-4 border-t grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2"><label className="text-xs font-semibold">সৃজনশীল নির্দেশিকা</label><Input value={meta.creativeInstruction} onChange={e => setMeta(p => ({...p, creativeInstruction: e.target.value}))} className="font-bold h-8" /></div>
+                  <div className="space-y-2"><label className="text-xs font-semibold">সংক্ষিপ্ত প্রশ্ন নির্দেশিকা</label><Input value={meta.shortInstruction} onChange={e => setMeta(p => ({...p, shortInstruction: e.target.value}))} className="font-bold h-8" /></div>
+                  <div className="space-y-2 col-span-full"><label className="text-xs font-semibold">এমসিকিউ নির্দেশিকা</label><Input value={meta.mcqInstruction} onChange={e => setMeta(p => ({...p, mcqInstruction: e.target.value}))} className="font-bold h-8" /></div>
+                </div>
+
                 {selectedBankSubject && (
                   <div className="space-y-4 pt-4 border-t animate-in fade-in duration-500">
                     <label className="text-sm font-black text-primary flex items-center gap-2">
@@ -512,7 +521,6 @@ function CreateQuestionContent() {
           </TabsContent>
         </Tabs>
 
-        {/* Question Editor Area */}
         <div className="space-y-4">
           <div className="flex items-center justify-between border-b pb-2">
             <h3 className="text-lg font-bold">প্রশ্নসমূহ ({toBengaliNumber(questions.length)})</h3>
@@ -541,7 +549,7 @@ function CreateQuestionContent() {
                   {q.section && <span className="px-2 py-0.5 text-[10px] font-black rounded bg-indigo-100 text-indigo-700 border border-indigo-200">{q.section}</span>}
                   <span className="text-sm font-bold">প্রশ্ন নং: {isEnglish ? (idx + 1) : toBengaliNumber(idx + 1)}</span>
                 </div>
-                <Textarea placeholder="উদ্দীপক ও প্রশ্ন ক. খ. গ. ঘ. সহ লিখুন..." value={q.content} onChange={e => setQuestions(prev => prev.map(item => item.id === q.id ? {...item, content: e.target.value} : item))} className="min-h-[120px] text-sm font-bold leading-[1.1]" style={{ lineHeight: '1.1' }} />
+                <Textarea placeholder="উদ্দীপক ও প্রশ্ন ক. খ. গ. ঘ. সহ লিখুন..." value={q.content} onChange={e => setQuestions(prev => prev.map(item => item.id === q.id ? {...item, content: e.target.value} : item))} className="min-h-[120px] text-sm font-bold" style={{ lineHeight: '1.1' }} />
                 {q.imageUrl && <div className="relative w-40 rounded border overflow-hidden"><img src={q.imageUrl} className="w-full h-auto" /><button onClick={() => setQuestions(prev => prev.map(item => item.id === q.id ? {...item, imageUrl: ''} : item))} className="absolute top-0 right-0 bg-red-500 text-white p-0.5"><X className="w-3 h-3" /></button></div>}
               </CardContent>
               <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
@@ -555,7 +563,6 @@ function CreateQuestionContent() {
         </div>
       </div>
 
-      {/* Bank Question Selection Popup */}
       <Dialog open={isBankDialogOpen} onOpenChange={setIsBankDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col font-kalpurush">
           <DialogHeader className="border-b pb-4">
@@ -624,7 +631,7 @@ function CreateQuestionContent() {
       <div className={cn("print-only font-kalpurush", isPrintMode && "block")}>
         <style dangerouslySetInnerHTML={{ __html: `
           @media print, screen {
-            .paper { lineHeight: 1.1; width: 100% !important; text-align: justify; color: black !important; position: relative; }
+            .paper { line-height: 1.1; width: 100% !important; text-align: justify; color: black !important; position: relative; }
             .header { text-align: center; margin-bottom: 2px; }
             .inst-name { font-size: 23px !important; font-weight: 800; line-height: 1.1; }
             .meta-info { display: flex; justify-content: space-between; font-weight: bold; font-size: 10pt; border-top: 1.5pt solid black; padding-top: 2px; }
@@ -653,12 +660,10 @@ function CreateQuestionContent() {
             <div className="meta-info"><div>সময়: {meta.time}</div><div>পূর্ণমান: {meta.totalMarks}</div></div>
           </div>
           <div className="content-area mt-2">
-            {/* Group questions by section for rendering */}
             {(() => {
               const renderedQuestions: any[] = [];
               let lastSection = '';
               
-              // Handle Creative Questions
               const creativeQs = questions.filter(q => q.type === 'creative');
               if (creativeQs.length > 0) {
                 renderedQuestions.push(
@@ -689,7 +694,6 @@ function CreateQuestionContent() {
                 });
               }
 
-              // Handle Short Questions
               const shortQs = questions.filter(q => q.type === 'short');
               if (shortQs.length > 0) {
                 renderedQuestions.push(
@@ -698,7 +702,7 @@ function CreateQuestionContent() {
                     <p className="text-[10px] font-bold">[{meta.shortInstruction}]</p>
                   </div>
                 );
-                lastSection = ''; // reset section for new type
+                lastSection = '';
                 shortQs.forEach((q, idx) => {
                   if (q.section && q.section !== lastSection) {
                     renderedQuestions.push(<div key={`section-short-${q.section}`} className="section-header">{q.section}</div>);
@@ -710,7 +714,6 @@ function CreateQuestionContent() {
                 });
               }
 
-              // Handle MCQ Questions
               const mcqQs = questions.filter(q => q.type === 'mcq');
               if (mcqQs.length > 0) {
                 renderedQuestions.push(
