@@ -386,6 +386,11 @@ function CreateQuestionContent() {
   const isEnglish = meta.subject?.toLowerCase().includes('english') || meta.subject?.toLowerCase().includes('ইংরেজি');
   if (loading || userLoading) return <div className="flex flex-col items-center justify-center p-20 min-h-[50vh] font-kalpurush"><Loader2 className="w-12 h-12 animate-spin text-primary mb-4" /><p className="text-muted-foreground font-bold">লোড হচ্ছে...</p></div>;
 
+  const handleMarksChange = (field: keyof typeof meta, value: string) => {
+    const parsed = parseInt(value);
+    setMeta(prev => ({ ...prev, [field]: isNaN(parsed) ? 0 : parsed }));
+  };
+
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-32 font-kalpurush">
       <div className={cn("no-print space-y-8", isPrintMode && "hidden")}>
@@ -430,27 +435,27 @@ function CreateQuestionContent() {
                 <div className="pt-4 border-t grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold">সৃজনশীল (ক)</label>
-                    <Input type="number" value={meta.marksA} onChange={e => setMeta(p => ({...p, marksA: parseInt(e.target.value)}))} className="h-8 font-bold" />
+                    <Input type="number" value={isNaN(meta.marksA) ? '' : meta.marksA} onChange={e => handleMarksChange('marksA', e.target.value)} className="h-8 font-bold" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold">সৃজনশীল (খ)</label>
-                    <Input type="number" value={meta.marksB} onChange={e => setMeta(p => ({...p, marksB: parseInt(e.target.value)}))} className="h-8 font-bold" />
+                    <Input type="number" value={isNaN(meta.marksB) ? '' : meta.marksB} onChange={e => handleMarksChange('marksB', e.target.value)} className="h-8 font-bold" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold">সৃজনশীল (গ)</label>
-                    <Input type="number" value={meta.marksC} onChange={e => setMeta(p => ({...p, marksC: parseInt(e.target.value)}))} className="h-8 font-bold" />
+                    <Input type="number" value={isNaN(meta.marksC) ? '' : meta.marksC} onChange={e => handleMarksChange('marksC', e.target.value)} className="h-8 font-bold" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold">সৃজনশীল (ঘ)</label>
-                    <Input type="number" value={meta.marksD} onChange={e => setMeta(p => ({...p, marksD: parseInt(e.target.value)}))} className="h-8 font-bold" />
+                    <Input type="number" value={isNaN(meta.marksD) ? '' : meta.marksD} onChange={e => handleMarksChange('marksD', e.target.value)} className="h-8 font-bold" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold">সংক্ষিপ্ত</label>
-                    <Input type="number" value={meta.shortMarks} onChange={e => setMeta(p => ({...p, shortMarks: parseInt(e.target.value)}))} className="h-8 font-bold" />
+                    <Input type="number" value={isNaN(meta.shortMarks) ? '' : meta.shortMarks} onChange={e => handleMarksChange('shortMarks', e.target.value)} className="h-8 font-bold" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold">এমসিকিউ</label>
-                    <Input type="number" value={meta.mcqMarks} onChange={e => setMeta(p => ({...p, mcqMarks: parseInt(e.target.value)}))} className="h-8 font-bold" />
+                    <Input type="number" value={isNaN(meta.mcqMarks) ? '' : meta.mcqMarks} onChange={e => handleMarksChange('mcqMarks', e.target.value)} className="h-8 font-bold" />
                   </div>
                 </div>
 
@@ -503,27 +508,27 @@ function CreateQuestionContent() {
                 <div className="pt-4 border-t grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold">সৃজনশীল (ক)</label>
-                    <Input type="number" value={meta.marksA} onChange={e => setMeta(p => ({...p, marksA: parseInt(e.target.value)}))} className="h-8 font-bold" />
+                    <Input type="number" value={isNaN(meta.marksA) ? '' : meta.marksA} onChange={e => handleMarksChange('marksA', e.target.value)} className="h-8 font-bold" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold">সৃজনশীল (খ)</label>
-                    <Input type="number" value={meta.marksB} onChange={e => setMeta(p => ({...p, marksB: parseInt(e.target.value)}))} className="h-8 font-bold" />
+                    <Input type="number" value={isNaN(meta.marksB) ? '' : meta.marksB} onChange={e => handleMarksChange('marksB', e.target.value)} className="h-8 font-bold" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold">সৃজনশীল (গ)</label>
-                    <Input type="number" value={meta.marksC} onChange={e => setMeta(p => ({...p, marksC: parseInt(e.target.value)}))} className="h-8 font-bold" />
+                    <Input type="number" value={isNaN(meta.marksC) ? '' : meta.marksC} onChange={e => handleMarksChange('marksC', e.target.value)} className="h-8 font-bold" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold">সৃজনশীল (ঘ)</label>
-                    <Input type="number" value={meta.marksD} onChange={e => setMeta(p => ({...p, marksD: parseInt(e.target.value)}))} className="h-8 font-bold" />
+                    <Input type="number" value={isNaN(meta.marksD) ? '' : meta.marksD} onChange={e => handleMarksChange('marksD', e.target.value)} className="h-8 font-bold" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold">সংক্ষিপ্ত</label>
-                    <Input type="number" value={meta.shortMarks} onChange={e => setMeta(p => ({...p, shortMarks: parseInt(e.target.value)}))} className="h-8 font-bold" />
+                    <Input type="number" value={isNaN(meta.shortMarks) ? '' : meta.shortMarks} onChange={e => handleMarksChange('shortMarks', e.target.value)} className="h-8 font-bold" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold">এমসিকিউ</label>
-                    <Input type="number" value={meta.mcqMarks} onChange={e => setMeta(p => ({...p, mcqMarks: parseInt(e.target.value)}))} className="h-8 font-bold" />
+                    <Input type="number" value={isNaN(meta.mcqMarks) ? '' : meta.mcqMarks} onChange={e => handleMarksChange('mcqMarks', e.target.value)} className="h-8 font-bold" />
                   </div>
                 </div>
 
