@@ -426,6 +426,34 @@ function CreateQuestionContent() {
                   <div className="space-y-2"><label className="text-sm font-semibold">শ্রেণি</label><Select onValueChange={v => setMeta(prev => ({...prev, classId: v}))} value={meta.classId}><SelectTrigger className="font-bold"><SelectValue placeholder="শ্রেণি" /></SelectTrigger><SelectContent>{CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}</SelectContent></Select></div>
                   <div className="space-y-2"><label className="text-sm font-semibold">বিষয়</label><Select onValueChange={v => setMeta(prev => ({...prev, subject: v}))} value={meta.subject} disabled={!meta.classId}><SelectTrigger className="font-bold"><SelectValue placeholder="বিষয়" /></SelectTrigger><SelectContent>{subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
                 </div>
+
+                <div className="pt-4 border-t grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold">সৃজনশীল (ক)</label>
+                    <Input type="number" value={meta.marksA} onChange={e => setMeta(p => ({...p, marksA: parseInt(e.target.value)}))} className="h-8 font-bold" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold">সৃজনশীল (খ)</label>
+                    <Input type="number" value={meta.marksB} onChange={e => setMeta(p => ({...p, marksB: parseInt(e.target.value)}))} className="h-8 font-bold" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold">সৃজনশীল (গ)</label>
+                    <Input type="number" value={meta.marksC} onChange={e => setMeta(p => ({...p, marksC: parseInt(e.target.value)}))} className="h-8 font-bold" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold">সৃজনশীল (ঘ)</label>
+                    <Input type="number" value={meta.marksD} onChange={e => setMeta(p => ({...p, marksD: parseInt(e.target.value)}))} className="h-8 font-bold" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold">সংক্ষিপ্ত</label>
+                    <Input type="number" value={meta.shortMarks} onChange={e => setMeta(p => ({...p, shortMarks: parseInt(e.target.value)}))} className="h-8 font-bold" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold">এমসিকিউ</label>
+                    <Input type="number" value={meta.mcqMarks} onChange={e => setMeta(p => ({...p, mcqMarks: parseInt(e.target.value)}))} className="h-8 font-bold" />
+                  </div>
+                </div>
+
                 <div className="pt-4 border-t grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2"><label className="text-xs font-semibold">সৃজনশীল নির্দেশিকা</label><Input value={meta.creativeInstruction} onChange={e => setMeta(p => ({...p, creativeInstruction: e.target.value}))} className="font-bold h-8" /></div>
                   <div className="space-y-2"><label className="text-xs font-semibold">সংক্ষিপ্ত প্রশ্ন নির্দেশিকা</label><Input value={meta.shortInstruction} onChange={e => setMeta(p => ({...p, shortInstruction: e.target.value}))} className="font-bold h-8" /></div>
@@ -469,6 +497,33 @@ function CreateQuestionContent() {
                       onChange={e => setMeta(prev => ({...prev, currentSection: e.target.value}))} 
                       className="font-bold border-indigo-200"
                     />
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold">সৃজনশীল (ক)</label>
+                    <Input type="number" value={meta.marksA} onChange={e => setMeta(p => ({...p, marksA: parseInt(e.target.value)}))} className="h-8 font-bold" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold">সৃজনশীল (খ)</label>
+                    <Input type="number" value={meta.marksB} onChange={e => setMeta(p => ({...p, marksB: parseInt(e.target.value)}))} className="h-8 font-bold" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold">সৃজনশীল (গ)</label>
+                    <Input type="number" value={meta.marksC} onChange={e => setMeta(p => ({...p, marksC: parseInt(e.target.value)}))} className="h-8 font-bold" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold">সৃজনশীল (ঘ)</label>
+                    <Input type="number" value={meta.marksD} onChange={e => setMeta(p => ({...p, marksD: parseInt(e.target.value)}))} className="h-8 font-bold" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold">সংক্ষিপ্ত</label>
+                    <Input type="number" value={meta.shortMarks} onChange={e => setMeta(p => ({...p, shortMarks: parseInt(e.target.value)}))} className="h-8 font-bold" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold">এমসিকিউ</label>
+                    <Input type="number" value={meta.mcqMarks} onChange={e => setMeta(p => ({...p, mcqMarks: parseInt(e.target.value)}))} className="h-8 font-bold" />
                   </div>
                 </div>
 
