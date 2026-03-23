@@ -32,8 +32,8 @@ import {
   CheckCircle2,
   BrainCircuit,
   Search,
-  Filter,
-  Layers
+  Layers,
+  LayoutGrid
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useDoc, useCollection } from '@/firebase';
@@ -50,6 +50,7 @@ type Question = {
   content: string;
   imageUrl?: string;
   isFromBank?: boolean;
+  section?: string;
 };
 
 async function processImage(file: File): Promise<string> {
@@ -144,7 +145,8 @@ function CreateQuestionContent() {
     creativeInstruction: 'যেকোনো ৭টি প্রশ্নের উত্তর দাও', 
     shortInstruction: 'সকল প্রশ্নের উত্তর দাও',
     mcqInstruction: 'সঠিক উত্তরের বিপরীতের বৃত্তটি বল পয়েন্ট কলম দ্বারা ভরাট কর। সকল প্রশ্নের উত্তর দিতে হবে। প্রশ্নপত্রে কোন প্রকার দাগ দেওয়া যাবে না।', 
-    marksA: 1, marksB: 2, marksC: 3, marksD: 4, shortMarks: 2, mcqMarks: 1
+    marksA: 1, marksB: 2, marksC: 3, marksD: 4, shortMarks: 2, mcqMarks: 1,
+    currentSection: ''
   });
   
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -224,7 +226,7 @@ function CreateQuestionContent() {
             }));
             const reconstructed = (data.questions || []).map((q: any) => {
               const id = Math.random().toString(36).substr(2, 9);
-              const commonFields = { id, type: q.type, imageUrl: q.imageUrl || '' };
+              const commonFields = { id, type: q.type, imageUrl: q.imageUrl || '', section: q.section || '' };
               if (q.type === 'mcq') return { ...commonFields, content: `${q.mcqQuestion || ''}\nক. ${q.optA || ''}\nখ. ${q.optB || ''}\nগ. ${q.optC || ''}\nঘ. ${q.optD || ''}`.trim() };
               if (q.type === 'creative') return { ...commonFields, content: `${q.stimulus || ''}\nক. ${q.qA || ''}\nখ. ${q.qB || ''}\nগ. ${q.qC || ''}\nঘ. ${q.qD || ''}`.trim() };
               return { ...commonFields, content: (q.shortText || '').trim() };
@@ -238,7 +240,7 @@ function CreateQuestionContent() {
           const mergedData = JSON.parse(stored);
           const reconstructed = mergedData.map((q: any) => {
             const id = Math.random().toString(36).substr(2, 9);
-            const commonFields = { id, type: q.type, imageUrl: q.imageUrl || '' };
+            const commonFields = { id, type: q.type, imageUrl: q.imageUrl || '', section: q.section || '' };
             if (q.type === 'mcq') return { ...commonFields, content: `${q.mcqQuestion || ''}\nক. ${q.optA || ''}\nখ. ${q.optB || ''}\nগ. ${q.optC || ''}\nঘ. ${q.optD || ''}`.trim() };
             if (q.type === 'creative') return { ...commonFields, content: `${q.stimulus || ''}\nক. ${q.qA || ''}\nখ. ${q.qB || ''}\nগ. ${q.qC || ''}\nঘ. ${q.qD || ''}`.trim() };
             return { ...commonFields, content: (q.shortText || '').trim() };
@@ -263,7 +265,7 @@ function CreateQuestionContent() {
   const bankSubjects = useMemo(() => selectedBankClass ? getSubjectsForClass(selectedBankClass) : [], [selectedBankClass]);
 
   const handleAddQuestion = (type: 'creative' | 'short' | 'mcq') => {
-    setQuestions(prev => [...prev, { id: Math.random().toString(36).substr(2, 9), type, content: '', imageUrl: '' }]);
+    setQuestions(prev => [...prev, { id: Math.random().toString(36).substr(2, 9), type, content: '', imageUrl: '', section: meta.currentSection }]);
   };
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -341,7 +343,7 @@ function CreateQuestionContent() {
     setSaving(true);
     const formattedQuestions = questions.map(q => {
       const p = parseText(q.content || '');
-      const common = { type: q.type, imageUrl: q.imageUrl || '' };
+      const common = { type: q.type, imageUrl: q.imageUrl || '', section: q.section || '' };
       if (q.type === 'creative') return { ...common, stimulus: p.main || '', qA: p.k || '', qB: p.kh || '', qC: p.g || '', qD: p.gh || '' };
       if (q.type === 'mcq') return { ...common, mcqQuestion: p.main || '', optA: p.k || '', optB: p.kh || '', optC: p.g || '', optD: p.gh || '' };
       return { ...common, shortText: q.content || '' };
@@ -365,7 +367,7 @@ function CreateQuestionContent() {
     const selected = questionsFromSelectedChapters.filter((_, idx) => selectedBankQuestionIds.includes(idx.toString()));
     const newQs = selected.map(q => {
       const id = Math.random().toString(36).substr(2, 9);
-      const commonFields = { id, type: q.type, imageUrl: q.imageUrl || '', isFromBank: true };
+      const commonFields = { id, type: q.type, imageUrl: q.imageUrl || '', isFromBank: true, section: meta.currentSection };
       let content = '';
       if (q.type === 'mcq') content = `${q.mcqQuestion || ''}\nক. ${q.optA || ''}\nখ. ${q.optB || ''}\nগ. ${q.optC || ''}\nঘ. ${q.optD || ''}`;
       else if (q.type === 'creative') content = `${q.stimulus || ''}\nক. ${q.qA || ''}\nখ. ${q.qB || ''}\nগ. ${q.qC || ''}\nঘ. ${q.qD || ''}`;
@@ -396,11 +398,11 @@ function CreateQuestionContent() {
         </header>
 
         <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-8 bg-secondary/50 p-1">
-            <TabsTrigger value="sample" className="gap-2 font-bold">
+          <TabsList className="grid w-full grid-cols-2 mb-8 bg-secondary/50 p-1 h-12">
+            <TabsTrigger value="sample" className="gap-2 font-bold h-10">
               <FileText className="w-4 h-4" /> নমুনা প্রশ্ন (ম্যানুয়াল)
             </TabsTrigger>
-            <TabsTrigger value="exam" className="gap-2 font-bold">
+            <TabsTrigger value="exam" className="gap-2 font-bold h-10">
               <BrainCircuit className="w-4 h-4" /> পরীক্ষার প্রশ্ন (ব্যাংক থেকে)
             </TabsTrigger>
           </TabsList>
@@ -439,6 +441,9 @@ function CreateQuestionContent() {
               </CardHeader>
               <CardContent className="pt-6 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="space-y-2"><label className="text-sm font-bold">প্রতিষ্ঠানের নাম</label><Input value={meta.institution || ''} onChange={e => setMeta(prev => ({...prev, institution: e.target.value}))} className="font-bold" /></div>
+                  <div className="space-y-2"><label className="text-sm font-bold">সময়</label><Input value={meta.time || ''} onChange={e => setMeta(prev => ({...prev, time: e.target.value}))} className="font-bold" /></div>
+                  <div className="space-y-2"><label className="text-sm font-bold">পূর্ণমান</label><Input value={meta.totalMarks || ''} onChange={e => setMeta(prev => ({...prev, totalMarks: e.target.value}))} className="font-bold" /></div>
                   <div className="space-y-2">
                     <label className="text-sm font-bold">শ্রেণি নির্বাচন করুন</label>
                     <Select onValueChange={setSelectedBankClass} value={selectedBankClass}>
@@ -452,6 +457,15 @@ function CreateQuestionContent() {
                       <SelectTrigger className="font-bold"><SelectValue placeholder="বিষয়" /></SelectTrigger>
                       <SelectContent>{bankSubjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                     </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold flex items-center gap-2 text-indigo-600"><LayoutGrid className="w-3.5 h-3.5" /> বিভাগ (অপশনাল)</label>
+                    <Input 
+                      placeholder="যেমন: ক - বিভাগ (বীজগণিত)" 
+                      value={meta.currentSection} 
+                      onChange={e => setMeta(prev => ({...prev, currentSection: e.target.value}))} 
+                      className="font-bold border-indigo-200"
+                    />
                   </div>
                 </div>
 
@@ -522,8 +536,9 @@ function CreateQuestionContent() {
                 <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => setQuestions(prev => prev.filter(item => item.id !== q.id))}><Trash2 className="w-4 h-4" /></Button>
               </div>
               <CardContent className="pt-6 space-y-4">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${q.type === 'mcq' ? 'bg-orange-100 text-orange-600' : q.type === 'short' ? 'bg-accent/10 text-accent' : 'bg-primary/10 text-primary'}`}>{q.type === 'mcq' ? 'বহুনির্বাচনি' : q.type === 'short' ? 'সংক্ষিপ্ত' : 'সৃজনশীল'}</span>
+                  {q.section && <span className="px-2 py-0.5 text-[10px] font-black rounded bg-indigo-100 text-indigo-700 border border-indigo-200">{q.section}</span>}
                   <span className="text-sm font-bold">প্রশ্ন নং: {isEnglish ? (idx + 1) : toBengaliNumber(idx + 1)}</span>
                 </div>
                 <Textarea placeholder="উদ্দীপক ও প্রশ্ন ক. খ. গ. ঘ. সহ লিখুন..." value={q.content} onChange={e => setQuestions(prev => prev.map(item => item.id === q.id ? {...item, content: e.target.value} : item))} className="min-h-[120px] text-sm font-bold leading-[1.1]" style={{ lineHeight: '1.1' }} />
@@ -585,7 +600,9 @@ function CreateQuestionContent() {
                         <span className={`px-2 py-0.5 text-[8px] font-bold rounded uppercase ${q.type === 'mcq' ? 'bg-orange-100 text-orange-600' : q.type === 'short' ? 'bg-accent/10 text-accent' : 'bg-primary/10 text-primary'}`}>
                           {q.type === 'mcq' ? 'এমসিকিউ' : q.type === 'short' ? 'সংক্ষিপ্ত' : 'সৃজনশীল'}
                         </span>
-                        <span className="text-[10px] font-bold text-muted-foreground">{q.chapter}</span>
+                        <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+                          {q.chapter}
+                        </span>
                       </div>
                       <p className="text-sm font-bold line-clamp-3 leading-[1.1]" style={{ lineHeight: '1.1' }}>{previewText}</p>
                     </div>
@@ -607,7 +624,7 @@ function CreateQuestionContent() {
       <div className={cn("print-only font-kalpurush", isPrintMode && "block")}>
         <style dangerouslySetInnerHTML={{ __html: `
           @media print, screen {
-            .paper { line-height: 1.1; width: 100% !important; text-align: justify; color: black !important; position: relative; }
+            .paper { lineHeight: 1.1; width: 100% !important; text-align: justify; color: black !important; position: relative; }
             .header { text-align: center; margin-bottom: 2px; }
             .inst-name { font-size: 23px !important; font-weight: 800; line-height: 1.1; }
             .meta-info { display: flex; justify-content: space-between; font-weight: bold; font-size: 10pt; border-top: 1.5pt solid black; padding-top: 2px; }
@@ -621,6 +638,7 @@ function CreateQuestionContent() {
             .math-sqrt { display: inline-flex; align-items: center; }
             .math-sqrt-stem { border-top: 0.5pt solid black; padding-top: 1px; }
             .math-text { font-family: 'Kalpurush', sans-serif; font-style: normal; }
+            .section-header { text-align: center; font-weight: 900; text-decoration: underline; margin: 10px 0 5px 0; font-size: 12pt; }
           }
           @media print { 
             .paper { margin: 0 !important; } 
@@ -635,12 +653,28 @@ function CreateQuestionContent() {
             <div className="meta-info"><div>সময়: {meta.time}</div><div>পূর্ণমান: {meta.totalMarks}</div></div>
           </div>
           <div className="content-area mt-2">
-            {questions.some(q => q.type === 'creative') && (
-              <div className="mb-2">
-                <div className="text-center mb-1"><div className="section-label">সৃজনশীল প্রশ্ন</div><p className="text-[10px] font-bold">[{meta.creativeInstruction}]</p></div>
-                {questions.filter(q => q.type === 'creative').map((q, idx) => {
+            {/* Group questions by section for rendering */}
+            {(() => {
+              const renderedQuestions: any[] = [];
+              let lastSection = '';
+              
+              // Handle Creative Questions
+              const creativeQs = questions.filter(q => q.type === 'creative');
+              if (creativeQs.length > 0) {
+                renderedQuestions.push(
+                  <div key="creative-header" className="text-center mb-1">
+                    <div className="section-label">সৃজনশীল প্রশ্ন</div>
+                    <p className="text-[10px] font-bold">[{meta.creativeInstruction}]</p>
+                  </div>
+                );
+                
+                creativeQs.forEach((q, idx) => {
+                  if (q.section && q.section !== lastSection) {
+                    renderedQuestions.push(<div key={`section-${q.section}`} className="section-header">{q.section}</div>);
+                    lastSection = q.section;
+                  }
                   const p = parseText(q.content);
-                  return (
+                  renderedQuestions.push(
                     <div key={q.id} className="mb-1 break-inside-avoid" style={{ lineHeight: '1.1' }}>
                       <div className="flex gap-2 font-bold"><span>{toBengaliNumber(idx + 1)}.</span><div dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} /></div>
                       {q.imageUrl && <img src={q.imageUrl} className="max-w-[200px] mx-auto my-1 border" />}
@@ -652,38 +686,58 @@ function CreateQuestionContent() {
                       </div>
                     </div>
                   );
-                })}
-              </div>
-            )}
-            {questions.some(q => q.type === 'short') && (
-              <div className="mb-2">
-                <div className="text-center mb-1"><div className="section-label">সংক্ষিপ্ত প্রশ্ন</div><p className="text-[10px] font-bold">[{meta.shortInstruction}]</p></div>
-                {questions.filter(q => q.type === 'short').map((q, idx) => (
-                  <div key={q.id} className="mb-1 flex gap-2" style={{ lineHeight: '1.1' }}><span className="font-bold">{toBengaliNumber(idx + 1)}.</span><div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(q.content) }} /><span>{toBengaliNumber(meta.shortMarks)}</span></div>
-                ))}
-              </div>
-            )}
-            {questions.some(q => q.type === 'mcq') && (
-              <div className="mt-1">
-                <div className="text-center mb-1"><div className="section-label">বহুনির্বাচনি প্রশ্ন</div><p className="text-[10px] font-bold">[{meta.mcqInstruction}]</p></div>
-                <div className="mcq-container">
-                  {questions.filter(q => q.type === 'mcq').map((q, idx) => {
-                    const p = parseText(q.content);
-                    return (
-                      <div key={q.id} className="mcq-item mb-2 break-inside-avoid" style={{ lineHeight: '1.1' }}>
-                        <div className="flex gap-2 font-bold"><span>{toBengaliNumber(idx + 1)}.</span><div dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} /></div>
-                        <div className="mcq-options">
-                          <div>ক) <span dangerouslySetInnerHTML={{ __html: formatMath(p.k) }} /></div>
-                          <div>খ) <span dangerouslySetInnerHTML={{ __html: formatMath(p.kh) }} /></div>
-                          <div>গ) <span dangerouslySetInnerHTML={{ __html: formatMath(p.g) }} /></div>
-                          <div>ঘ) <span dangerouslySetInnerHTML={{ __html: formatMath(p.gh) }} /></div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+                });
+              }
+
+              // Handle Short Questions
+              const shortQs = questions.filter(q => q.type === 'short');
+              if (shortQs.length > 0) {
+                renderedQuestions.push(
+                  <div key="short-header" className="text-center mb-1">
+                    <div className="section-label">সংক্ষিপ্ত প্রশ্ন</div>
+                    <p className="text-[10px] font-bold">[{meta.shortInstruction}]</p>
+                  </div>
+                );
+                lastSection = ''; // reset section for new type
+                shortQs.forEach((q, idx) => {
+                  if (q.section && q.section !== lastSection) {
+                    renderedQuestions.push(<div key={`section-short-${q.section}`} className="section-header">{q.section}</div>);
+                    lastSection = q.section;
+                  }
+                  renderedQuestions.push(
+                    <div key={q.id} className="mb-1 flex gap-2" style={{ lineHeight: '1.1' }}><span className="font-bold">{toBengaliNumber(idx + 1)}.</span><div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(q.content) }} /><span>{toBengaliNumber(meta.shortMarks)}</span></div>
+                  );
+                });
+              }
+
+              // Handle MCQ Questions
+              const mcqQs = questions.filter(q => q.type === 'mcq');
+              if (mcqQs.length > 0) {
+                renderedQuestions.push(
+                  <div key="mcq-header" className="mt-1">
+                    <div className="text-center mb-1"><div className="section-label">বহুনির্বাচনি প্রশ্ন</div><p className="text-[10px] font-bold">[{meta.mcqInstruction}]</p></div>
+                    <div className="mcq-container">
+                      {mcqQs.map((q, idx) => {
+                        const p = parseText(q.content);
+                        return (
+                          <div key={q.id} className="mcq-item mb-2 break-inside-avoid" style={{ lineHeight: '1.1' }}>
+                            <div className="flex gap-2 font-bold"><span>{toBengaliNumber(idx + 1)}.</span><div dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} /></div>
+                            <div className="mcq-options">
+                              <div>ক) <span dangerouslySetInnerHTML={{ __html: formatMath(p.k) }} /></div>
+                              <div>খ) <span dangerouslySetInnerHTML={{ __html: formatMath(p.kh) }} /></div>
+                              <div>গ) <span dangerouslySetInnerHTML={{ __html: formatMath(p.g) }} /></div>
+                              <div>ঘ) <span dangerouslySetInnerHTML={{ __html: formatMath(p.gh) }} /></div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              }
+
+              return renderedQuestions;
+            })()}
           </div>
         </div>
       </div>
