@@ -93,11 +93,12 @@ function formatMath(text: string) {
     '\\\\sum': '∑', '\\\\prod': '∏', '\\\\alpha': 'α', '\\\\beta': 'β',
     '\\\\gamma': 'γ', '\\\\delta': 'δ', '\\\\sigma': 'σ', '\\\\phi': 'φ', '\\\\omega': 'ω',
     '\\\\eta': 'η', '\\\\rho': 'ρ', '\\\\lambda': 'λ', '\\\\mu': 'μ',
+    '\\\\div': '÷', '\\\\rightarrow': '→', '\\\\to': '→', '\\\\arrow': '→',
     '\\\\in': '∈', '\\\\mathbb\\{N\\}': 'ℕ', '\\\\mathbb\\{R\\}': 'ℝ', '\\\\mathbb\\{Z\\}': 'ℤ',
     '\\\\mathbb\\{Q\\}': 'ℚ', '\\\\subset': '⊂', '\\\\subseteq': '⊆', '\\\\cup': '∪',
     '\\\\cap': '∩', '\\\\emptyset': '∅', '\\\\forall': '∀', '\\\\exists': '∃', 
-    '\\\\rightarrow': '→', '\\\\Rightarrow': '⇒', '\\\\leftarrow': '←', '\\\\Leftarrow': '⇐', 
-    '\\\\leftrightarrow': '↔', '\\\\Leftrightarrow': '⇔', '\\\\to': '→', '\\\\arrow': '→',
+    '\\\\Rightarrow': '⇒', '\\\\leftarrow': '←', '\\\\Leftarrow': '⇐', 
+    '\\\\leftrightarrow': '↔', '\\\\Leftrightarrow': '⇔',
     '\\\\left': '', '\\\\right': '', '\\\\\%': '%', '\\\\setminus': '\\', '\\\\backslash': '\\'
   };
   
@@ -301,6 +302,7 @@ function CreateQuestionContent() {
     if (!text) return parts;
     const cleanText = text.trim();
     const markers = ['ক', 'খ', 'গ', 'ঘ'];
+    
     const findMarkerPos = (m: string, fromIndex: number = 0) => {
       const patterns = [ 
         m + '.', m + ')', m + ' .', m + ' )', 
@@ -314,11 +316,13 @@ function CreateQuestionContent() {
       }
       return minIdx;
     };
+
     let firstMarkerPos = -1;
     for (const m of markers) {
       const pos = findMarkerPos(m);
       if (pos !== -1 && (firstMarkerPos === -1 || pos < firstMarkerPos)) firstMarkerPos = pos;
     }
+
     if (firstMarkerPos !== -1) {
       parts.main = cleanText.substring(0, firstMarkerPos).trim();
       const extract = (m: string) => {
@@ -609,7 +613,7 @@ function CreateQuestionContent() {
                   {q.section && <span className="px-2 py-0.5 text-[10px] font-black rounded bg-indigo-100 text-indigo-700 border border-indigo-200">{q.section}</span>}
                   <span className="text-sm font-bold">প্রশ্ন নং: {isEnglish ? (idx + 1) : toBengaliNumber(idx + 1)}</span>
                 </div>
-                <Textarea placeholder="উদ্দীপক ও প্রশ্ন ক. খ. গ. ঘ. সহ লিখুন..." value={q.content} onChange={e => setQuestions(prev => prev.map(item => item.id === q.id ? {...item, content: e.target.value} : item))} className="min-h-[120px] text-sm font-bold" style={{ lineHeight: '1.1' }} />
+                <Textarea placeholder="উদ্দীপক ও প্রশ্ন ক. খ. গ. ঘ. সহ লিখুন..." value={q.content} onChange={e => setQuestions(prev => prev.map(item => item.id === q.id ? {...item, content: e.target.value} : item))} className="min-h-[120px] text-sm font-bold" style={{ lineHeight: '1.2' }} />
                 {q.imageUrl && <div className="relative w-40 rounded border overflow-hidden"><img src={q.imageUrl} className="w-full h-auto" /><button onClick={() => setQuestions(prev => prev.map(item => item.id === q.id ? {...item, imageUrl: ''} : item))} className="absolute top-0 right-0 bg-red-500 text-white p-0.5"><X className="w-3 h-3" /></button></div>}
               </CardContent>
               <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
@@ -671,7 +675,7 @@ function CreateQuestionContent() {
                           {q.chapter}
                         </span>
                       </div>
-                      <p className="text-sm font-bold line-clamp-3 leading-[1.1]" style={{ lineHeight: '1.1' }}>{previewText}</p>
+                      <p className="text-sm font-bold line-clamp-3 leading-[1.2]" style={{ lineHeight: '1.2' }}>{previewText}</p>
                     </div>
                   </div>
                 );
@@ -691,12 +695,12 @@ function CreateQuestionContent() {
       <div className={cn("print-only font-kalpurush", isPrintMode && "block")}>
         <style dangerouslySetInnerHTML={{ __html: `
           @media print, screen {
-            .paper { line-height: 1.1; width: 100% !important; text-align: justify; color: black !important; position: relative; }
+            .paper { line-height: 1.2; width: 100% !important; text-align: justify; color: black !important; position: relative; }
             .header { text-align: center; margin-bottom: 2px; }
-            .inst-name { font-size: 23px !important; font-weight: 800; line-height: 1.1; }
+            .inst-name { font-size: 23px !important; font-weight: 800; line-height: 1.2; }
             .meta-info { display: flex; justify-content: space-between; font-weight: bold; font-size: 10pt; border-top: 1.5pt solid black; padding-top: 2px; }
             .section-label { font-size: 11pt; font-weight: bold; border: 1pt solid black; display: inline-block; padding: 2px 20px; margin: 4px auto; }
-            .content-area { font-size: 10.5pt; color: black !important; line-height: 1.1; }
+            .content-area { font-size: 10.5pt; color: black !important; line-height: 1.2; }
             .mcq-container { column-count: 2; column-gap: 40px; column-rule: 1pt solid #000; }
             .mcq-options { display: grid; grid-template-columns: 1fr 1fr; gap: 1px 10px; padding-left: 20px; font-size: 10pt; }
             .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
@@ -740,7 +744,7 @@ function CreateQuestionContent() {
                   }
                   const p = parseText(q.content);
                   renderedQuestions.push(
-                    <div key={q.id} className="mb-1 break-inside-avoid" style={{ lineHeight: '1.1' }}>
+                    <div key={q.id} className="mb-1 break-inside-avoid" style={{ lineHeight: '1.2' }}>
                       <div className="flex gap-2 font-bold"><span>{toBengaliNumber(idx + 1)}.</span><div dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} /></div>
                       {q.imageUrl && <img src={q.imageUrl} className="max-w-[200px] mx-auto my-1 border" />}
                       <div className="ml-5">
@@ -769,7 +773,7 @@ function CreateQuestionContent() {
                     lastSection = q.section;
                   }
                   renderedQuestions.push(
-                    <div key={q.id} className="mb-1 flex gap-2" style={{ lineHeight: '1.1' }}><span className="font-bold">{toBengaliNumber(idx + 1)}.</span><div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(q.content) }} /><span>{toBengaliNumber(meta.shortMarks)}</span></div>
+                    <div key={q.id} className="mb-1 flex gap-2" style={{ lineHeight: '1.2' }}><span className="font-bold">{toBengaliNumber(idx + 1)}.</span><div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(q.content) }} /><span>{toBengaliNumber(meta.shortMarks)}</span></div>
                   );
                 });
               }
@@ -783,7 +787,7 @@ function CreateQuestionContent() {
                       {mcqQs.map((q, idx) => {
                         const p = parseText(q.content);
                         return (
-                          <div key={q.id} className="mcq-item mb-2 break-inside-avoid" style={{ lineHeight: '1.1' }}>
+                          <div key={q.id} className="mcq-item mb-2 break-inside-avoid" style={{ lineHeight: '1.2' }}>
                             <div className="flex gap-2 font-bold"><span>{toBengaliNumber(idx + 1)}.</span><div dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} /></div>
                             <div className="mcq-options">
                               <div>ক) <span dangerouslySetInnerHTML={{ __html: formatMath(p.k) }} /></div>

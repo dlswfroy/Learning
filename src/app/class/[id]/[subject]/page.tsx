@@ -22,27 +22,21 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 
 function formatMath(text: string) {
   if (!text) return '';
-  // Initial cleanup of markers
   let formatted = text.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
   
-  // 1. Text processing
   formatted = formatted.replace(/\\text\{([^}]+)\}/g, '<span class="math-text">$1</span>');
 
-  // 2. Fractions - Using a regex that supports one level of nesting (like \sqrt{...} inside \frac{...}{...})
   const fracRegex = /\\frac\{((?:[^{}]|\{[^{}]*\})*)\}\s*\{((?:[^{}]|\{[^{}]*\})*)\}/g;
   formatted = formatted.replace(fracRegex, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
 
-  // 3. Square Roots
   formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
   formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>');
 
-  // 4. Subscripts / Superscripts
   formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
   formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
 
-  // 5. Common Symbols mapping
   const symbolMap: Record<string, string> = {
     '\\\\log': 'log', '\\\\triangle': '△', '\\\\angle': '∠', '\\\\circ': '°',
     '\\\\theta': 'θ', '\\\\pi': 'π', '\\\\pm': '±', '\\\\times': '×',
@@ -51,11 +45,12 @@ function formatMath(text: string) {
     '\\\\sum': '∑', '\\\\prod': '∏', '\\\\alpha': 'α', '\\\\beta': 'β',
     '\\\\gamma': 'γ', '\\\\delta': 'δ', '\\\\sigma': 'σ', '\\\\phi': 'φ', '\\\\omega': 'ω',
     '\\\\eta': 'η', '\\\\rho': 'ρ', '\\\\lambda': 'λ', '\\\\mu': 'μ',
+    '\\\\div': '÷', '\\\\rightarrow': '→', '\\\\to': '→', '\\\\arrow': '→',
     '\\\\in': '∈', '\\\\mathbb\\{N\\}': 'ℕ', '\\\\mathbb\\{R\\}': 'ℝ', '\\\\mathbb\\{Z\\}': 'ℤ',
     '\\\\mathbb\\{Q\\}': 'ℚ', '\\\\subset': '⊂', '\\\\subseteq': '⊆', '\\\\cup': '∪',
     '\\\\cap': '∩', '\\\\emptyset': '∅', '\\\\forall': '∀', '\\\\exists': '∃', 
-    '\\\\rightarrow': '→', '\\\\Rightarrow': '⇒', '\\\\leftarrow': '←', '\\\\Leftarrow': '⇐', 
-    '\\\\leftrightarrow': '↔', '\\\\Leftrightarrow': '⇔', '\\\\to': '→', '\\\\arrow': '→',
+    '\\\\Rightarrow': '⇒', '\\\\leftarrow': '←', '\\\\Leftarrow': '⇐', 
+    '\\\\leftrightarrow': '↔', '\\\\Leftrightarrow': '⇔',
     '\\\\left': '', '\\\\right': '', '\\\\\%': '%', '\\\\setminus': '\\', '\\\\backslash': '\\'
   };
   
@@ -64,8 +59,6 @@ function formatMath(text: string) {
   });
 
   formatted = formatted.replace(/\\dot\{([^}]+)\}/g, '<span class="math-dot">$1</span>');
-  
-  // 6. Cleanup of any remaining backslashes
   formatted = formatted.replace(/\\/g, '');
   return formatted;
 }
@@ -327,7 +320,7 @@ export default function SubjectPage() {
           </DialogHeader>
           
           <div className="p-8 bg-slate-50 min-h-screen">
-            <div className="paper-preview bg-white shadow-xl mx-auto p-[0.5in] relative overflow-hidden min-h-[11in] w-full" style={{ lineHeight: '1.1' }}>
+            <div className="paper-preview bg-white shadow-xl mx-auto p-[0.5in] relative overflow-hidden min-h-[11in] w-full" style={{ lineHeight: '1.2' }}>
               {/* Watermark for Lecture Sheets */}
               <div 
                 className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden"
@@ -355,7 +348,7 @@ export default function SubjectPage() {
 
                 <div 
                   className="content-area text-[10.5pt] text-justify whitespace-pre-wrap"
-                  style={{ lineHeight: '1.1' }}
+                  style={{ lineHeight: '1.2' }}
                   dangerouslySetInnerHTML={{ __html: formatMath(viewingNote?.content || '') }}
                 />
               </div>
@@ -375,7 +368,7 @@ export default function SubjectPage() {
         .math-sup { font-size: 0.7em; vertical-align: super; }
         .math-sub { font-size: 0.7em; vertical-align: sub; }
         .math-text { font-family: 'Kalpurush', sans-serif; font-style: normal; }
-        .paper-preview { color: black !important; line-height: 1.1; }
+        .paper-preview { color: black !important; line-height: 1.2; }
       `}</style>
     </div>
   );

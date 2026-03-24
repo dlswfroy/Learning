@@ -26,27 +26,21 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 
 function formatMath(text: string) {
   if (!text) return '';
-  // Cleanup initial wrappers
   let formatted = text.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
   
-  // 1. Text processing first
   formatted = formatted.replace(/\\text\{([^}]+)\}/g, '<span class="math-text">$1</span>');
 
-  // 2. Fractions - Using regex that supports one level of nesting (like \sqrt{...} inside \frac{...}{...})
   const fracRegex = /\\frac\{((?:[^{}]|\{[^{}]*\})*)\}\s*\{((?:[^{}]|\{[^{}]*\})*)\}/g;
   formatted = formatted.replace(fracRegex, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
 
-  // 3. Square Roots
   formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
   formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>');
 
-  // 4. Subscripts / Superscripts
   formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
   formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
 
-  // 5. Symbols
   const symbolMap: Record<string, string> = {
     '\\\\log': 'log', '\\\\triangle': '△', '\\\\angle': '∠', '\\\\circ': '°',
     '\\\\theta': 'θ', '\\\\pi': 'π', '\\\\pm': '±', '\\\\times': '×',
@@ -55,11 +49,12 @@ function formatMath(text: string) {
     '\\\\sum': '∑', '\\\\prod': '∏', '\\\\alpha': 'α', '\\\\beta': 'β',
     '\\\\gamma': 'γ', '\\\\delta': 'δ', '\\\\sigma': 'σ', '\\\\phi': 'φ', '\\\\omega': 'ω',
     '\\\\eta': 'η', '\\\\rho': 'ρ', '\\\\lambda': 'λ', '\\\\mu': 'μ',
+    '\\\\div': '÷', '\\\\rightarrow': '→', '\\\\to': '→', '\\\\arrow': '→',
     '\\\\in': '∈', '\\\\mathbb\\{N\\}': 'ℕ', '\\\\mathbb\\{R\\}': 'ℝ', '\\\\mathbb\\{Z\\}': 'ℤ',
     '\\\\mathbb\\{Q\\}': 'ℚ', '\\\\subset': '⊂', '\\\\subseteq': '⊆', '\\\\cup': '∪',
     '\\\\cap': '∩', '\\\\emptyset': '∅', '\\\\forall': '∀', '\\\\exists': '∃', 
-    '\\\\rightarrow': '→', '\\\\Rightarrow': '⇒', '\\\\leftarrow': '←', '\\\\Leftarrow': '⇐', 
-    '\\\\leftrightarrow': '↔', '\\\\Leftrightarrow': '⇔', '\\\\to': '→', '\\\\arrow': '→',
+    '\\\\Rightarrow': '⇒', '\\\\leftarrow': '←', '\\\\Leftarrow': '⇐', 
+    '\\\\leftrightarrow': '↔', '\\\\Leftrightarrow': '⇔',
     '\\\\left': '', '\\\\right': '', '\\\\\%': '%', '\\\\setminus': '\\', '\\\\backslash': '\\'
   };
   
@@ -68,8 +63,6 @@ function formatMath(text: string) {
   });
 
   formatted = formatted.replace(/\\dot\{([^}]+)\}/g, '<span class="math-dot">$1</span>');
-  
-  // 6. Final cleanup of remaining backslashes
   formatted = formatted.replace(/\\/g, '');
   return formatted;
 }
@@ -276,9 +269,9 @@ function CreateLectureSheetContent() {
               value={data.content || ''} 
               onChange={Eisen => setData(prev => ({...prev, content: Eisen.target.value}))} 
               className="min-h-[400px] text-base leading-relaxed font-bold" 
+              style={{ lineHeight: '1.2' }}
             />
           </CardContent>
-        </Card>
 
         <div className="flex gap-4 pt-8">
           <Button onClick={handleSave} disabled={saving} className="gap-2 px-8 font-bold"><Save className="w-4 h-4" /> সেভ করুন</Button>
@@ -313,10 +306,9 @@ function CreateLectureSheetContent() {
               width: 100% !important; 
               text-align: justify; 
               color: black !important;
-              line-height: 1.1;
+              line-height: 1.2;
               position: relative;
             }
-            /* Watermark for Lecture Sheets */
             .paper::before {
               content: "${softwareConfig?.appName || 'টপ গ্রেড টিউটোরিয়ালস'}";
               position: fixed;
@@ -331,10 +323,10 @@ function CreateLectureSheetContent() {
               z-index: 0;
             }
             .header { margin-bottom: 2px; border-bottom: 1.5pt solid black; padding-bottom: 2px; position: relative; z-index: 10; text-align: center; margin-top: 0 !important; }
-            .inst-name { font-size: 23px !important; font-weight: 800; line-height: 1.1; }
-            .topic-title { font-size: 13pt; font-weight: bold; margin: 4px 0; text-align: center; text-decoration: underline; line-height: 1.1; }
-            .meta-info { display: flex; justify-content: center; gap: 20pt; font-weight: 900; margin-top: 2px; font-size: 10pt; border-top: 0.5pt solid #ddd; padding-top: 2px; line-height: 1.1; }
-            .content-area { white-space: pre-wrap; font-size: 10.5pt; lineHeight: 1.1; background: transparent !important; position: relative; z-index: 10; }
+            .inst-name { font-size: 23px !important; font-weight: 800; line-height: 1.2; }
+            .topic-title { font-size: 13pt; font-weight: bold; margin: 4px 0; text-align: center; text-decoration: underline; line-height: 1.2; }
+            .meta-info { display: flex; justify-content: center; gap: 20pt; font-weight: 900; margin-top: 2px; font-size: 10pt; border-top: 0.5pt solid #ddd; padding-top: 2px; line-height: 1.2; }
+            .content-area { white-space: pre-wrap; font-size: 10.5pt; line-height: 1.2; background: transparent !important; position: relative; z-index: 10; }
             
             .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
             .math-num { border-bottom: 0.5pt solid black; padding: 0 1px; }
@@ -362,7 +354,7 @@ function CreateLectureSheetContent() {
             </div>
           </div>
           <div className="topic-title">{data.topic || 'লেকচার শিট'}</div>
-          <div className="content-area" dangerouslySetInnerHTML={{ __html: formatMath(data.content) }} style={{ lineHeight: '1.1' }} />
+          <div className="content-area" dangerouslySetInnerHTML={{ __html: formatMath(data.content) }} style={{ lineHeight: '1.2' }} />
         </div>
       </div>
     </div>
