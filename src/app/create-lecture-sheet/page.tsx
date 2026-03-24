@@ -163,7 +163,7 @@ function CreateLectureSheetContent() {
       });
   };
 
-  const handleOCR = async ( Eisen: React.ChangeEvent<HTMLInputElement>) => {
+  const handleOCR = async (Eisen: React.ChangeEvent<HTMLInputElement>) => {
     const file = Eisen.target.files?.[0];
     if (!file) return;
 
@@ -272,6 +272,7 @@ function CreateLectureSheetContent() {
               style={{ lineHeight: '1.2' }}
             />
           </CardContent>
+        </Card>
 
         <div className="flex gap-4 pt-8">
           <Button onClick={handleSave} disabled={saving} className="gap-2 px-8 font-bold"><Save className="w-4 h-4" /> সেভ করুন</Button>
