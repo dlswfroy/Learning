@@ -156,13 +156,23 @@ function CreateLectureSheetContent() {
   useEffect(() => {
     if (!isPrintMode) return;
 
+    // Check if we should restore from manualPages or re-paginate from editor content
     if (Object.keys(manualPages).length > 0 && paginatedPages.length === 0) {
       const sortedIndices = Object.keys(manualPages).map(Number).sort((a, b) => a - b);
-      setPaginatedPages(sortedIndices.map(idx => manualPages[idx]));
-      return;
+      const restoredPages = sortedIndices.map(idx => manualPages[idx]);
+      
+      // Smart check: if the editor content is significantly different from manual pages, re-paginate
+      const editorText = data.content.replace(/<[^>]*>/g, '').replace(/\s/g, '');
+      const manualCombinedText = restoredPages.join('').replace(/<[^>]*>/g, '').replace(/\s|&nbsp;/g, '');
+      
+      if (Math.abs(editorText.length - manualCombinedText.length) < 15) {
+        setPaginatedPages(restoredPages);
+        return;
+      }
+      // If content is different, fall through to re-pagination logic
     }
 
-    if (data.content && measurementRef.current && Object.keys(manualPages).length === 0) {
+    if (data.content && measurementRef.current) {
       const container = measurementRef.current;
       const contentHtml = formatMath(data.content);
       
