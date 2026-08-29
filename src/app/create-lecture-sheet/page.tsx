@@ -334,6 +334,7 @@ function CreateLectureSheetContent() {
             </Card>
             <div className="space-y-3">
               <Button onClick={handleSave} disabled={saving} className="w-full gap-2 font-bold h-11"><Save className="w-4 h-4" /> সেভ করুন</Button>
+              <Button onClick={() => window.print()} variant="outline" className="w-full gap-2 border-red-500 text-red-600 font-bold hover:bg-red-50 h-11"><FileText className="w-4 h-4" /> পিডিএফ সেভ করুন</Button>
               <Button onClick={handlePrintView} variant="outline" className="w-full gap-2 border-primary text-primary font-bold hover:bg-primary/5 h-11"><Eye className="w-4 h-4" /> প্রিন্ট ভিউ</Button>
             </div>
           </aside>
