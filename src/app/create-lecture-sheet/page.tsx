@@ -147,7 +147,6 @@ function CreateLectureSheetContent() {
     if (user && db) loadSheet();
   }, [editId, db, user, router]);
 
-  // PAGINATION EFFECT: Only recalculate pages if content or layout settings change
   useEffect(() => {
     if (isPrintMode && data.content && measurementRef.current) {
       const container = measurementRef.current;
@@ -157,7 +156,6 @@ function CreateLectureSheetContent() {
       const lineHtml = tempLines.map(line => `<div class="measure-line" style="margin-bottom: 0px;">${line || '&nbsp;'}</div>`).join('');
       container.innerHTML = lineHtml;
       
-      // Calculate available height based on margins (Excluding visual-only settings for performance)
       const availableHeightPx = (11.69 - printSettings.marginTop - printSettings.marginBottom - 1.5) * 96;
       
       const newPages: string[] = [];
@@ -269,7 +267,6 @@ function CreateLectureSheetContent() {
 
   return (
     <div className="max-w-[1400px] mx-auto space-y-8 pb-32 font-kalpurush">
-      {/* Measurement Container (Hidden) */}
       <div 
         ref={measurementRef} 
         className="fixed invisible pointer-events-none whitespace-pre-wrap text-[10.5pt]" 
@@ -359,8 +356,8 @@ function CreateLectureSheetContent() {
       </div>
 
       {isPrintMode && (
-        <div className="no-print flex flex-col h-screen fixed inset-0 top-0 left-0 bg-slate-100 z-[9999] font-kalpurush overflow-hidden">
-          <header className="h-14 bg-white border-b flex items-center justify-between px-6 shrink-0 shadow-sm z-50">
+        <div className="flex flex-col h-screen fixed inset-0 top-0 left-0 bg-slate-100 z-[9999] font-kalpurush overflow-hidden">
+          <header className="no-print h-14 bg-white border-b flex items-center justify-between px-6 shrink-0 shadow-sm z-50">
              <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center"><Eye className="w-5 h-5" /></div>
                 <h3 className="font-bold text-lg">প্রিন্ট প্রিভিউ ও লেআউট (মোট {toBengaliNumber(paginatedPages.length)} পাতা)</h3>
@@ -373,8 +370,7 @@ function CreateLectureSheetContent() {
           </header>
           
           <div className="flex-1 flex overflow-hidden">
-            {/* Sidebar Settings */}
-            <aside className="w-80 bg-white border-r overflow-y-auto p-6 space-y-8 shrink-0 pb-32">
+            <aside className="no-print w-80 bg-white border-r overflow-y-auto p-6 space-y-8 shrink-0 pb-32">
                <div className="space-y-4">
                   <h4 className="text-xs font-black text-slate-500 uppercase tracking-wider flex items-center gap-2">
                     <Settings2 className="w-3.5 h-3.5" /> পেজ মার্জিন (ইঞ্চি)
@@ -407,7 +403,6 @@ function CreateLectureSheetContent() {
                   </h4>
                   
                   <div className="space-y-6">
-                    {/* Text Watermark Option */}
                     <div className="p-4 rounded-xl border-2 bg-slate-50/50 space-y-4">
                       <div className="flex items-center gap-3">
                         <Checkbox 
@@ -455,7 +450,6 @@ function CreateLectureSheetContent() {
                       )}
                     </div>
 
-                    {/* Image Watermark Option */}
                     <div className="p-4 rounded-xl border-2 bg-slate-50/50 space-y-4">
                       <div className="flex items-center gap-3">
                         <Checkbox 
@@ -522,7 +516,6 @@ function CreateLectureSheetContent() {
                </div>
             </aside>
 
-            {/* Paper Preview Area */}
             <main className="flex-1 overflow-y-auto bg-slate-200 pt-16 pb-24 flex flex-col items-center gap-10 custom-scrollbar relative">
                {paginatedPages.map((pageHtml, idx) => (
                  <div 
@@ -535,7 +528,6 @@ function CreateLectureSheetContent() {
                      lineHeight: '1.2'
                    }}
                  >
-                    {/* Watermark Rendering */}
                     <div 
                       className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden" 
                       style={{ 
@@ -612,8 +604,6 @@ function CreateLectureSheetContent() {
           .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
           .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
           .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-          
-          /* Remove arrows from number input */
           input.no-arrows::-webkit-outer-spin-button,
           input.no-arrows::-webkit-inner-spin-button {
             -webkit-appearance: none;
@@ -624,20 +614,20 @@ function CreateLectureSheetContent() {
           }
         }
         @media print {
-          body * { visibility: hidden; }
-          .print-area, .print-area *, .paper, .paper * { visibility: visible; }
+          body { background: white !important; margin: 0 !important; padding: 0 !important; }
+          .no-print { display: none !important; }
+          main { background: white !important; padding: 0 !important; margin: 0 !important; overflow: visible !important; display: block !important; }
           .paper { 
             position: relative !important; 
             margin: 0 !important; 
             box-shadow: none !important; 
             width: 100% !important; 
             height: 11.69in !important; 
-            padding: 0.5in !important; 
             page-break-after: always; 
-            display: block !important;
+            display: flex !important;
+            visibility: visible !important;
           }
           @page { size: A4; margin: 0; }
-          .no-print { display: none !important; }
         }
       `}} />
     </div>
