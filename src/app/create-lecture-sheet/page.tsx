@@ -147,6 +147,7 @@ function CreateLectureSheetContent() {
     if (user && db) loadSheet();
   }, [editId, db, user, router]);
 
+  // PAGINATION EFFECT: Only recalculate pages if content or layout settings change
   useEffect(() => {
     if (isPrintMode && data.content && measurementRef.current) {
       const container = measurementRef.current;
@@ -156,6 +157,7 @@ function CreateLectureSheetContent() {
       const lineHtml = tempLines.map(line => `<div class="measure-line" style="margin-bottom: 0px;">${line || '&nbsp;'}</div>`).join('');
       container.innerHTML = lineHtml;
       
+      // Calculate available height based on margins (Excluding visual-only settings for performance)
       const availableHeightPx = (11.69 - printSettings.marginTop - printSettings.marginBottom - 1.5) * 96;
       
       const newPages: string[] = [];
@@ -178,7 +180,7 @@ function CreateLectureSheetContent() {
       if (currentChunk) newPages.push(currentChunk);
       setPaginatedPages(newPages);
     }
-  }, [isPrintMode, data.content, printSettings]);
+  }, [isPrintMode, data.content, printSettings.marginTop, printSettings.marginBottom, printSettings.marginLeft, printSettings.marginRight]);
 
   const subjects = useMemo(() => data.classId ? getSubjectsForClass(data.classId) : [], [data.classId]);
 
@@ -358,7 +360,7 @@ function CreateLectureSheetContent() {
 
       {isPrintMode && (
         <div className="no-print flex flex-col h-screen fixed inset-0 bg-slate-100 z-[2000] font-kalpurush">
-          <header className="h-14 bg-white border-b flex items-center justify-between px-6 shrink-0 shadow-sm">
+          <header className="h-14 bg-white border-b flex items-center justify-between px-6 shrink-0 shadow-sm z-50">
              <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center"><Eye className="w-5 h-5" /></div>
                 <h3 className="font-bold text-lg">প্রিন্ট প্রিভিউ ও লেআউট (মোট {toBengaliNumber(paginatedPages.length)} পাতা)</h3>
@@ -520,7 +522,7 @@ function CreateLectureSheetContent() {
             </aside>
 
             {/* Paper Preview Area */}
-            <main className="flex-1 overflow-y-auto bg-slate-200 pt-16 pb-24 flex flex-col items-center gap-10 custom-scrollbar">
+            <main className="flex-1 overflow-y-auto bg-slate-200 pt-16 pb-24 flex flex-col items-center gap-10 custom-scrollbar relative">
                {paginatedPages.map((pageHtml, idx) => (
                  <div 
                    key={idx}
@@ -546,8 +548,8 @@ function CreateLectureSheetContent() {
                           src={printSettings.watermarkImageUrl} 
                           alt="Watermark" 
                           style={{ 
-                            maxWidth: `${printSettings.watermarkImageSize || 70}%`, 
-                            maxHeight: `${printSettings.watermarkImageSize || 70}%` 
+                            width: `${printSettings.watermarkImageSize || 70}%`, 
+                            height: `${printSettings.watermarkImageSize || 70}%` 
                           }} 
                           className="object-contain" 
                         />
