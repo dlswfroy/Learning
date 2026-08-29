@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Printer, Save, FileText, ArrowLeft, Loader2, BookOpen, ScanText, Eye, Settings2, SlidersHorizontal, Image as ImageIcon, X, Type, Bold, AlignLeft, AlignCenter, AlignRight, AlignJustify, Edit3, FileDown } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useDoc } from '@/firebase';
 import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -72,6 +72,7 @@ function formatMath(text: string) {
 function CreateLectureSheetContent() {
   const db = useFirestore();
   const { user, loading: userLoading } = useUser();
+  const { toast } = useToast();
   const searchParams = useSearchParams();
   const router = useRouter();
   const editId = searchParams.get('id');
@@ -145,13 +146,15 @@ function CreateLectureSheetContent() {
   useEffect(() => {
     if (!isPrintMode) return;
 
+    // Prioritize manualPages if they exist from Firestore or local state
     if (Object.keys(manualPages).length > 0 && paginatedPages.length === 0) {
       const sortedIndices = Object.keys(manualPages).map(Number).sort((a, b) => a - b);
       setPaginatedPages(sortedIndices.map(idx => manualPages[idx]));
       return;
     }
 
-    if (data.content && measurementRef.current) {
+    // Only regenerate if manualPages are empty
+    if (data.content && measurementRef.current && Object.keys(manualPages).length === 0) {
       const container = measurementRef.current;
       const contentHtml = formatMath(data.content);
       
@@ -254,8 +257,11 @@ function CreateLectureSheetContent() {
     setDoc(ref, payload, { merge: true })
       .then(() => { 
         setSaving(false); 
-        // Update local state AFTER successful server save to prevent flickering
+        // Update local state AND paginatedPages to ensure consistency
         setManualPages(currentManualPages);
+        const sortedIndices = Object.keys(currentManualPages).map(Number).sort((a, b) => a - b);
+        setPaginatedPages(sortedIndices.map(idx => currentManualPages[idx]));
+        
         toast({ title: "সফল!", description: "লেকচার শিট সরাসরি সেভ হয়েছে।" }); 
         if (!editId) router.replace(`/create-lecture-sheet?id=${docId}`); 
       })
@@ -267,7 +273,7 @@ function CreateLectureSheetContent() {
           requestResourceData: payload 
         })); 
       });
-  }, [user, db, editId, data, printSettings, pageStyles, manualPages, router]);
+  }, [user, db, editId, data, printSettings, pageStyles, manualPages, router, toast]);
 
   // Keyboard Shortcut: Ctrl + S / Cmd + S for direct save
   useEffect(() => {
