@@ -28,8 +28,7 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 
 function formatMath(text: string) {
   if (!text) return '';
-  // Remove all $ signs and LaTeX delimiters from Gemini output to keep formulas clean
-  // Also remove markdown artifacts like ### and **
+  // Remove markdown artifacts and LaTeX delimiters
   let formatted = text.replace(/\$|\\\(|\\\)|\\\[|\\\]|###|\*\*/g, '');
   
   formatted = formatted.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
@@ -164,7 +163,6 @@ function CreateLectureSheetContent() {
       const editorText = data.content.replace(/<[^>]*>/g, '').replace(/\s/g, '');
       const manualCombinedText = restoredPages.join('').replace(/<[^>]*>/g, '').replace(/\s|&nbsp;/g, '');
       
-      // If editor has significantly more content, force re-pagination
       if (Math.abs(editorText.length - manualCombinedText.length) < 25) {
         setPaginatedPages(restoredPages);
         return;
@@ -216,12 +214,7 @@ function CreateLectureSheetContent() {
       
       if (currentChunk.trim() !== "") newPages.push(currentChunk);
       
-      const finalPages = newPages.filter(p => {
-        const textContent = p.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, '').trim();
-        return textContent.length > 0;
-      });
-
-      const pagesToRender = finalPages.length > 0 ? finalPages : [""];
+      const pagesToRender = newPages.length > 0 ? newPages : [""];
       setPaginatedPages(pagesToRender);
       
       const initialStyles: Record<number, any> = {};
@@ -353,17 +346,11 @@ function CreateLectureSheetContent() {
     if (hasSelection) {
       document.execCommand('styleWithCSS', false, 'true');
       if (command === 'fontSize') {
-        document.execCommand('styleWithCSS', false, 'false');
-        document.execCommand('fontSize', false, '7');
-        const editableDiv = document.querySelector(`.paper-idx-${activeEditIdx} .content-area`) as HTMLElement;
-        if (editableDiv) {
-          const fonts = editableDiv.querySelectorAll('font[size="7"]');
-          fonts.forEach(font => {
-            font.removeAttribute('size');
-            font.style.fontSize = value + 'pt';
-          });
-        }
-        document.execCommand('styleWithCSS', false, 'true');
+        const span = document.createElement('span');
+        span.style.fontSize = value + 'pt';
+        const range = selection.getRangeAt(0);
+        span.appendChild(range.extractContents());
+        range.insertNode(span);
       } else if (command === 'lineHeight') {
         const range = selection.getRangeAt(0);
         if (range) {
@@ -400,11 +387,7 @@ function CreateLectureSheetContent() {
 
     newPaginated.forEach((content, i) => {
       const oldIdx = i < idx ? i : i + 1;
-      if (manualPages[oldIdx] !== undefined) {
-        nextManual[i] = manualPages[oldIdx];
-      } else {
-        nextManual[i] = content;
-      }
+      nextManual[i] = manualPages[oldIdx] || content;
       if (pageStyles[oldIdx]) {
         nextStyles[i] = pageStyles[oldIdx];
       }
