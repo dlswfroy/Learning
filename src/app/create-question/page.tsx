@@ -71,7 +71,8 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 function formatMath(text: string) {
   if (!text) return '';
   // Remove all $ signs and LaTeX delimiters from Gemini output to keep formulas clean
-  let formatted = text.replace(/\$|\\\(|\\\)|\\\[|\\\]/g, '');
+  // Also remove markdown artifacts like ### and **
+  let formatted = text.replace(/\$|\\\(|\\\)|\\\[|\\\]|###|\*\*/g, '');
   
   formatted = formatted.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
   
