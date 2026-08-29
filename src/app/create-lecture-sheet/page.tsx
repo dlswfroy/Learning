@@ -80,6 +80,7 @@ function CreateLectureSheetContent() {
   const [isScanning, setIsScanning] = useState(false);
   const [existingData, setExistingData] = useState<any>(null);
   const ocrInputRef = useRef<HTMLInputElement>(null);
+  const measurementRef = useRef<HTMLDivElement>(null);
   
   const softwareDocRef = useMemo(() => doc(db, 'config', 'software'), [db]);
   const { data: softwareConfig } = useDoc(softwareDocRef);
@@ -93,14 +94,15 @@ function CreateLectureSheetContent() {
     type: 'written'
   });
 
-  // Print Layout and Watermark settings
   const [printSettings, setPrintSettings] = useState({
     marginTop: 0.5,
     marginBottom: 0.5,
     marginLeft: 0.5,
     marginRight: 0.5,
-    watermarkOpacity: 8 // Percent
+    watermarkOpacity: 8
   });
+
+  const [paginatedPages, setPaginatedPages] = useState<string[]>([]);
 
   useEffect(() => { if (!userLoading && !user) router.push('/auth'); }, [user, userLoading, router]);
   
@@ -122,14 +124,49 @@ function CreateLectureSheetContent() {
             content: docData.content || '',
             type: docData.type || 'written'
           });
-          if (docData.printSettings) {
-            setPrintSettings(docData.printSettings);
-          }
+          if (docData.printSettings) setPrintSettings(docData.printSettings);
         }
       } catch (e) {} finally { setLoading(false); }
     }
     if (user && db) loadSheet();
   }, [editId, db, user, router]);
+
+  // Enhanced Pagination Logic for Preview
+  useEffect(() => {
+    if (isPrintMode && data.content && measurementRef.current) {
+      const container = measurementRef.current;
+      const contentHtml = formatMath(data.content);
+      
+      // Split content by paragraphs or lines to measure
+      const tempLines = contentHtml.split('\n');
+      const lineHtml = tempLines.map(line => `<div class="measure-line" style="margin-bottom: 0px;">${line || '&nbsp;'}</div>`).join('');
+      container.innerHTML = lineHtml;
+      
+      // A4 is 11.69 inches. 96 DPI standard.
+      // Subtract header height (~1.5 inches) and margins
+      const availableHeightPx = (11.69 - printSettings.marginTop - printSettings.marginBottom - 1.5) * 96;
+      
+      const newPages: string[] = [];
+      let currentChunk = "";
+      let currentHeight = 0;
+
+      const lines = container.querySelectorAll('.measure-line');
+      lines.forEach((line) => {
+        const h = (line as HTMLElement).offsetHeight;
+        if (currentHeight + h > availableHeightPx && currentChunk !== "") {
+          newPages.push(currentChunk);
+          currentChunk = line.innerHTML + "<br/>";
+          currentHeight = h;
+        } else {
+          currentChunk += line.innerHTML + "<br/>";
+          currentHeight += h;
+        }
+      });
+      
+      if (currentChunk) newPages.push(currentChunk);
+      setPaginatedPages(newPages);
+    }
+  }, [isPrintMode, data.content, printSettings]);
 
   const subjects = useMemo(() => data.classId ? getSubjectsForClass(data.classId) : [], [data.classId]);
 
@@ -148,11 +185,8 @@ function CreateLectureSheetContent() {
       updatedAt: serverTimestamp(),
     };
 
-    if (!editId) {
-      payload.createdAt = serverTimestamp();
-    } else if (existingData?.createdAt) {
-      payload.createdAt = existingData.createdAt;
-    }
+    if (!editId) payload.createdAt = serverTimestamp();
+    else if (existingData?.createdAt) payload.createdAt = existingData.createdAt;
 
     setDoc(ref, payload, { merge: true })
       .then(() => { 
@@ -176,10 +210,7 @@ function CreateLectureSheetContent() {
     toast({ title: "স্ক্যান শুরু হয়েছে", description: "লোকাল স্ক্যানার ইমেজ প্রসেস করছে, অনুগ্রহ করে অপেক্ষা করুন..." });
 
     try {
-      const result = await Tesseract.recognize(file, 'ben+eng', {
-        logger: m => console.log(m)
-      });
-      
+      const result = await Tesseract.recognize(file, 'ben+eng');
       if (result && result.data.text) {
         const text = result.data.text.trim();
         setData(prev => ({ ...prev, content: prev.content ? prev.content + '\n\n' + text : text }));
@@ -198,17 +229,23 @@ function CreateLectureSheetContent() {
       toast({ variant: "destructive", title: "তথ্য নেই", description: "প্রিন্ট ভিউ দেখার জন্য অন্তত কিছু লিখুন।" });
       return;
     }
-    const currentPath = window.location.pathname;
     const params = new URLSearchParams(window.location.search);
     params.set('print', 'true');
     if (editId) params.set('id', editId);
-    router.push(`${currentPath}?${params.toString()}`);
+    router.push(`${window.location.pathname}?${params.toString()}`);
   };
 
   if (loading || userLoading) return <div className="flex flex-col items-center justify-center p-20 min-h-[50vh] font-kalpurush"><Loader2 className="w-12 h-12 animate-spin text-primary mb-4" /><p className="text-muted-foreground font-bold">অ্যাক্সেস চেক করা হচ্ছে...</p></div>;
 
   return (
     <div className="max-w-[1400px] mx-auto space-y-8 pb-32 font-kalpurush">
+      {/* Measurement Container (Hidden) */}
+      <div 
+        ref={measurementRef} 
+        className="fixed invisible pointer-events-none whitespace-pre-wrap text-[10.5pt]" 
+        style={{ width: '7.27in', lineHeight: '1.2' }} 
+      />
+
       <div className={cn("no-print space-y-8", isPrintMode && "hidden")}>
         <header className="flex items-center justify-between border-b pb-4">
           <div className="flex items-center gap-4">
@@ -222,97 +259,64 @@ function CreateLectureSheetContent() {
         </header>
 
         <div className="flex flex-col lg:flex-row gap-8 items-start">
-          {/* Sidebar Menu for Sheet Information */}
           <aside className="w-full lg:w-80 shrink-0 space-y-6 sticky top-24">
             <Card className="shadow-md border-primary/10">
               <CardHeader className="bg-primary/5 border-b py-3">
-                <CardTitle className="text-base flex items-center gap-2 font-bold text-primary">
-                  <FileText className="w-4 h-4" /> শিট সংক্রান্ত তথ্য
-                </CardTitle>
+                <CardTitle className="text-base flex items-center gap-2 font-bold text-primary"><FileText className="w-4 h-4" /> শিট সংক্রান্ত তথ্য</CardTitle>
               </CardHeader>
               <CardContent className="pt-6 space-y-5">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">প্রতিষ্ঠানের নাম</label>
-                  <input 
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
-                    value={data.institution || ''} 
-                    onChange={Eisen => setData(prev => ({...prev, institution: Eisen.target.value}))} 
-                  />
+                  <Input value={data.institution || ''} onChange={Eisen => setData(prev => ({...prev, institution: Eisen.target.value}))} />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">শ্রেণি</label>
                   <Select onValueChange={v => setData(prev => ({...prev, classId: v}))} value={data.classId || ''}>
                     <SelectTrigger className="font-bold"><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
-                    <SelectContent>
-                      {CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}
-                    </SelectContent>
+                    <SelectContent>{CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">বিষয়</label>
                   <Select onValueChange={v => setData(prev => ({...prev, subject: v}))} value={data.subject || ''} disabled={!data.classId}>
                     <SelectTrigger className="font-bold"><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
-                    <SelectContent>
-                      {subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                    </SelectContent>
+                    <SelectContent>{subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">শিটের ধরন</label>
                   <Select onValueChange={v => setData(prev => ({...prev, type: v}))} value={data.type || 'written'}>
                     <SelectTrigger className="font-bold"><SelectValue placeholder="ধরণ নির্বাচন করুন" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="written">লিখিত</SelectItem>
-                      <SelectItem value="mcq">বহুনির্বাচনি</SelectItem>
-                    </SelectContent>
+                    <SelectContent><SelectItem value="written">লিখিত</SelectItem><SelectItem value="mcq">বহুনির্বাচনি</SelectItem></SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">টপিক / শিরোনাম</label>
-                  <input 
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
-                    value={data.topic || ''} 
-                    onChange={Eisen => setData(prev => ({...prev, topic: Eisen.target.value}))} 
-                    placeholder="যেমন: গাণিতিক সূত্রাবলী" 
-                  />
+                  <Input value={data.topic || ''} onChange={Eisen => setData(prev => ({...prev, topic: Eisen.target.value}))} placeholder="যেমন: গাণিতিক সূত্রাবলী" />
                 </div>
-
-                <div className="pt-4 border-t space-y-4">
+                <div className="pt-4 border-t">
                   <input type="file" ref={ocrInputRef} className="hidden" accept="image/*" onChange={handleOCR} />
-                  <Button 
-                    onClick={() => ocrInputRef.current?.click()} 
-                    disabled={isScanning}
-                    variant="outline" 
-                    className="w-full gap-2 border-indigo-600 text-indigo-700 font-bold hover:bg-indigo-50"
-                  >
-                    {isScanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanText className="w-4 h-4" />}
-                    এআই স্ক্যান (Local)
+                  <Button onClick={() => ocrInputRef.current?.click()} disabled={isScanning} variant="outline" className="w-full gap-2 border-indigo-600 text-indigo-700 font-bold hover:bg-indigo-50">
+                    {isScanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanText className="w-4 h-4" />} এআই স্ক্যান (Local)
                   </Button>
                 </div>
               </CardContent>
             </Card>
-
             <div className="space-y-3">
               <Button onClick={handleSave} disabled={saving} className="w-full gap-2 font-bold h-11"><Save className="w-4 h-4" /> সেভ করুন</Button>
-              <Button onClick={handlePrintView} variant="outline" className="w-full gap-2 border-primary text-primary font-bold hover:bg-primary/5 h-11">
-                <Eye className="w-4 h-4" /> প্রিন্ট ভিউ
-              </Button>
-              <Button onClick={() => window.print()} variant="secondary" className="w-full gap-2 shadow-lg font-bold h-11"><Printer className="w-4 h-4" /> প্রিন্ট</Button>
+              <Button onClick={handlePrintView} variant="outline" className="w-full gap-2 border-primary text-primary font-bold hover:bg-primary/5 h-11"><Eye className="w-4 h-4" /> প্রিন্ট ভিউ</Button>
             </div>
           </aside>
 
-          {/* Main Editor Section */}
           <div className="flex-1 w-full space-y-6">
             <Card className="shadow-sm border-primary/5">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between mb-4 border-b pb-2">
-                  <label className="text-sm font-bold text-primary flex items-center gap-2">
-                    <BookOpen className="w-4 h-4" /> লেকচার কন্টেন্ট এডিটর
-                  </label>
+                  <label className="text-sm font-bold text-primary flex items-center gap-2"><BookOpen className="w-4 h-4" /> লেকচার কন্টেন্ট এডিটর</label>
                   <span className="text-[10px] text-muted-foreground font-bold italic">ম্যাথ ফরমেট সাপোর্ট করে</span>
                 </div>
                 <Textarea 
-                  placeholder="এখানে আপনার লেকচার নোট লিখুন... সেট লিখতে {x \in \mathbb{N} : x < 4} এভাবে টাইপ করুন।" 
+                  placeholder="এখানে আপনার লেকচার নোট লিখুন..." 
                   value={data.content || ''} 
                   onChange={Eisen => setData(prev => ({...prev, content: Eisen.target.value}))} 
                   className="min-h-[600px] text-base leading-relaxed font-bold border-none focus-visible:ring-0 shadow-none px-0" 
@@ -330,18 +334,13 @@ function CreateLectureSheetContent() {
              <div className="flex justify-between items-center">
                 <div className="flex items-center gap-3">
                    <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center"><Eye className="w-5 h-5" /></div>
-                   <h3 className="font-bold text-lg">প্রিন্ট প্রিভিউ ও লেআউট সেটিংস</h3>
+                   <h3 className="font-bold text-lg">প্রিন্ট প্রিভিউ ও লেআউট সেটিংস (মোট {toBengaliNumber(paginatedPages.length)} পাতা)</h3>
                 </div>
                 <div className="flex gap-3">
-                  <Button variant="outline" onClick={() => router.back()} className="gap-2 font-bold border-primary text-primary bg-white">
-                    <ArrowLeft className="w-4 h-4" /> এডিটরে ফিরুন
-                  </Button>
-                  <Button onClick={() => window.print()} className="gap-2 font-bold bg-primary px-8 shadow-lg">
-                    <Printer className="w-4 h-4" /> প্রিন্ট করুন
-                  </Button>
+                  <Button variant="outline" onClick={() => router.back()} className="gap-2 font-bold border-primary text-primary bg-white"><ArrowLeft className="w-4 h-4" /> এডিটরে ফিরুন</Button>
+                  <Button onClick={() => window.print()} className="gap-2 font-bold bg-primary px-8 shadow-lg"><Printer className="w-4 h-4" /> প্রিন্ট করুন</Button>
                 </div>
              </div>
-
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 p-4 bg-white rounded-xl border border-slate-200">
                 <div className="space-y-2">
                    <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1"><Settings2 className="w-3 h-3" /> মার্জিন (টপ)</label>
@@ -361,65 +360,53 @@ function CreateLectureSheetContent() {
                 </div>
                 <div className="space-y-2">
                    <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1"><SlidersHorizontal className="w-3 h-3" /> জলছাপ ব্রাইটনেস ({toBengaliNumber(printSettings.watermarkOpacity)}%)</label>
-                   <div className="pt-2">
-                     <Slider 
-                        value={[printSettings.watermarkOpacity]} 
-                        max={100} 
-                        step={1} 
-                        onValueChange={([v]) => setPrintSettings(p => ({...p, watermarkOpacity: v}))} 
-                     />
-                   </div>
+                   <div className="pt-2"><Slider value={[printSettings.watermarkOpacity]} max={100} step={1} onValueChange={([v]) => setPrintSettings(p => ({...p, watermarkOpacity: v}))} /></div>
                 </div>
              </div>
           </div>
 
-          <div className="print-area py-10 flex justify-center bg-slate-200 min-h-screen">
-             <div 
-               className="paper shadow-2xl bg-white relative overflow-hidden" 
-               style={{ 
-                 width: '8.27in', 
-                 minHeight: '11.69in',
-                 padding: `${printSettings.marginTop}in ${printSettings.marginRight}in ${printSettings.marginBottom}in ${printSettings.marginLeft}in`,
-                 lineHeight: '1.2'
-               }}
-             >
-                {/* Watermark */}
-                <div 
-                  className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden"
-                  style={{ 
-                    opacity: printSettings.watermarkOpacity / 100, 
-                    transform: 'rotate(-45deg)', 
-                    whiteSpace: 'nowrap' 
-                  }}
-                >
-                  <span className="text-[80pt] font-black text-black">
-                    {softwareConfig?.appName || 'টপ গ্রেড টিউটোরিয়ালস'}
-                  </span>
-                </div>
+          <div className="print-area py-10 flex flex-col items-center bg-slate-200 min-h-screen gap-10">
+             {paginatedPages.map((pageHtml, idx) => (
+               <div 
+                 key={idx}
+                 className="paper shadow-2xl bg-white relative overflow-hidden flex flex-col" 
+                 style={{ 
+                   width: '8.27in', 
+                   height: '11.69in',
+                   padding: `${printSettings.marginTop}in ${printSettings.marginRight}in ${printSettings.marginBottom}in ${printSettings.marginLeft}in`,
+                   lineHeight: '1.2'
+                 }}
+               >
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden" style={{ opacity: printSettings.watermarkOpacity / 100, transform: 'rotate(-45deg)', whiteSpace: 'nowrap' }}>
+                    <span className="text-[80pt] font-black text-black">{softwareConfig?.appName || 'টপ গ্রেড টিউটোরিয়ালস'}</span>
+                  </div>
 
-                {/* Content */}
-                <div className="relative z-10 space-y-4 text-black">
-                  <header className="text-center border-b-2 border-black pb-1 mb-2">
-                    <h1 className="font-black text-[23px] text-black leading-tight">
-                      {data.institution || softwareConfig?.appName || 'শিক্ষা প্রতিষ্ঠানের নাম'}
-                    </h1>
-                    <div className="flex justify-center gap-8 text-[10pt] font-bold mt-1">
-                      <span>শ্রেণি: {CLASSES.find(c => c.id === data.classId)?.label || ''} শ্রেণি</span>
-                      <span>বিষয়: {data.subject}</span>
-                    </div>
-                  </header>
-                  
-                  <h2 className="text-[13pt] font-bold text-center underline uppercase mb-4">
-                    {data.topic || 'লেকচার শিট'}
-                  </h2>
+                  <div className="relative z-10 flex flex-col h-full text-black">
+                    <header className="text-center border-b-2 border-black pb-1 mb-2">
+                      <h1 className="font-black text-[23px] text-black leading-tight">{data.institution || softwareConfig?.appName || 'শিক্ষা প্রতিষ্ঠানের নাম'}</h1>
+                      <div className="flex justify-center gap-8 text-[10pt] font-bold mt-1">
+                        <span>শ্রেণি: {CLASSES.find(c => c.id === data.classId)?.label || ''} শ্রেণি</span>
+                        <span>বিষয়: {data.subject}</span>
+                      </div>
+                    </header>
+                    
+                    {idx === 0 && (
+                      <h2 className="text-[13pt] font-bold text-center underline uppercase mb-4">{data.topic || 'লেকচার শিট'}</h2>
+                    )}
 
-                  <div 
-                    className="content-area text-[10.5pt] text-justify whitespace-pre-wrap"
-                    style={{ lineHeight: '1.2' }}
-                    dangerouslySetInnerHTML={{ __html: formatMath(data.content) }}
-                  />
-                </div>
-             </div>
+                    <div 
+                      className="content-area text-[10.5pt] text-justify flex-1"
+                      style={{ lineHeight: '1.2' }}
+                      dangerouslySetInnerHTML={{ __html: pageHtml }}
+                    />
+                    
+                    <footer className="mt-auto pt-4 flex justify-between text-[9pt] font-bold border-t border-slate-200">
+                      <span>পাতা: {toBengaliNumber(idx + 1)} / {toBengaliNumber(paginatedPages.length)}</span>
+                      <span>{softwareConfig?.appName || 'টপ গ্রেড টিউটোরিয়ালস'}</span>
+                    </footer>
+                  </div>
+               </div>
+             ))}
           </div>
         </div>
       )}
@@ -441,11 +428,10 @@ function CreateLectureSheetContent() {
         @media print {
           body * { visibility: hidden; }
           .print-area, .print-area * { visibility: visible; }
-          .print-area { position: absolute; left: 0; top: 0; width: 100%; padding: 0 !important; background: white !important; }
-          .paper { margin: 0 !important; box-shadow: none !important; width: 100% !important; padding: 0 !important; }
+          .print-area { position: absolute; left: 0; top: 0; width: 100%; padding: 0 !important; background: white !important; display: block !important; }
+          .paper { margin: 0 !important; box-shadow: none !important; width: 100% !important; height: 11.69in !important; padding: 0 !important; page-break-after: always; position: relative; }
           @page { size: A4; margin: 0; }
           .no-print { display: none !important; }
-          
           .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
           .math-num { border-bottom: 0.5pt solid black; padding: 0 1px; }
           .math-den { padding: 0 1px; }
