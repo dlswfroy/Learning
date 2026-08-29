@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, Save, FileText, ArrowLeft, Loader2, BookOpen, ScanText, Eye, Settings2, SlidersHorizontal, Image as ImageIcon, X, Type, Bold, AlignLeft, AlignCenter, AlignRight, AlignJustify, Edit3, FileDown, Trash2 } from 'lucide-react';
+import { Printer, Save, FileText, ArrowLeft, Loader2, BookOpen, ScanText, Eye, Settings2, SlidersHorizontal, Image as ImageIcon, X, Type, Bold, Underline, Rows3, AlignLeft, AlignCenter, AlignRight, AlignJustify, Edit3, FileDown, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useDoc } from '@/firebase';
 import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
@@ -118,6 +118,7 @@ function CreateLectureSheetContent() {
   const [activeEditIdx, setActiveEditIdx] = useState<number | null>(null);
   const [manualPages, setManualPages] = useState<Record<number, string>>({});
   const [globalFontSize, setGlobalFontSize] = useState(10.5);
+  const [globalLineHeight, setGlobalLineHeight] = useState(1.2);
 
   useEffect(() => { if (!userLoading && !user) router.push('/auth'); }, [user, userLoading, router]);
   
@@ -142,6 +143,7 @@ function CreateLectureSheetContent() {
           if (docData.pageStyles) {
             setPageStyles(docData.pageStyles);
             if (docData.pageStyles[0]?.fontSize) setGlobalFontSize(docData.pageStyles[0].fontSize);
+            if (docData.pageStyles[0]?.lineHeight) setGlobalLineHeight(docData.pageStyles[0].lineHeight);
           }
           if (docData.manualPages) setManualPages(docData.manualPages);
         }
@@ -171,7 +173,7 @@ function CreateLectureSheetContent() {
       container.style.width = (8.27 - mL - mR) + 'in';
       container.style.fontFamily = 'Kalpurush, sans-serif';
       container.style.fontSize = globalFontSize + 'pt';
-      container.style.lineHeight = '1.2';
+      container.style.lineHeight = String(globalLineHeight);
       
       const tempLines = contentHtml.split('\n');
       const lineHtml = tempLines.map(line => `<div class="measure-line" style="min-height: 1.2em;">${line.trim() || '&nbsp;'}</div>`).join('');
@@ -215,14 +217,14 @@ function CreateLectureSheetContent() {
       const initialStyles: Record<number, any> = {};
       const initialManual: Record<number, string> = {};
       pagesToRender.forEach((p, i) => {
-         initialStyles[i] = { fontSize: globalFontSize, bold: false, color: '#000000', align: 'justify', mT, mB, mL, mR };
+         initialStyles[i] = { fontSize: globalFontSize, lineHeight: globalLineHeight, bold: false, underline: false, color: '#000000', align: 'justify', mT, mB, mL, mR };
          initialManual[i] = p;
       });
       
       setPageStyles(initialStyles);
       setManualPages(initialManual);
     }
-  }, [isPrintMode, data.content, printSettings, globalFontSize]);
+  }, [isPrintMode, data.content, printSettings, globalFontSize, globalLineHeight]);
 
   const subjects = useMemo(() => data.classId ? getSubjectsForClass(data.classId) : [], [data.classId]);
 
@@ -317,6 +319,17 @@ function CreateLectureSheetContent() {
     });
   };
 
+  const handleGlobalLineHeightChange = (val: number) => {
+    setGlobalLineHeight(val);
+    setPageStyles(prev => {
+      const updated = { ...prev };
+      Object.keys(updated).forEach(idx => {
+        updated[parseInt(idx)] = { ...updated[parseInt(idx)], lineHeight: val };
+      });
+      return updated;
+    });
+  };
+
   const handleFormatting = (command: string, value: string | null = null) => {
     const selection = window.getSelection();
     const hasSelection = selection && selection.rangeCount > 0 && !selection.isCollapsed;
@@ -335,12 +348,23 @@ function CreateLectureSheetContent() {
             font.parentNode?.replaceChild(span, font);
           });
         }
+      } else if (command === 'lineHeight') {
+        const range = selection.getRangeAt(0);
+        if (range) {
+          const span = document.createElement('span');
+          span.style.lineHeight = value + '';
+          span.style.display = 'inline-block';
+          span.appendChild(range.extractContents());
+          range.insertNode(span);
+        }
       } else {
         document.execCommand(command, false, value || '');
       }
     } else if (activeEditIdx !== null) {
       if (command === 'fontSize') updatePageStyle(activeEditIdx, 'fontSize', parseFloat(value || '10.5'));
+      if (command === 'lineHeight') updatePageStyle(activeEditIdx, 'lineHeight', parseFloat(value || '1.2'));
       if (command === 'bold') updatePageStyle(activeEditIdx, 'bold', !pageStyles[activeEditIdx].bold);
+      if (command === 'underline') updatePageStyle(activeEditIdx, 'underline', !pageStyles[activeEditIdx].underline);
       if (command === 'foreColor') updatePageStyle(activeEditIdx, 'color', value);
       if (command.startsWith('justify')) {
         const alignMap: any = { justifyLeft: 'left', justifyCenter: 'center', justifyRight: 'right', justifyFull: 'justify' };
@@ -383,7 +407,7 @@ function CreateLectureSheetContent() {
 
   return (
     <div className="max-w-[1400px] mx-auto space-y-8 pb-32 font-kalpurush">
-      <div ref={measurementRef} className="fixed invisible pointer-events-none whitespace-pre-wrap text-[10.5pt] font-kalpurush" style={{ width: '7.27in', lineHeight: '1.2' }} />
+      <div ref={measurementRef} className="fixed invisible pointer-none whitespace-pre-wrap text-[10.5pt] font-kalpurush" style={{ width: '7.27in', lineHeight: '1.2' }} />
 
       <div className={cn("no-print space-y-8", isPrintMode && "hidden")}>
         <header className="flex items-center justify-between border-b pb-4">
@@ -497,16 +521,36 @@ function CreateLectureSheetContent() {
                         />
                       </div>
 
-                      <div className="flex items-center justify-between">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase">বোল্ড (Bold)</label>
-                        <Button 
-                          variant={pageStyles[activeEditIdx].bold ? 'default' : 'outline'} 
-                          size="icon" className="h-8 w-8" 
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-slate-500 flex justify-between">লাইন স্পেসিং <span>{toBengaliNumber(pageStyles[activeEditIdx].lineHeight)}</span></label>
+                        <Slider 
+                          value={[pageStyles[activeEditIdx].lineHeight]} 
+                          min={1.0} max={3.0} step={0.1} 
                           onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => handleFormatting('bold')}
-                        >
-                          <Bold className="w-4 h-4" />
-                        </Button>
+                          onValueChange={([v]) => handleFormatting('lineHeight', v.toString())} 
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase">টেক্সট স্টাইল</label>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant={pageStyles[activeEditIdx].bold ? 'default' : 'outline'} 
+                            size="icon" className="h-8 w-8" 
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => handleFormatting('bold')}
+                          >
+                            <Bold className="w-4 h-4" />
+                          </Button>
+                          <Button 
+                            variant={pageStyles[activeEditIdx].underline ? 'default' : 'outline'} 
+                            size="icon" className="h-8 w-8" 
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => handleFormatting('underline')}
+                          >
+                            <Underline className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
 
                       <div className="space-y-2">
@@ -559,7 +603,22 @@ function CreateLectureSheetContent() {
                           onMouseDown={(e) => e.preventDefault()}
                           onValueChange={([v]) => handleGlobalFontSizeChange(v)} 
                         />
-                        <p className="text-[8px] font-bold text-muted-foreground italic leading-tight">এটি পরিবর্তন করলে সকল পাতার ফন্ট সাইজ একসাথে পরিবর্তিত হবে।</p>
+                      </div>
+                   </div>
+
+                   <div className="space-y-4">
+                      <h4 className="text-xs font-black text-slate-500 uppercase flex items-center gap-2"><Rows3 className="w-3.5 h-3.5" /> গ্লোবাল লাইন স্পেসিং</h4>
+                      <div className="p-4 rounded-xl border-2 border-slate-100 bg-slate-50/30 space-y-3">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">লাইন স্পেসিং</label>
+                          <span className="text-xs font-black text-primary">{toBengaliNumber(globalLineHeight)}</span>
+                        </div>
+                        <Slider 
+                          value={[globalLineHeight]} 
+                          min={1.0} max={3.0} step={0.1} 
+                          onMouseDown={(e) => e.preventDefault()}
+                          onValueChange={([v]) => handleGlobalLineHeightChange(v)} 
+                        />
                       </div>
                    </div>
 
@@ -640,7 +699,7 @@ function CreateLectureSheetContent() {
 
             <main className="print-main-area flex-1 overflow-y-auto bg-slate-200 pt-16 pb-24 flex flex-col items-center gap-10 relative">
                {paginatedPages.map((pageHtml, idx) => {
-                 const style = pageStyles[idx] || { fontSize: globalFontSize, bold: false, color: '#000000', align: 'justify', mT: 0.5, mB: 0.5, mL: 0.5, mR: 0.5 };
+                 const style = pageStyles[idx] || { fontSize: globalFontSize, lineHeight: globalLineHeight, bold: false, underline: false, color: '#000000', align: 'justify', mT: 0.5, mB: 0.5, mL: 0.5, mR: 0.5 };
                  const mT = parseFloat(String(style.mT)) || 0.5;
                  const mB = parseFloat(String(style.mB)) || 0.5;
                  const mL = parseFloat(String(style.mL)) || 0.5;
@@ -677,7 +736,7 @@ function CreateLectureSheetContent() {
                           setManualPages(prev => ({ ...prev, [idx]: htmlValue }));
                         }}
                         className={cn("content-area flex-1 font-kalpurush outline-none", activeEditIdx === idx && "bg-blue-50/20 p-1 rounded border border-dashed border-blue-300")}
-                        style={{ lineHeight: '1.2', fontSize: `${style.fontSize}pt`, fontWeight: style.bold ? 'bold' : 'normal', color: style.color, textAlign: style.align as any }}
+                        style={{ lineHeight: String(style.lineHeight), fontSize: `${style.fontSize}pt`, fontWeight: style.bold ? 'bold' : 'normal', textDecoration: style.underline ? 'underline' : 'none', color: style.color, textAlign: style.align as any }}
                         dangerouslySetInnerHTML={{ __html: manualPages[idx] || pageHtml }}
                       />
                       <footer className="mt-auto pt-4 flex justify-between text-[9pt] font-bold border-t border-slate-200"><span>পাতা: {toBengaliNumber(idx + 1)} / {toBengaliNumber(paginatedPages.length)}</span><span>{softwareConfig?.appName || 'টপ গ্রেড টিউটোরিয়ালস'}</span></footer>
