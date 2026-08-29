@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, Save, FileText, ArrowLeft, Loader2, BookOpen, ScanText, Eye, Settings2, SlidersHorizontal, Image as ImageIcon, X, Type, Compass, RotateCw } from 'lucide-react';
+import { Printer, Save, FileText, ArrowLeft, Loader2, BookOpen, ScanText, Eye, Settings2, SlidersHorizontal, Image as ImageIcon, X, Type, RotateCw } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useDoc } from '@/firebase';
 import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
@@ -157,19 +157,21 @@ function CreateLectureSheetContent() {
       const mL = parseFloat(String(printSettings.marginLeft)) || 0.5;
       const mR = parseFloat(String(printSettings.marginRight)) || 0.5;
 
-      // Sync measurement width with custom margins accurately
+      // Ensure measurement container exactly matches content area width
       container.style.width = (8.27 - mL - mR) + 'in';
+      container.style.padding = '0';
+      container.style.boxSizing = 'border-box';
       
       const tempLines = contentHtml.split('\n');
-      const lineHtml = tempLines.map(line => `<div class="measure-line" style="margin-bottom: 0px; min-height: 1.2em;">${line.trim() || '&nbsp;'}</div>`).join('');
+      const lineHtml = tempLines.map(line => `<div class="measure-line" style="margin: 0; padding: 0; min-height: 1.2em; box-sizing: border-box; overflow: hidden;">${line.trim() || '&nbsp;'}</div>`).join('');
       container.innerHTML = lineHtml;
       
-      // Calculate available height dynamically
-      const headerSpace = 130; // Increased buffer for safety
+      // Calculate available height based on A4 height (11.69in) and margins
+      const headerSpace = 130; 
       const footerSpace = 60;
+      const topicSpacePx = 60; 
       const totalPageHeightPx = 11.69 * 96;
       const availableHeightPx = totalPageHeightPx - (mT * 96) - (mB * 96) - headerSpace - footerSpace;
-      const topicSpacePx = 60; 
       
       const newPages: string[] = [];
       let currentChunk = "";
@@ -177,11 +179,12 @@ function CreateLectureSheetContent() {
 
       const lines = container.querySelectorAll('.measure-line');
       lines.forEach((line) => {
-        const h = (line as HTMLElement).offsetHeight || 18; // Fallback height
+        const h = (line as HTMLElement).offsetHeight || 18; 
         const effectiveLimit = (newPages.length === 0) ? (availableHeightPx - topicSpacePx) : availableHeightPx;
 
         if (currentHeight > 0 && currentHeight + h > effectiveLimit) {
-          if (currentChunk.trim() !== "") {
+          // Push current chunk and start a new one
+          if (currentChunk.trim() !== "" && currentChunk.replace(/(&nbsp;|<br\/?>|\s)/g, '').trim() !== "") {
             newPages.push(currentChunk);
           }
           currentChunk = line.innerHTML + "<br/>";
@@ -192,11 +195,18 @@ function CreateLectureSheetContent() {
         }
       });
       
-      if (currentChunk.trim() !== "") {
+      // Final chunk push
+      if (currentChunk.trim() !== "" && currentChunk.replace(/(&nbsp;|<br\/?>|\s)/g, '').trim() !== "") {
         newPages.push(currentChunk);
       }
       
-      setPaginatedPages(newPages.filter(p => p.replace(/<br\/>/g, '').trim() !== ""));
+      // Strict filter for empty pages
+      const filteredPages = newPages.filter(p => {
+        const textOnly = p.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, '').trim();
+        return textOnly.length > 0;
+      });
+
+      setPaginatedPages(filteredPages.length > 0 ? filteredPages : [""]);
     }
   }, [isPrintMode, data.content, printSettings.marginTop, printSettings.marginBottom, printSettings.marginLeft, printSettings.marginRight]);
 
@@ -572,7 +582,6 @@ function CreateLectureSheetContent() {
                      display: 'block'
                    }}
                  >
-                    {/* Integrated Watermark into Paper Container */}
                     <div 
                       className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden" 
                       style={{ 
@@ -601,7 +610,6 @@ function CreateLectureSheetContent() {
                       )}
                     </div>
 
-                    {/* Integrated Header and Content into Paper Container */}
                     <div className="relative z-10 flex flex-col h-full text-black">
                       <header className="text-center border-b-2 border-black pb-1 mb-2">
                         <h1 className="font-black text-[23px] text-black leading-tight">{data.institution || softwareConfig?.appName || 'শিক্ষা প্রতিষ্ঠানের নাম'}</h1>
