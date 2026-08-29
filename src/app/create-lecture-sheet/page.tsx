@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, Save, FileText, ArrowLeft, Loader2, BookOpen, ScanText, Eye, Settings2, SlidersHorizontal, Image as ImageIcon, X, Type, RotateCw, Bold, AlignLeft, AlignCenter, AlignRight, AlignJustify, Palette, Edit3, FileDown } from 'lucide-react';
+import { Printer, Save, FileText, ArrowLeft, Loader2, BookOpen, ScanText, Eye, Settings2, SlidersHorizontal, Image as ImageIcon, X, Type, Bold, AlignLeft, AlignCenter, AlignRight, AlignJustify, Edit3, FileDown } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useDoc } from '@/firebase';
 import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
@@ -79,7 +79,6 @@ function CreateLectureSheetContent() {
   const [loading, setLoading] = useState(!!editId);
   const [saving, setSaving] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
-  const [existingData, setExistingData] = useState<any>(null);
   const ocrInputRef = useRef<HTMLInputElement>(null);
   const watermarkImageRef = useRef<HTMLInputElement>(null);
   const measurementRef = useRef<HTMLDivElement>(null);
@@ -126,7 +125,6 @@ function CreateLectureSheetContent() {
         if (docSnap.exists()) {
           const docData = docSnap.data();
           if (docData.userId !== user.uid) { router.push('/'); return; }
-          setExistingData(docData);
           setData({
             institution: docData.institution || 'টপ গ্রেড টিউটোরিয়ালস',
             classId: docData.classId || '',
@@ -145,7 +143,17 @@ function CreateLectureSheetContent() {
   }, [editId, db, user, router]);
 
   useEffect(() => {
-    if (isPrintMode && data.content && measurementRef.current && Object.keys(manualPages).length === 0) {
+    if (!isPrintMode) return;
+
+    // Case 1: Initializing from saved manualPages
+    if (Object.keys(manualPages).length > 0 && paginatedPages.length === 0) {
+      const sortedIndices = Object.keys(manualPages).map(Number).sort((a, b) => a - b);
+      setPaginatedPages(sortedIndices.map(idx => manualPages[idx]));
+      return;
+    }
+
+    // Case 2: Fresh pagination from data.content
+    if (data.content && measurementRef.current && Object.keys(manualPages).length === 0) {
       const container = measurementRef.current;
       const contentHtml = formatMath(data.content);
       
@@ -190,18 +198,19 @@ function CreateLectureSheetContent() {
       
       if (currentChunk.trim() !== "") newPages.push(currentChunk);
       const filteredPages = newPages.filter(p => p.replace(/<[^>]*>/g, '').trim().length > 0);
-      setPaginatedPages(filteredPages.length > 0 ? filteredPages : [""]);
+      const finalPages = filteredPages.length > 0 ? filteredPages : [""];
+      setPaginatedPages(finalPages);
       
       const initialStyles: Record<number, any> = {};
       const initialManual: Record<number, string> = {};
-      (filteredPages.length > 0 ? filteredPages : [""]).forEach((p, i) => {
+      finalPages.forEach((p, i) => {
          initialStyles[i] = { fontSize: 10.5, bold: false, color: '#000000', align: 'justify', mT, mB, mL, mR };
          initialManual[i] = p;
       });
       setPageStyles(prev => ({ ...initialStyles, ...prev }));
       setManualPages(prev => ({ ...initialManual, ...prev }));
     }
-  }, [isPrintMode, data.content, printSettings.marginTop, printSettings.marginBottom, printSettings.marginLeft, printSettings.marginRight, manualPages]);
+  }, [isPrintMode, data.content, printSettings, manualPages, paginatedPages.length]);
 
   const subjects = useMemo(() => data.classId ? getSubjectsForClass(data.classId) : [], [data.classId]);
 
@@ -243,9 +252,8 @@ function CreateLectureSheetContent() {
     if (hasSelection) {
       document.execCommand('styleWithCSS', false, 'true');
       if (command === 'fontSize') {
-        // CONTENTEDITABLE FONT SIZE PT HACK
         document.execCommand('fontSize', false, '7');
-        const editableDiv = document.querySelector(`.paper-idx-${activeEditIdx} .content-area`);
+        const editableDiv = document.querySelector(`.paper-idx-${activeEditIdx} .content-area`) as HTMLElement;
         if (editableDiv) {
           const fonts = editableDiv.querySelectorAll('font[size="7"]');
           fonts.forEach(font => {
@@ -254,17 +262,16 @@ function CreateLectureSheetContent() {
             span.innerHTML = font.innerHTML;
             font.parentNode?.replaceChild(span, font);
           });
-          setManualPages(prev => ({ ...prev, [activeEditIdx!]: editableDiv.innerHTML }));
+          const updatedHTML = editableDiv.innerHTML;
+          setManualPages(prev => ({ ...prev, [activeEditIdx!]: updatedHTML }));
         }
-      } else if (command === 'bold') {
-        document.execCommand('bold', false);
-      } else if (command === 'foreColor') {
-        document.execCommand('foreColor', false, value || '');
-      }
-      
-      const editableDiv = document.querySelector(`.paper-idx-${activeEditIdx} .content-area`);
-      if (editableDiv) {
-        setManualPages(prev => ({ ...prev, [activeEditIdx!]: editableDiv.innerHTML }));
+      } else {
+        document.execCommand(command, false, value || '');
+        const editableDiv = document.querySelector(`.paper-idx-${activeEditIdx} .content-area`) as HTMLElement;
+        if (editableDiv) {
+          const updatedHTML = editableDiv.innerHTML;
+          setManualPages(prev => ({ ...prev, [activeEditIdx!]: updatedHTML }));
+        }
       }
     } else if (activeEditIdx !== null) {
       if (command === 'fontSize') updatePageStyle(activeEditIdx, 'fontSize', parseFloat(value || '10.5'));
