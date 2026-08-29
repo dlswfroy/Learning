@@ -157,11 +157,10 @@ function CreateLectureSheetContent() {
     if (!isPrintMode) return;
 
     // Check if we should restore from manualPages or re-paginate from editor content
-    if (Object.keys(manualPages).length > 0 && paginatedPages.length === 0) {
+    if (Object.keys(manualPages).length > 0) {
       const sortedIndices = Object.keys(manualPages).map(Number).sort((a, b) => a - b);
       const restoredPages = sortedIndices.map(idx => manualPages[idx]);
       
-      // Smart check: if the editor content is significantly different from manual pages, re-paginate
       const editorText = data.content.replace(/<[^>]*>/g, '').replace(/\s/g, '');
       const manualCombinedText = restoredPages.join('').replace(/<[^>]*>/g, '').replace(/\s|&nbsp;/g, '');
       
@@ -169,7 +168,6 @@ function CreateLectureSheetContent() {
         setPaginatedPages(restoredPages);
         return;
       }
-      // If content is different, fall through to re-pagination logic
     }
 
     if (data.content && measurementRef.current) {
@@ -243,18 +241,25 @@ function CreateLectureSheetContent() {
     if (!user || !db) return;
     
     let currentManualPages = { ...manualPages };
-    const activeEl = document.activeElement;
-    if (activeEl && activeEl.getAttribute('contenteditable') === 'true') {
-      const paper = activeEl.closest('.paper');
-      if (paper) {
+    
+    // Sync current DOM content to manualPages if in print mode
+    if (isPrintMode) {
+      const papers = document.querySelectorAll('.paper');
+      papers.forEach(paper => {
         const match = paper.className.match(/paper-idx-(\d+)/);
         if (match) {
           const idx = parseInt(match[1]);
-          const currentHTML = (activeEl as HTMLElement).innerHTML || "";
-          currentManualPages[idx] = currentHTML;
+          const contentArea = paper.querySelector('.content-area');
+          if (contentArea) {
+            currentManualPages[idx] = contentArea.innerHTML || "";
+          }
         }
-      }
+      });
     }
+
+    // Merge manual pages into data.content to sync both editors
+    const sortedIndices = Object.keys(currentManualPages).map(Number).sort((a, b) => a - b);
+    const updatedFullContent = sortedIndices.map(idx => currentManualPages[idx]).join('\n\n');
 
     setSaving(true);
     const docId = editId || doc(collection(db, 'lecture-sheets')).id;
@@ -262,6 +267,7 @@ function CreateLectureSheetContent() {
     
     const payload: any = { 
       ...data, 
+      content: updatedFullContent,
       printSettings, 
       pageStyles, 
       manualPages: currentManualPages, 
@@ -274,10 +280,10 @@ function CreateLectureSheetContent() {
       .then(() => { 
         setSaving(false); 
         setManualPages(currentManualPages);
-        const sortedIndices = Object.keys(currentManualPages).map(Number).sort((a, b) => a - b);
+        setData(prev => ({ ...prev, content: updatedFullContent }));
         setPaginatedPages(sortedIndices.map(idx => currentManualPages[idx]));
         
-        toast({ title: "সফল!", description: "লেকচার শিট সরাসরি সেভ হয়েছে।" }); 
+        toast({ title: "সফল!", description: "লেকচার শিট সরাসরি সেভ হয়েছে এবং এডিটর সিঙ্ক হয়েছে।" }); 
         if (!editId) router.replace(`/create-lecture-sheet?id=${docId}`); 
       })
       .catch(async (error) => { 
@@ -288,7 +294,7 @@ function CreateLectureSheetContent() {
           requestResourceData: payload 
         })); 
       });
-  }, [user, db, editId, data, printSettings, pageStyles, manualPages, router, toast]);
+  }, [user, db, editId, data, printSettings, pageStyles, manualPages, router, toast, isPrintMode]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -390,29 +396,23 @@ function CreateLectureSheetContent() {
     const newPaginated = paginatedPages.filter((_, i) => i !== idx);
     setPaginatedPages(newPaginated);
     
-    setManualPages(prev => {
-      const next: Record<number, string> = {};
-      newPaginated.forEach((content, i) => {
-        const oldIdx = i < idx ? i : i + 1;
-        if (prev[oldIdx] !== undefined) {
-          next[i] = prev[oldIdx];
-        } else {
-          next[i] = content;
-        }
-      });
-      return next;
+    const nextManual: Record<number, string> = {};
+    const nextStyles: Record<number, any> = {};
+
+    newPaginated.forEach((content, i) => {
+      const oldIdx = i < idx ? i : i + 1;
+      if (manualPages[oldIdx] !== undefined) {
+        nextManual[i] = manualPages[oldIdx];
+      } else {
+        nextManual[i] = content;
+      }
+      if (pageStyles[oldIdx]) {
+        nextStyles[i] = pageStyles[oldIdx];
+      }
     });
 
-    setPageStyles(prev => {
-      const next: Record<number, any> = {};
-      newPaginated.forEach((_, i) => {
-        const oldIdx = i < idx ? i : i + 1;
-        if (prev[oldIdx]) {
-          next[i] = prev[oldIdx];
-        }
-      });
-      return next;
-    });
+    setManualPages(nextManual);
+    setPageStyles(nextStyles);
 
     if (activeEditIdx === idx) setActiveEditIdx(null);
     else if (activeEditIdx !== null && activeEditIdx > idx) setActiveEditIdx(activeEditIdx - 1);
