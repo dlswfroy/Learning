@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, Save, FileText, ArrowLeft, Loader2, BookOpen, ScanText, Eye } from 'lucide-react';
+import { Printer, Save, FileText, ArrowLeft, Loader2, BookOpen, ScanText, Eye, Settings2, SlidersHorizontal } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useDoc } from '@/firebase';
 import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
@@ -17,6 +17,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { cn } from '@/lib/utils';
 import Tesseract from 'tesseract.js';
+import { Slider } from '@/components/ui/slider';
 
 function toBengaliNumber(n: number | string | undefined | null): string {
   if (n === undefined || n === null || n === '') return '';
@@ -92,6 +93,15 @@ function CreateLectureSheetContent() {
     type: 'written'
   });
 
+  // Print Layout and Watermark settings
+  const [printSettings, setPrintSettings] = useState({
+    marginTop: 0.5,
+    marginBottom: 0.5,
+    marginLeft: 0.5,
+    marginRight: 0.5,
+    watermarkOpacity: 8 // Percent
+  });
+
   useEffect(() => { if (!userLoading && !user) router.push('/auth'); }, [user, userLoading, router]);
   
   useEffect(() => {
@@ -112,6 +122,9 @@ function CreateLectureSheetContent() {
             content: docData.content || '',
             type: docData.type || 'written'
           });
+          if (docData.printSettings) {
+            setPrintSettings(docData.printSettings);
+          }
         }
       } catch (e) {} finally { setLoading(false); }
     }
@@ -130,6 +143,7 @@ function CreateLectureSheetContent() {
     
     const payload: any = {
       ...data,
+      printSettings,
       userId: user.uid,
       updatedAt: serverTimestamp(),
     };
@@ -187,6 +201,7 @@ function CreateLectureSheetContent() {
     const currentPath = window.location.pathname;
     const params = new URLSearchParams(window.location.search);
     params.set('print', 'true');
+    if (editId) params.set('id', editId);
     router.push(`${currentPath}?${params.toString()}`);
   };
 
@@ -310,86 +325,134 @@ function CreateLectureSheetContent() {
       </div>
 
       {isPrintMode && (
-        <div className="no-print flex justify-center gap-4 py-6 border-b bg-slate-100 shadow-inner sticky top-0 z-[100]">
-          <Button variant="outline" onClick={() => router.back()} className="gap-2 font-bold border-primary text-primary bg-white shadow-sm">
-            <ArrowLeft className="w-4 h-4" /> এডিটরে ফিরুন
-          </Button>
-          <Button onClick={() => window.print()} className="gap-2 font-bold bg-primary shadow-lg shadow-primary/20 px-8">
-            <Printer className="w-4 h-4" /> প্রিন্ট করুন
-          </Button>
+        <div className="no-print space-y-6">
+          <div className="flex flex-col gap-6 p-6 bg-slate-100 border-b sticky top-0 z-[100] shadow-md rounded-b-xl">
+             <div className="flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                   <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center"><Eye className="w-5 h-5" /></div>
+                   <h3 className="font-bold text-lg">প্রিন্ট প্রিভিউ ও লেআউট সেটিংস</h3>
+                </div>
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={() => router.back()} className="gap-2 font-bold border-primary text-primary bg-white">
+                    <ArrowLeft className="w-4 h-4" /> এডিটরে ফিরুন
+                  </Button>
+                  <Button onClick={() => window.print()} className="gap-2 font-bold bg-primary px-8 shadow-lg">
+                    <Printer className="w-4 h-4" /> প্রিন্ট করুন
+                  </Button>
+                </div>
+             </div>
+
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 p-4 bg-white rounded-xl border border-slate-200">
+                <div className="space-y-2">
+                   <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1"><Settings2 className="w-3 h-3" /> মার্জিন (টপ)</label>
+                   <Input type="number" step="0.1" value={printSettings.marginTop} onChange={e => setPrintSettings(p => ({...p, marginTop: parseFloat(e.target.value)}))} className="h-8 font-bold" />
+                </div>
+                <div className="space-y-2">
+                   <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1"><Settings2 className="w-3 h-3" /> মার্জিন (বটম)</label>
+                   <Input type="number" step="0.1" value={printSettings.marginBottom} onChange={e => setPrintSettings(p => ({...p, marginBottom: parseFloat(e.target.value)}))} className="h-8 font-bold" />
+                </div>
+                <div className="space-y-2">
+                   <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1"><Settings2 className="w-3 h-3" /> মার্জিন (বাম)</label>
+                   <Input type="number" step="0.1" value={printSettings.marginLeft} onChange={e => setPrintSettings(p => ({...p, marginLeft: parseFloat(e.target.value)}))} className="h-8 font-bold" />
+                </div>
+                <div className="space-y-2">
+                   <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1"><Settings2 className="w-3 h-3" /> মার্জিন (ডান)</label>
+                   <Input type="number" step="0.1" value={printSettings.marginRight} onChange={e => setPrintSettings(p => ({...p, marginRight: parseFloat(e.target.value)}))} className="h-8 font-bold" />
+                </div>
+                <div className="space-y-2">
+                   <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1"><SlidersHorizontal className="w-3 h-3" /> জলছাপ ব্রাইটনেস ({toBengaliNumber(printSettings.watermarkOpacity)}%)</label>
+                   <div className="pt-2">
+                     <Slider 
+                        value={[printSettings.watermarkOpacity]} 
+                        max={100} 
+                        step={1} 
+                        onValueChange={([v]) => setPrintSettings(p => ({...p, watermarkOpacity: v}))} 
+                     />
+                   </div>
+                </div>
+             </div>
+          </div>
+
+          <div className="print-area py-10 flex justify-center bg-slate-200 min-h-screen">
+             <div 
+               className="paper shadow-2xl bg-white relative overflow-hidden" 
+               style={{ 
+                 width: '8.27in', 
+                 minHeight: '11.69in',
+                 padding: `${printSettings.marginTop}in ${printSettings.marginRight}in ${printSettings.marginBottom}in ${printSettings.marginLeft}in`,
+                 lineHeight: '1.2'
+               }}
+             >
+                {/* Watermark */}
+                <div 
+                  className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden"
+                  style={{ 
+                    opacity: printSettings.watermarkOpacity / 100, 
+                    transform: 'rotate(-45deg)', 
+                    whiteSpace: 'nowrap' 
+                  }}
+                >
+                  <span className="text-[80pt] font-black text-black">
+                    {softwareConfig?.appName || 'টপ গ্রেড টিউটোরিয়ালস'}
+                  </span>
+                </div>
+
+                {/* Content */}
+                <div className="relative z-10 space-y-4 text-black">
+                  <header className="text-center border-b-2 border-black pb-1 mb-2">
+                    <h1 className="font-black text-[23px] text-black leading-tight">
+                      {data.institution || softwareConfig?.appName || 'শিক্ষা প্রতিষ্ঠানের নাম'}
+                    </h1>
+                    <div className="flex justify-center gap-8 text-[10pt] font-bold mt-1">
+                      <span>শ্রেণি: {CLASSES.find(c => c.id === data.classId)?.label || ''} শ্রেণি</span>
+                      <span>বিষয়: {data.subject}</span>
+                    </div>
+                  </header>
+                  
+                  <h2 className="text-[13pt] font-bold text-center underline uppercase mb-4">
+                    {data.topic || 'লেকচার শিট'}
+                  </h2>
+
+                  <div 
+                    className="content-area text-[10.5pt] text-justify whitespace-pre-wrap"
+                    style={{ lineHeight: '1.2' }}
+                    dangerouslySetInnerHTML={{ __html: formatMath(data.content) }}
+                  />
+                </div>
+             </div>
+          </div>
         </div>
       )}
 
-      <div className={cn("print-only font-kalpurush", isPrintMode && "block")}>
-        <style dangerouslySetInnerHTML={{ __html: `
-          @media print, screen {
-            ${isPrintMode ? `
-              body { background: #f0f2f5 !important; }
-              .paper { 
-                background: white !important; 
-                margin: 20px auto !important; 
-                padding: 0.5in !important; 
-                box-shadow: 0 0 20px rgba(0,0,0,0.15);
-                min-height: 11in;
-                width: 8.27in !important;
-                position: relative;
-                z-index: 1;
-              }
-            ` : ''}
-            .paper { 
-              text-align: justify; 
-              color: black !important;
-              line-height: 1.2;
-              position: relative;
-            }
-            .paper::before {
-              content: "${softwareConfig?.appName || 'টপ গ্রেড টিউটোরিয়ালস'}";
-              position: fixed;
-              top: 50%;
-              left: 50%;
-              transform: translate(-50%, -50%) rotate(-45deg);
-              font-size: 80pt;
-              font-weight: 900;
-              color: rgba(0, 0, 0, 0.08);
-              white-space: nowrap;
-              pointer-events: none;
-              z-index: 0;
-            }
-            .header { margin-bottom: 2px; border-bottom: 1.5pt solid black; padding-bottom: 2px; position: relative; z-index: 10; text-align: center; margin-top: 0 !important; }
-            .inst-name { font-size: 23px !important; font-weight: 800; line-height: 1.2; }
-            .topic-title { font-size: 13pt; font-weight: bold; margin: 4px 0; text-align: center; text-decoration: underline; line-height: 1.2; }
-            .meta-info { display: flex; justify-content: center; gap: 20pt; font-weight: 900; margin-top: 2px; font-size: 10pt; border-top: 0.5pt solid #ddd; padding-top: 2px; line-height: 1.2; }
-            .content-area { white-space: pre-wrap; font-size: 10.5pt; line-height: 1.2; background: transparent !important; position: relative; z-index: 10; }
-            
-            .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
-            .math-num { border-bottom: 0.5pt solid black; padding: 0 1px; }
-            .math-den { padding: 0 1px; }
-            .math-dot { position: relative; display: inline-block; }
-            .math-dot::after { content: "·"; position: absolute; top: -0.6em; left: 50%; transform: translateX(-50%); font-weight: bold; font-size: 1.2em; }
-            .math-sqrt { display: inline-flex; align-items: center; }
-            .math-sqrt-stem { border-top: 0.5pt solid black; padding-top: 1px; }
-            .math-sup { font-size: 0.7em; vertical-align: super; }
-            .math-sub { font-size: 0.7em; vertical-align: sub; }
-            .math-text { font-family: 'Kalpurush', sans-serif; font-style: normal; }
-          }
-          @media print {
-            .paper { margin: 0 !important; box-shadow: none !important; padding: 0 !important; padding-top: 0 !important; width: 100% !important; }
-            @page { size: auto; margin: 0.5in !important; }
-          }
-        `}} />
-        
-        <div className="paper">
-          <div className="header">
-            <div className="inst-name">{data.institution || 'শিক্ষা প্রতিষ্ঠানের নাম'}</div>
-            <div className="meta-info">
-              <div>শ্রেণি: {CLASSES.find(c => c.id === data.classId)?.label || ''} শ্রেণি</div>
-              <div>বিষয়: {data.subject}</div>
-            </div>
-          </div>
-          <div className="topic-title">{data.topic || 'লেকচার শিট'}</div>
-          <div className="content-area" dangerouslySetInnerHTML={{ __html: formatMath(data.content) }} style={{ lineHeight: '1.2' }} />
-        </div>
-      </div>
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media screen {
+          .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
+          .math-num { border-bottom: 0.5pt solid black; padding: 0 1px; }
+          .math-den { padding: 0 1px; }
+          .math-dot { position: relative; display: inline-block; }
+          .math-dot::after { content: "·"; position: absolute; top: -0.6em; left: 50%; transform: translateX(-50%); font-weight: bold; font-size: 1.2em; }
+          .math-sqrt { display: inline-flex; align-items: center; }
+          .math-sqrt-stem { border-top: 0.5pt solid black; padding-top: 1px; }
+          .math-sup { font-size: 0.7em; vertical-align: super; }
+          .math-sub { font-size: 0.7em; vertical-align: sub; }
+          .math-text { font-family: 'Kalpurush', sans-serif; font-style: normal; }
+          .paper { color: black !important; }
+        }
+        @media print {
+          body * { visibility: hidden; }
+          .print-area, .print-area * { visibility: visible; }
+          .print-area { position: absolute; left: 0; top: 0; width: 100%; padding: 0 !important; background: white !important; }
+          .paper { margin: 0 !important; box-shadow: none !important; width: 100% !important; padding: 0 !important; }
+          @page { size: A4; margin: 0; }
+          .no-print { display: none !important; }
+          
+          .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
+          .math-num { border-bottom: 0.5pt solid black; padding: 0 1px; }
+          .math-den { padding: 0 1px; }
+          .math-sqrt { display: inline-flex; align-items: center; }
+          .math-sqrt-stem { border-top: 0.5pt solid black; padding-top: 1px; }
+        }
+      `}} />
     </div>
   );
 }
