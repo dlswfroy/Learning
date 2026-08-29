@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, Save, FileText, ArrowLeft, Loader2, BookOpen, ScanText, Eye, Settings2, SlidersHorizontal, Image as ImageIcon, X, Type, Bold, Underline, Rows3, AlignLeft, AlignCenter, AlignRight, AlignJustify, Edit3, FileDown, Trash2 } from 'lucide-react';
+import { Printer, Save, FileText, ArrowLeft, Loader2, BookOpen, ScanText, Eye, Settings2, SlidersHorizontal, Image as ImageIcon, X, Type, Bold, Underline, Rows3, AlignLeft, AlignCenter, AlignRight, AlignJustify, Edit3, FileDown, Trash2, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useDoc } from '@/firebase';
 import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
@@ -163,7 +163,7 @@ function CreateLectureSheetContent() {
       const editorText = data.content.replace(/<[^>]*>/g, '').replace(/\s/g, '');
       const manualCombinedText = restoredPages.join('').replace(/<[^>]*>/g, '').replace(/\s|&nbsp;/g, '');
       
-      // If editor has significantly more content, force re-pagination to create new pages
+      // If editor has significantly more content, force re-pagination
       if (Math.abs(editorText.length - manualCombinedText.length) < 25) {
         setPaginatedPages(restoredPages);
         return;
@@ -244,7 +244,6 @@ function CreateLectureSheetContent() {
     let updatedFullContent = data.content;
     let updatedManualPages = { ...manualPages };
 
-    // Source of truth synchronization based on current mode
     if (isPrintMode) {
       const papers = document.querySelectorAll('.paper');
       const tempManual: Record<number, string> = {};
@@ -417,6 +416,30 @@ function CreateLectureSheetContent() {
     else if (activeEditIdx !== null && activeEditIdx > idx) setActiveEditIdx(activeEditIdx - 1);
     
     toast({ title: "সফল", description: "পাতাটি মুছে ফেলা হয়েছে।" });
+  };
+
+  const handleAddNewPage = () => {
+    const nextIdx = paginatedPages.length;
+    const mT = parseFloat(String(printSettings.marginTop)) || 0.5;
+    const mB = parseFloat(String(printSettings.marginBottom)) || 0.5;
+    const mL = parseFloat(String(printSettings.marginLeft)) || 0.5;
+    const mR = parseFloat(String(printSettings.marginRight)) || 0.5;
+
+    setPaginatedPages(prev => [...prev, ""]);
+    setManualPages(prev => ({ ...prev, [nextIdx]: "" }));
+    setPageStyles(prev => ({ 
+      ...prev, 
+      [nextIdx]: { 
+        fontSize: globalFontSize, 
+        lineHeight: globalLineHeight, 
+        bold: false, 
+        underline: false, 
+        color: '#000000', 
+        align: 'justify', 
+        mT, mB, mL, mR 
+      } 
+    }));
+    toast({ title: "সফল", description: "নতুন পাতা যোগ করা হয়েছে।" });
   };
 
   if (loading || userLoading) return <div className="flex flex-col items-center justify-center p-20 min-h-[50vh]"><Loader2 className="w-12 h-12 animate-spin text-primary mb-4" /><p className="font-bold">অ্যাক্সেস চেক করা হচ্ছে...</p></div>;
@@ -759,6 +782,12 @@ function CreateLectureSheetContent() {
                     </div>
                  </div>
                )})}
+               
+               <div className="no-print pt-4 pb-20">
+                 <Button onClick={handleAddNewPage} variant="outline" className="gap-2 border-2 border-dashed border-primary/50 text-primary font-black h-16 w-[8.27in] bg-white/50 hover:bg-white transition-all shadow-lg rounded-2xl">
+                   <PlusCircle className="w-6 h-6" /> নতুন পাতা যোগ করুন
+                 </Button>
+               </div>
             </main>
           </div>
         </div>
