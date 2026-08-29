@@ -152,19 +152,21 @@ function CreateLectureSheetContent() {
       const container = measurementRef.current;
       const contentHtml = formatMath(data.content);
       
-      const mT = parseFloat(printSettings.marginTop) || 0;
-      const mB = parseFloat(printSettings.marginBottom) || 0;
-      const mL = parseFloat(printSettings.marginLeft) || 0;
-      const mR = parseFloat(printSettings.marginRight) || 0;
+      const mT = parseFloat(String(printSettings.marginTop)) || 0.5;
+      const mB = parseFloat(String(printSettings.marginBottom)) || 0.5;
+      const mL = parseFloat(String(printSettings.marginLeft)) || 0.5;
+      const mR = parseFloat(String(printSettings.marginRight)) || 0.5;
 
-      // Sync measurement width with custom margins
+      // Sync measurement width with custom margins accurately
       container.style.width = (8.27 - mL - mR) + 'in';
       
       const tempLines = contentHtml.split('\n');
       const lineHtml = tempLines.map(line => `<div class="measure-line" style="margin-bottom: 0px;">${line || '&nbsp;'}</div>`).join('');
       container.innerHTML = lineHtml;
       
+      // Calculate height considering header/footer (approx 1.5 inches total buffer)
       const availableHeightPx = (11.69 - mT - mB - 1.5) * 96;
+      const topicSpacePx = 50; // Buffer for the topic header on the first page
       
       const newPages: string[] = [];
       let currentChunk = "";
@@ -173,7 +175,10 @@ function CreateLectureSheetContent() {
       const lines = container.querySelectorAll('.measure-line');
       lines.forEach((line) => {
         const h = (line as HTMLElement).offsetHeight;
-        if (currentHeight + h > availableHeightPx && currentChunk !== "") {
+        // Adjust limit for the first page which has a topic title
+        const effectiveLimit = (newPages.length === 0) ? (availableHeightPx - topicSpacePx) : availableHeightPx;
+
+        if (currentHeight + h > effectiveLimit && currentChunk !== "") {
           newPages.push(currentChunk);
           currentChunk = line.innerHTML + "<br/>";
           currentHeight = h;
@@ -202,10 +207,10 @@ function CreateLectureSheetContent() {
       ...data,
       printSettings: {
         ...printSettings,
-        marginTop: parseFloat(printSettings.marginTop) || 0.5,
-        marginBottom: parseFloat(printSettings.marginBottom) || 0.5,
-        marginLeft: parseFloat(printSettings.marginLeft) || 0.5,
-        marginRight: parseFloat(printSettings.marginRight) || 0.5,
+        marginTop: parseFloat(String(printSettings.marginTop)) || 0.5,
+        marginBottom: parseFloat(String(printSettings.marginBottom)) || 0.5,
+        marginLeft: parseFloat(String(printSettings.marginLeft)) || 0.5,
+        marginRight: parseFloat(String(printSettings.marginRight)) || 0.5,
         watermarkRotation: parseInt(printSettings.watermarkRotation.toString()) || 0,
         watermarkImageSize: parseInt(printSettings.watermarkImageSize.toString()) || 70
       },
@@ -549,14 +554,20 @@ function CreateLectureSheetContent() {
             </aside>
 
             <main className="print-main-area flex-1 overflow-y-auto bg-slate-200 pt-16 pb-24 flex flex-col items-center gap-10 custom-scrollbar relative">
-               {paginatedPages.map((pageHtml, idx) => (
+               {paginatedPages.map((pageHtml, idx) => {
+                 const mT = parseFloat(String(printSettings.marginTop)) || 0.5;
+                 const mB = parseFloat(String(printSettings.marginBottom)) || 0.5;
+                 const mL = parseFloat(String(printSettings.marginLeft)) || 0.5;
+                 const mR = parseFloat(String(printSettings.marginRight)) || 0.5;
+                 
+                 return (
                  <div 
                    key={idx}
                    className="paper shadow-2xl bg-white relative overflow-hidden flex flex-col shrink-0" 
                    style={{ 
                      width: '8.27in', 
                      height: '11.69in',
-                     padding: `${printSettings.marginTop || 0.5}in ${printSettings.marginRight || 0.5}in ${printSettings.marginBottom || 0.5}in ${printSettings.marginLeft || 0.5}in`,
+                     padding: `${mT}in ${mR}in ${mB}in ${mL}in`,
                      lineHeight: '1.2'
                    }}
                  >
@@ -613,7 +624,7 @@ function CreateLectureSheetContent() {
                       </footer>
                     </div>
                  </div>
-               ))}
+               )})}
             </main>
           </div>
         </div>
@@ -675,11 +686,12 @@ function CreateLectureSheetContent() {
             position: relative !important; 
             margin: 0 !important; 
             box-shadow: none !important; 
-            width: 100% !important; 
+            width: 8.27in !important; 
             height: 11.69in !important; 
             break-after: page; 
             display: flex !important;
             visibility: visible !important;
+            box-sizing: border-box !important;
           }
           @page { size: A4; margin: 0; }
         }
