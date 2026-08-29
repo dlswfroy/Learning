@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, Save, FileText, ArrowLeft, Loader2, BookOpen, ScanText } from 'lucide-react';
+import { Printer, Save, FileText, ArrowLeft, Loader2, BookOpen, ScanText, Eye } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useDoc } from '@/firebase';
 import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
@@ -188,6 +188,17 @@ function CreateLectureSheetContent() {
     }
   };
 
+  const handlePrintView = () => {
+    if (!data.content) {
+      toast({ variant: "destructive", title: "তথ্য নেই", description: "প্রিন্ট ভিউ দেখার জন্য অন্তত কিছু লিখুন।" });
+      return;
+    }
+    const currentPath = window.location.pathname;
+    const params = new URLSearchParams(window.location.search);
+    params.set('print', 'true');
+    router.push(`${currentPath}?${params.toString()}`);
+  };
+
   if (loading || userLoading) return <div className="flex flex-col items-center justify-center p-20 min-h-[50vh] font-kalpurush"><Loader2 className="w-12 h-12 animate-spin text-primary mb-4" /><p className="text-muted-foreground font-bold">অ্যাক্সেস চেক করা হচ্ছে...</p></div>;
 
   return (
@@ -277,6 +288,9 @@ function CreateLectureSheetContent() {
 
             <div className="space-y-3">
               <Button onClick={handleSave} disabled={saving} className="w-full gap-2 font-bold h-11"><Save className="w-4 h-4" /> সেভ করুন</Button>
+              <Button onClick={handlePrintView} variant="outline" className="w-full gap-2 border-primary text-primary font-bold hover:bg-primary/5 h-11">
+                <Eye className="w-4 h-4" /> প্রিন্ট ভিউ
+              </Button>
               <Button onClick={() => window.print()} variant="secondary" className="w-full gap-2 shadow-lg font-bold h-11"><Printer className="w-4 h-4" /> প্রিন্ট</Button>
             </div>
           </aside>
