@@ -221,7 +221,7 @@ function CreateLectureSheetContent() {
   const handleSave = useCallback(() => {
     if (!user || !db) return;
     
-    // Sync current editing content if user is focused on a page (even in preview)
+    // CRITICAL: Sync current manual edits from DOM to ensure latest character is saved
     let currentManualPages = { ...manualPages };
     const activeEl = document.activeElement;
     if (activeEl && activeEl.getAttribute('contenteditable') === 'true') {
@@ -232,7 +232,6 @@ function CreateLectureSheetContent() {
           const idx = parseInt(match[1]);
           const currentHTML = (activeEl as HTMLElement).innerHTML || "";
           currentManualPages[idx] = currentHTML;
-          setManualPages(prev => ({ ...prev, [idx]: currentHTML }));
         }
       }
     }
@@ -240,6 +239,8 @@ function CreateLectureSheetContent() {
     setSaving(true);
     const docId = editId || doc(collection(db, 'lecture-sheets')).id;
     const ref = doc(db, 'lecture-sheets', docId);
+    
+    // Build payload using currentManualPages which has the latest synced DOM content
     const payload: any = { 
       ...data, 
       printSettings, 
@@ -253,6 +254,8 @@ function CreateLectureSheetContent() {
     setDoc(ref, payload, { merge: true })
       .then(() => { 
         setSaving(false); 
+        // Update local state AFTER successful server save to prevent flickering
+        setManualPages(currentManualPages);
         toast({ title: "সফল!", description: "লেকচার শিট সরাসরি সেভ হয়েছে।" }); 
         if (!editId) router.replace(`/create-lecture-sheet?id=${docId}`); 
       })
@@ -266,7 +269,7 @@ function CreateLectureSheetContent() {
       });
   }, [user, db, editId, data, printSettings, pageStyles, manualPages, router]);
 
-  // Keyboard Shortcut: Ctrl + S / Cmd + S
+  // Keyboard Shortcut: Ctrl + S / Cmd + S for direct save
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
