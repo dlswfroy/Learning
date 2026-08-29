@@ -28,7 +28,7 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 
 function formatMath(text: string) {
   if (!text) return '';
-  // Strip redundant dollar signs common in Gemini output
+  // Remove all $ signs from Gemini output to keep formulas clean
   let formatted = text.replace(/\$/g, '');
   
   formatted = formatted.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
@@ -231,6 +231,7 @@ function CreateLectureSheetContent() {
   const handleSave = useCallback(() => {
     if (!user || !db) return;
     
+    // Capture latest HTML from all visible pages to ensure direct edits are saved
     let currentManualPages = { ...manualPages };
     const activeEl = document.activeElement;
     if (activeEl && activeEl.getAttribute('contenteditable') === 'true') {
@@ -337,17 +338,18 @@ function CreateLectureSheetContent() {
     if (hasSelection) {
       document.execCommand('styleWithCSS', false, 'true');
       if (command === 'fontSize') {
+        // Specifically handle font size in pt for selection
+        document.execCommand('styleWithCSS', false, 'false'); // Use tags temporarily to catch them
         document.execCommand('fontSize', false, '7');
         const editableDiv = document.querySelector(`.paper-idx-${activeEditIdx} .content-area`) as HTMLElement;
         if (editableDiv) {
           const fonts = editableDiv.querySelectorAll('font[size="7"]');
           fonts.forEach(font => {
-            const span = document.createElement('span');
-            span.style.fontSize = value + 'pt';
-            span.innerHTML = font.innerHTML;
-            font.parentNode?.replaceChild(span, font);
+            font.removeAttribute('size');
+            font.style.fontSize = value + 'pt';
           });
         }
+        document.execCommand('styleWithCSS', false, 'true');
       } else if (command === 'lineHeight') {
         const range = selection.getRangeAt(0);
         if (range) {
