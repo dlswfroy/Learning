@@ -211,7 +211,6 @@ function CreateLectureSheetContent() {
          initialManual[i] = p;
       });
       
-      // When re-paginating from raw content, clear old manual ghost pages
       setPageStyles(initialStyles);
       setManualPages(initialManual);
     }
@@ -532,7 +531,7 @@ function CreateLectureSheetContent() {
                  return (
                  <div 
                    key={idx} className={cn(`paper paper-idx-${idx} shadow-2xl bg-white relative overflow-hidden shrink-0 group transition-all`, activeEditIdx === idx && "ring-4 ring-blue-500 shadow-blue-200")}
-                   style={{ width: '8.27in', height: '11.69in', padding: `${mT}in ${mR}in ${mB}in ${mL}in`, lineHeight: '1.2' }}
+                   style={{ width: '8.27in', height: '11.69in', padding: `${mT}in ${mR}in ${mB}in ${mL}in`, lineHeight: '1.2', boxSizing: 'border-box' }}
                  >
                     <div className="no-print absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-50"><Button size="sm" variant={activeEditIdx === idx ? 'default' : 'secondary'} className="gap-2 font-bold shadow-lg" onClick={() => setActiveEditIdx(idx)}><Edit3 className="w-3.5 h-3.5" /> এডিট করুন</Button></div>
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden" style={{ opacity: (printSettings.watermarkOpacity || 0) / 100, transform: `rotate(${printSettings.watermarkRotation || 0}deg)`, whiteSpace: 'nowrap' }}>
@@ -594,8 +593,8 @@ function CreateLectureSheetContent() {
           .no-print { display: none !important; }
           .print-view-container { position: static !important; height: auto !important; overflow: visible !important; display: block !important; background: white !important; }
           .print-main-area { background: white !important; padding: 0 !important; margin: 0 !important; overflow: visible !important; display: block !important; height: auto !important; position: static !important; }
-          .paper { position: relative !important; margin: 0 !important; box-shadow: none !important; width: 8.27in !important; height: 11.68in !important; break-after: page; break-inside: avoid; display: block !important; }
-          @page { size: A4; margin: 0; }
+          .paper { position: relative !important; margin: 0 !important; box-shadow: none !important; width: 8.27in !important; height: 11.69in !important; break-after: page; break-inside: avoid; display: block !important; box-sizing: border-box !important; border: none !important; }
+          @page { size: A4; margin: 0 !important; }
         }
       `}} />
     </div>
