@@ -97,7 +97,7 @@ function CreateLectureSheetContent() {
     type: 'written'
   });
 
-  const [printSettings, setPrintSettings] = useState({
+  const [printSettings, setPrintSettings] = useState<any>({
     marginTop: 0.5,
     marginBottom: 0.5,
     marginLeft: 0.5,
@@ -105,10 +105,10 @@ function CreateLectureSheetContent() {
     watermarkOpacity: 8,
     watermarkText: '',
     watermarkFontSize: 80,
-    watermarkRotation: -45 as string | number,
+    watermarkRotation: -45,
     watermarkImageUrl: '',
     watermarkImageSize: 70,
-    watermarkType: 'text' as 'text' | 'image'
+    watermarkType: 'text'
   });
 
   const [paginatedPages, setPaginatedPages] = useState<string[]>([]);
@@ -152,11 +152,19 @@ function CreateLectureSheetContent() {
       const container = measurementRef.current;
       const contentHtml = formatMath(data.content);
       
+      const mT = parseFloat(printSettings.marginTop) || 0;
+      const mB = parseFloat(printSettings.marginBottom) || 0;
+      const mL = parseFloat(printSettings.marginLeft) || 0;
+      const mR = parseFloat(printSettings.marginRight) || 0;
+
+      // Sync measurement width with custom margins
+      container.style.width = (8.27 - mL - mR) + 'in';
+      
       const tempLines = contentHtml.split('\n');
       const lineHtml = tempLines.map(line => `<div class="measure-line" style="margin-bottom: 0px;">${line || '&nbsp;'}</div>`).join('');
       container.innerHTML = lineHtml;
       
-      const availableHeightPx = (11.69 - printSettings.marginTop - printSettings.marginBottom - 1.5) * 96;
+      const availableHeightPx = (11.69 - mT - mB - 1.5) * 96;
       
       const newPages: string[] = [];
       let currentChunk = "";
@@ -194,6 +202,10 @@ function CreateLectureSheetContent() {
       ...data,
       printSettings: {
         ...printSettings,
+        marginTop: parseFloat(printSettings.marginTop) || 0.5,
+        marginBottom: parseFloat(printSettings.marginBottom) || 0.5,
+        marginLeft: parseFloat(printSettings.marginLeft) || 0.5,
+        marginRight: parseFloat(printSettings.marginRight) || 0.5,
         watermarkRotation: parseInt(printSettings.watermarkRotation.toString()) || 0,
         watermarkImageSize: parseInt(printSettings.watermarkImageSize.toString()) || 70
       },
@@ -378,19 +390,39 @@ function CreateLectureSheetContent() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold">উপরে (Top)</label>
-                      <Input type="number" step="0.1" value={printSettings.marginTop} onChange={e => setPrintSettings(p => ({...p, marginTop: parseFloat(e.target.value)}))} className="h-8 font-bold" />
+                      <Input type="text" value={printSettings.marginTop} onChange={e => {
+                        const val = e.target.value;
+                        if (val === '' || val === '.' || !isNaN(parseFloat(val))) {
+                          setPrintSettings(p => ({...p, marginTop: val}));
+                        }
+                      }} className="h-8 font-bold no-arrows" />
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold">নিচে (Bottom)</label>
-                      <Input type="number" step="0.1" value={printSettings.marginBottom} onChange={e => setPrintSettings(p => ({...p, marginBottom: parseFloat(e.target.value)}))} className="h-8 font-bold" />
+                      <Input type="text" value={printSettings.marginBottom} onChange={e => {
+                        const val = e.target.value;
+                        if (val === '' || val === '.' || !isNaN(parseFloat(val))) {
+                          setPrintSettings(p => ({...p, marginBottom: val}));
+                        }
+                      }} className="h-8 font-bold no-arrows" />
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold">বামে (Left)</label>
-                      <Input type="number" step="0.1" value={printSettings.marginLeft} onChange={e => setPrintSettings(p => ({...p, marginLeft: parseFloat(e.target.value)}))} className="h-8 font-bold" />
+                      <Input type="text" value={printSettings.marginLeft} onChange={e => {
+                        const val = e.target.value;
+                        if (val === '' || val === '.' || !isNaN(parseFloat(val))) {
+                          setPrintSettings(p => ({...p, marginLeft: val}));
+                        }
+                      }} className="h-8 font-bold no-arrows" />
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold">ডানে (Right)</label>
-                      <Input type="number" step="0.1" value={printSettings.marginRight} onChange={e => setPrintSettings(p => ({...p, marginRight: parseFloat(e.target.value)}))} className="h-8 font-bold" />
+                      <Input type="text" value={printSettings.marginRight} onChange={e => {
+                        const val = e.target.value;
+                        if (val === '' || val === '.' || !isNaN(parseFloat(val))) {
+                          setPrintSettings(p => ({...p, marginRight: val}));
+                        }
+                      }} className="h-8 font-bold no-arrows" />
                     </div>
                   </div>
                </div>
@@ -524,7 +556,7 @@ function CreateLectureSheetContent() {
                    style={{ 
                      width: '8.27in', 
                      height: '11.69in',
-                     padding: `${printSettings.marginTop}in ${printSettings.marginRight}in ${printSettings.marginBottom}in ${printSettings.marginLeft}in`,
+                     padding: `${printSettings.marginTop || 0.5}in ${printSettings.marginRight || 0.5}in ${printSettings.marginBottom || 0.5}in ${printSettings.marginLeft || 0.5}in`,
                      lineHeight: '1.2'
                    }}
                  >
@@ -604,6 +636,7 @@ function CreateLectureSheetContent() {
           .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
           .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
           .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+          
           input.no-arrows::-webkit-outer-spin-button,
           input.no-arrows::-webkit-inner-spin-button {
             -webkit-appearance: none;
