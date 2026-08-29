@@ -105,7 +105,7 @@ function CreateLectureSheetContent() {
     watermarkOpacity: 8,
     watermarkText: '',
     watermarkFontSize: 80,
-    watermarkRotation: -45,
+    watermarkRotation: -45 as string | number,
     watermarkImageUrl: '',
     watermarkType: 'text' as 'text' | 'image'
   });
@@ -190,7 +190,10 @@ function CreateLectureSheetContent() {
     
     const payload: any = {
       ...data,
-      printSettings,
+      printSettings: {
+        ...printSettings,
+        watermarkRotation: parseInt(printSettings.watermarkRotation.toString()) || 0
+      },
       userId: user.uid,
       updatedAt: serverTimestamp(),
     };
@@ -365,7 +368,7 @@ function CreateLectureSheetContent() {
           
           <div className="flex-1 flex overflow-hidden">
             {/* Sidebar Settings */}
-            <aside className="w-80 bg-white border-r overflow-y-auto p-6 space-y-8 shrink-0">
+            <aside className="w-80 bg-white border-r overflow-y-auto p-6 space-y-8 shrink-0 pb-32">
                <div className="space-y-4">
                   <h4 className="text-xs font-black text-slate-500 uppercase tracking-wider flex items-center gap-2">
                     <Settings2 className="w-3.5 h-3.5" /> পেজ মার্জিন (ইঞ্চি)
@@ -425,8 +428,20 @@ function CreateLectureSheetContent() {
                             <div className="space-y-1">
                               <label className="text-[10px] font-bold text-slate-500">এঙ্গেল (ডিগ্রি)</label>
                               <div className="relative">
-                                <Input type="number" value={printSettings.watermarkRotation} onChange={e => setPrintSettings(p => ({...p, watermarkRotation: parseInt(e.target.value) || 0}))} className="h-8 font-bold text-xs pr-7" />
-                                <RotateCw className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400" />
+                                <Input 
+                                  type="text" 
+                                  value={printSettings.watermarkRotation} 
+                                  onChange={e => {
+                                    const val = e.target.value;
+                                    if (val === '' || val === '-') {
+                                      setPrintSettings(p => ({...p, watermarkRotation: val}));
+                                    } else {
+                                      const parsed = parseInt(val);
+                                      if (!isNaN(parsed)) setPrintSettings(p => ({...p, watermarkRotation: parsed}));
+                                    }
+                                  }} 
+                                  className="h-8 font-bold text-xs no-arrows" 
+                                />
                               </div>
                             </div>
                           </div>
@@ -462,8 +477,20 @@ function CreateLectureSheetContent() {
                           <div className="space-y-1">
                             <label className="text-[10px] font-bold text-slate-500">এঙ্গেল (ডিগ্রি)</label>
                             <div className="relative">
-                              <Input type="number" value={printSettings.watermarkRotation} onChange={e => setPrintSettings(p => ({...p, watermarkRotation: parseInt(e.target.value) || 0}))} className="h-8 font-bold text-xs pr-7" />
-                              <Compass className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400" />
+                                <Input 
+                                  type="text" 
+                                  value={printSettings.watermarkRotation} 
+                                  onChange={e => {
+                                    const val = e.target.value;
+                                    if (val === '' || val === '-') {
+                                      setPrintSettings(p => ({...p, watermarkRotation: val}));
+                                    } else {
+                                      const parsed = parseInt(val);
+                                      if (!isNaN(parsed)) setPrintSettings(p => ({...p, watermarkRotation: parsed}));
+                                    }
+                                  }} 
+                                  className="h-8 font-bold text-xs no-arrows" 
+                                />
                             </div>
                           </div>
                           <input type="file" ref={watermarkImageRef} className="hidden" accept="image/*" onChange={handleWatermarkImage} />
@@ -501,7 +528,7 @@ function CreateLectureSheetContent() {
                       className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden" 
                       style={{ 
                         opacity: printSettings.watermarkOpacity / 100, 
-                        transform: `rotate(${printSettings.watermarkRotation}deg)`, 
+                        transform: `rotate(${parseInt(printSettings.watermarkRotation.toString()) || 0}deg)`, 
                         whiteSpace: 'nowrap' 
                       }}
                     >
@@ -565,6 +592,16 @@ function CreateLectureSheetContent() {
           .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
           .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
           .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+          
+          /* Remove arrows from number input */
+          input.no-arrows::-webkit-outer-spin-button,
+          input.no-arrows::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+          }
+          input.no-arrows {
+            -moz-appearance: textfield;
+          }
         }
         @media print {
           body * { visibility: hidden; }
