@@ -107,6 +107,7 @@ function CreateLectureSheetContent() {
     watermarkFontSize: 80,
     watermarkRotation: -45 as string | number,
     watermarkImageUrl: '',
+    watermarkImageSize: 70,
     watermarkType: 'text' as 'text' | 'image'
   });
 
@@ -136,7 +137,8 @@ function CreateLectureSheetContent() {
             setPrintSettings(prev => ({
               ...prev, 
               ...docData.printSettings,
-              watermarkRotation: docData.printSettings.watermarkRotation !== undefined ? docData.printSettings.watermarkRotation : -45
+              watermarkRotation: docData.printSettings.watermarkRotation !== undefined ? docData.printSettings.watermarkRotation : -45,
+              watermarkImageSize: docData.printSettings.watermarkImageSize !== undefined ? docData.printSettings.watermarkImageSize : 70
             }));
           }
         }
@@ -192,7 +194,8 @@ function CreateLectureSheetContent() {
       ...data,
       printSettings: {
         ...printSettings,
-        watermarkRotation: parseInt(printSettings.watermarkRotation.toString()) || 0
+        watermarkRotation: parseInt(printSettings.watermarkRotation.toString()) || 0,
+        watermarkImageSize: parseInt(printSettings.watermarkImageSize.toString()) || 70
       },
       userId: user.uid,
       updatedAt: serverTimestamp(),
@@ -354,7 +357,7 @@ function CreateLectureSheetContent() {
       </div>
 
       {isPrintMode && (
-        <div className="no-print flex flex-col h-screen fixed inset-0 bg-slate-100 z-[100] font-kalpurush">
+        <div className="no-print flex flex-col h-screen fixed inset-0 bg-slate-100 z-[2000] font-kalpurush">
           <header className="h-14 bg-white border-b flex items-center justify-between px-6 shrink-0 shadow-sm">
              <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center"><Eye className="w-5 h-5" /></div>
@@ -493,6 +496,12 @@ function CreateLectureSheetContent() {
                                 />
                             </div>
                           </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-500 flex justify-between">লোগো সাইজ (%) <span>{toBengaliNumber(printSettings.watermarkImageSize)}%</span></label>
+                            <div className="pt-1">
+                              <Slider value={[printSettings.watermarkImageSize]} max={100} min={10} step={1} onValueChange={([v]) => setPrintSettings(p => ({...p, watermarkImageSize: v}))} />
+                            </div>
+                          </div>
                           <input type="file" ref={watermarkImageRef} className="hidden" accept="image/*" onChange={handleWatermarkImage} />
                         </div>
                       )}
@@ -511,7 +520,7 @@ function CreateLectureSheetContent() {
             </aside>
 
             {/* Paper Preview Area */}
-            <main className="flex-1 overflow-y-auto bg-slate-200 py-10 flex flex-col items-center gap-10 custom-scrollbar">
+            <main className="flex-1 overflow-y-auto bg-slate-200 pt-16 pb-24 flex flex-col items-center gap-10 custom-scrollbar">
                {paginatedPages.map((pageHtml, idx) => (
                  <div 
                    key={idx}
@@ -533,7 +542,15 @@ function CreateLectureSheetContent() {
                       }}
                     >
                       {printSettings.watermarkType === 'image' && printSettings.watermarkImageUrl ? (
-                        <img src={printSettings.watermarkImageUrl} alt="Watermark" className="max-w-[70%] max-h-[70%] object-contain" />
+                        <img 
+                          src={printSettings.watermarkImageUrl} 
+                          alt="Watermark" 
+                          style={{ 
+                            maxWidth: `${printSettings.watermarkImageSize || 70}%`, 
+                            maxHeight: `${printSettings.watermarkImageSize || 70}%` 
+                          }} 
+                          className="object-contain" 
+                        />
                       ) : (
                         <span 
                           style={{ fontSize: `${printSettings.watermarkFontSize}pt` }} 
