@@ -161,12 +161,16 @@ function CreateLectureSheetContent() {
       container.style.width = (8.27 - mL - mR) + 'in';
       
       const tempLines = contentHtml.split('\n');
-      const lineHtml = tempLines.map(line => `<div class="measure-line" style="margin-bottom: 0px;">${line || '&nbsp;'}</div>`).join('');
+      const lineHtml = tempLines.map(line => `<div class="measure-line" style="margin-bottom: 0px;">${line.trim() || '&nbsp;'}</div>`).join('');
       container.innerHTML = lineHtml;
       
-      // Calculate height considering header/footer (approx 1.5 inches total buffer)
-      const availableHeightPx = (11.69 - mT - mB - 1.5) * 96;
-      const topicSpacePx = 50; // Buffer for the topic header on the first page
+      // Calculate available height dynamically
+      // Header is approx 110px, Footer is 50px. Total buffer ~1.7 inches.
+      const headerSpace = 110;
+      const footerSpace = 50;
+      const totalPageHeightPx = 11.69 * 96;
+      const availableHeightPx = totalPageHeightPx - (mT * 96) - (mB * 96) - headerSpace - footerSpace;
+      const topicSpacePx = 60; // Extra buffer for topic on first page
       
       const newPages: string[] = [];
       let currentChunk = "";
@@ -175,11 +179,12 @@ function CreateLectureSheetContent() {
       const lines = container.querySelectorAll('.measure-line');
       lines.forEach((line) => {
         const h = (line as HTMLElement).offsetHeight;
-        // Adjust limit for the first page which has a topic title
         const effectiveLimit = (newPages.length === 0) ? (availableHeightPx - topicSpacePx) : availableHeightPx;
 
-        if (currentHeight + h > effectiveLimit && currentChunk !== "") {
-          newPages.push(currentChunk);
+        if (currentHeight > 0 && currentHeight + h > effectiveLimit) {
+          if (currentChunk.trim() !== "") {
+            newPages.push(currentChunk);
+          }
           currentChunk = line.innerHTML + "<br/>";
           currentHeight = h;
         } else {
@@ -188,8 +193,12 @@ function CreateLectureSheetContent() {
         }
       });
       
-      if (currentChunk) newPages.push(currentChunk);
-      setPaginatedPages(newPages);
+      if (currentChunk.trim() !== "") {
+        newPages.push(currentChunk);
+      }
+      
+      // Final sanity filter: Ensure no empty pages
+      setPaginatedPages(newPages.filter(p => p.replace(/<br\/>/g, '').trim() !== ""));
     }
   }, [isPrintMode, data.content, printSettings.marginTop, printSettings.marginBottom, printSettings.marginLeft, printSettings.marginRight]);
 
