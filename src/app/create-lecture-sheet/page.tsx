@@ -100,7 +100,7 @@ function CreateLectureSheetContent() {
     marginBottom: 0.5,
     marginLeft: 0.5,
     marginRight: 0.5,
-    watermarkOpacity: 8,
+    watermarkOpacity: 10,
     watermarkText: '',
     watermarkFontSize: 80,
     watermarkRotation: -45,
@@ -250,7 +250,6 @@ function CreateLectureSheetContent() {
     if (hasSelection) {
       document.execCommand('styleWithCSS', false, 'true');
       if (command === 'fontSize') {
-        // Special handling to apply precise pt size to selection by replacing tags
         document.execCommand('fontSize', false, '7');
         const editableDiv = document.querySelector(`.paper-idx-${activeEditIdx} .content-area`) as HTMLElement;
         if (editableDiv) {
@@ -377,10 +376,10 @@ function CreateLectureSheetContent() {
                       <div className="space-y-4">
                         <label className="text-[10px] font-black text-slate-500 uppercase">পেজ মার্জিন (ইঞ্চি)</label>
                         <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1"><label className="text-[9px] font-bold">উপরে</label><Input type="text" value={pageStyles[activeEditIdx].mT} onChange={e => updatePageStyle(activeEditIdx!, 'mT', e.target.value)} className="h-7 text-xs font-bold no-arrows" onMouseDown={e => e.stopPropagation()} /></div>
-                          <div className="space-y-1"><label className="text-[9px] font-bold">নিচে</label><Input type="text" value={pageStyles[activeEditIdx].mB} onChange={e => updatePageStyle(activeEditIdx!, 'mB', e.target.value)} className="h-7 text-xs font-bold no-arrows" onMouseDown={e => e.stopPropagation()} /></div>
-                          <div className="space-y-1"><label className="text-[9px] font-bold">বামে</label><Input type="text" value={pageStyles[activeEditIdx].mL} onChange={e => updatePageStyle(activeEditIdx!, 'mL', e.target.value)} className="h-7 text-xs font-bold no-arrows" onMouseDown={e => e.stopPropagation()} /></div>
-                          <div className="space-y-1"><label className="text-[9px] font-bold">ডানে</label><Input type="text" value={pageStyles[activeEditIdx].mR} onChange={e => updatePageStyle(activeEditIdx!, 'mR', e.target.value)} className="h-7 text-xs font-bold no-arrows" onMouseDown={e => e.stopPropagation()} /></div>
+                          <div className="space-y-1"><label className="text-[9px] font-bold">উপরে</label><Input type="text" value={pageStyles[activeEditIdx].mT} onChange={e => updatePageStyle(activeEditIdx!, 'mT', e.target.value)} onMouseDown={e => e.stopPropagation()} className="h-7 text-xs font-bold no-arrows" /></div>
+                          <div className="space-y-1"><label className="text-[9px] font-bold">নিচে</label><Input type="text" value={pageStyles[activeEditIdx].mB} onChange={e => updatePageStyle(activeEditIdx!, 'mB', e.target.value)} onMouseDown={e => e.stopPropagation()} className="h-7 text-xs font-bold no-arrows" /></div>
+                          <div className="space-y-1"><label className="text-[9px] font-bold">বামে</label><Input type="text" value={pageStyles[activeEditIdx].mL} onChange={e => updatePageStyle(activeEditIdx!, 'mL', e.target.value)} onMouseDown={e => e.stopPropagation()} className="h-7 text-xs font-bold no-arrows" /></div>
+                          <div className="space-y-1"><label className="text-[9px] font-bold">ডানে</label><Input type="text" value={pageStyles[activeEditIdx].mR} onChange={e => updatePageStyle(activeEditIdx!, 'mR', e.target.value)} onMouseDown={e => e.stopPropagation()} className="h-7 text-xs font-bold no-arrows" /></div>
                         </div>
                       </div>
 
@@ -446,10 +445,10 @@ function CreateLectureSheetContent() {
                    <div className="space-y-4">
                       <h4 className="text-xs font-black text-slate-500 uppercase flex items-center gap-2"><Settings2 className="w-3.5 h-3.5" /> গ্লোবাল মার্জিন</h4>
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1"><label className="text-[10px] font-bold">উপরে</label><Input type="text" value={printSettings.marginTop} onChange={e => setPrintSettings(p => ({...p, marginTop: e.target.value}))} className="h-8 font-bold no-arrows" /></div>
-                        <div className="space-y-1"><label className="text-[10px] font-bold">নিচে</label><Input type="text" value={printSettings.marginBottom} onChange={e => setPrintSettings(p => ({...p, marginBottom: e.target.value}))} className="h-8 font-bold no-arrows" /></div>
-                        <div className="space-y-1"><label className="text-[10px] font-bold">বামে</label><Input type="text" value={printSettings.marginLeft} onChange={e => setPrintSettings(p => ({...p, marginLeft: e.target.value}))} className="h-8 font-bold no-arrows" /></div>
-                        <div className="space-y-1"><label className="text-[10px] font-bold">ডানে</label><Input type="text" value={printSettings.marginRight} onChange={e => setPrintSettings(p => ({...p, marginRight: e.target.value}))} className="h-8 font-bold no-arrows" /></div>
+                        <div className="space-y-1"><label className="text-[10px] font-bold">উপরে</label><Input type="text" value={printSettings.marginTop} onChange={e => setPrintSettings(p => ({...p, marginTop: e.target.value}))} onMouseDown={e => e.stopPropagation()} className="h-8 font-bold no-arrows" /></div>
+                        <div className="space-y-1"><label className="text-[10px] font-bold">নিচে</label><Input type="text" value={printSettings.marginBottom} onChange={e => setPrintSettings(p => ({...p, marginBottom: e.target.value}))} onMouseDown={e => e.stopPropagation()} className="h-8 font-bold no-arrows" /></div>
+                        <div className="space-y-1"><label className="text-[10px] font-bold">বামে</label><Input type="text" value={printSettings.marginLeft} onChange={e => setPrintSettings(p => ({...p, marginLeft: e.target.value}))} onMouseDown={e => e.stopPropagation()} className="h-8 font-bold no-arrows" /></div>
+                        <div className="space-y-1"><label className="text-[10px] font-bold">ডানে</label><Input type="text" value={printSettings.marginRight} onChange={e => setPrintSettings(p => ({...p, marginRight: e.target.value}))} onMouseDown={e => e.stopPropagation()} className="h-8 font-bold no-arrows" /></div>
                       </div>
                    </div>
 
@@ -464,6 +463,7 @@ function CreateLectureSheetContent() {
                               key={t}
                               variant={printSettings.watermarkType === t ? 'default' : 'outline'}
                               className="flex-1 h-10 gap-2 font-bold text-[10px]"
+                              onMouseDown={e => e.preventDefault()}
                               onClick={() => setPrintSettings(p => ({...p, watermarkType: t}))}
                             >
                               {t === 'text' ? <Type className="w-3.5 h-3.5" /> : <ImageIcon className="w-3.5 h-3.5" />}
@@ -475,17 +475,17 @@ function CreateLectureSheetContent() {
                         {printSettings.watermarkType === 'text' ? (
                           <div className="p-4 rounded-xl border-2 bg-slate-50/50 space-y-2">
                             <label className="text-[10px] font-bold text-slate-500 uppercase">জলছাপ টেক্সট</label>
-                            <Input value={printSettings.watermarkText} onChange={e => setPrintSettings(p => ({...p, watermarkText: e.target.value}))} className="h-8 text-xs font-bold" placeholder="প্রতিষ্ঠানের নাম" />
+                            <Input value={printSettings.watermarkText} onChange={e => setPrintSettings(p => ({...p, watermarkText: e.target.value}))} onMouseDown={e => e.stopPropagation()} className="h-8 text-xs font-bold" placeholder="প্রতিষ্ঠানের নাম" />
                           </div>
                         ) : (
                           <div className="p-4 rounded-xl border-2 bg-slate-50/50 space-y-4">
                             <div className="flex items-center gap-2">
                               <input type="file" ref={watermarkImageRef} className="hidden" accept="image/*" onChange={e => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onload = (ev) => setPrintSettings(p => ({ ...p, watermarkImageUrl: ev.target?.result as string, watermarkType: 'image' })); r.readAsDataURL(f); } }} />
-                              <Button onClick={() => watermarkImageRef.current?.click()} variant="outline" className="flex-1 h-9 gap-2 font-bold text-xs border-dashed border-2">
+                              <Button onClick={() => watermarkImageRef.current?.click()} onMouseDown={e => e.preventDefault()} variant="outline" className="flex-1 h-9 gap-2 font-bold text-xs border-dashed border-2">
                                 <ImageIcon className="w-3.5 h-3.5" /> লোগো আপলোড
                               </Button>
                               {printSettings.watermarkImageUrl && (
-                                <Button onClick={() => setPrintSettings(p => ({...p, watermarkImageUrl: ''}))} variant="ghost" size="icon" className="h-9 w-9 text-destructive">
+                                <Button onClick={() => setPrintSettings(p => ({...p, watermarkImageUrl: ''}))} onMouseDown={e => e.preventDefault()} variant="ghost" size="icon" className="h-9 w-9 text-destructive">
                                   <X className="w-4 h-4" />
                                 </Button>
                               )}
@@ -496,17 +496,17 @@ function CreateLectureSheetContent() {
                         <div className="space-y-4 pt-2">
                           <div className="space-y-1">
                             <label className="text-[10px] font-bold text-slate-500 uppercase">জলছাপ এঙ্গেল</label>
-                            <Input type="text" value={printSettings.watermarkRotation} onChange={e => setPrintSettings(p => ({...p, watermarkRotation: e.target.value}))} className="h-8 font-bold no-arrows" />
+                            <Input type="text" value={printSettings.watermarkRotation} onChange={e => setPrintSettings(p => ({...p, watermarkRotation: e.target.value}))} onMouseDown={e => e.stopPropagation()} className="h-8 font-bold no-arrows" />
                           </div>
                           
                           <div className="space-y-2">
                             <div className="flex justify-between items-center"><label className="text-[10px] font-bold text-slate-500 uppercase">জলছাপ সাইজ (%)</label><span className="text-[10px] font-bold">{toBengaliNumber(printSettings.watermarkImageSize)}%</span></div>
-                            <Slider value={[printSettings.watermarkImageSize]} min={10} max={200} step={1} onValueChange={([v]) => setPrintSettings(p => ({...p, watermarkImageSize: v}))} />
+                            <Slider value={[printSettings.watermarkImageSize]} min={10} max={200} step={1} onMouseDown={e => e.preventDefault()} onValueChange={([v]) => setPrintSettings(p => ({...p, watermarkImageSize: v}))} />
                           </div>
                           
                           <div className="space-y-2">
                             <div className="flex justify-between items-center"><label className="text-[10px] font-bold text-slate-500 uppercase">জলছাপ ব্রাইটনেস</label><span className="text-[10px] font-bold">{toBengaliNumber(printSettings.watermarkOpacity)}%</span></div>
-                            <Slider value={[printSettings.watermarkOpacity]} min={1} max={100} step={1} onValueChange={([v]) => setPrintSettings(p => ({...p, watermarkOpacity: v}))} />
+                            <Slider value={[printSettings.watermarkOpacity]} min={0} max={100} step={1} onMouseDown={e => e.preventDefault()} onValueChange={([v]) => setPrintSettings(p => ({...p, watermarkOpacity: v}))} />
                           </div>
                         </div>
                       </div>
@@ -526,11 +526,11 @@ function CreateLectureSheetContent() {
                    style={{ width: '8.27in', height: '11.69in', padding: `${mT}in ${mR}in ${mB}in ${mL}in`, lineHeight: '1.2' }}
                  >
                     <div className="no-print absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-50"><Button size="sm" variant={activeEditIdx === idx ? 'default' : 'secondary'} className="gap-2 font-bold shadow-lg" onClick={() => setActiveEditIdx(idx)}><Edit3 className="w-3.5 h-3.5" /> এডিট করুন</Button></div>
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden" style={{ opacity: (printSettings.watermarkOpacity || 8) / 100, transform: `rotate(${printSettings.watermarkRotation || 0}deg)`, whiteSpace: 'nowrap' }}>
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden" style={{ opacity: (printSettings.watermarkOpacity || 0) / 100, transform: `rotate(${printSettings.watermarkRotation || 0}deg)`, whiteSpace: 'nowrap' }}>
                       {printSettings.watermarkType === 'image' && printSettings.watermarkImageUrl ? (
                         <img src={printSettings.watermarkImageUrl} alt="Watermark" style={{ width: `${printSettings.watermarkImageSize || 70}%`, height: 'auto', objectFit: 'contain' }} />
                       ) : (
-                        <span className="font-black text-black" style={{ fontSize: `${(printSettings.watermarkImageSize || 80) * 1.2}pt`, opacity: 0.1 }}>
+                        <span className="font-black text-black" style={{ fontSize: `${(printSettings.watermarkImageSize || 80) * 1.2}pt` }}>
                           {printSettings.watermarkText || data.institution || softwareConfig?.appName || 'টপ গ্রেড'}
                         </span>
                       )}
