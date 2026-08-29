@@ -157,8 +157,11 @@ function CreateLectureSheetContent() {
       const mL = parseFloat(String(printSettings.marginLeft)) || 0.5;
       const mR = parseFloat(String(printSettings.marginRight)) || 0.5;
 
-      // Ensure measurement container exactly matches content area width
+      // Ensure measurement container exactly matches content area styling
       container.style.width = (8.27 - mL - mR) + 'in';
+      container.style.fontFamily = 'Kalpurush, sans-serif';
+      container.style.fontSize = '10.5pt';
+      container.style.lineHeight = '1.2';
       container.style.padding = '0';
       container.style.boxSizing = 'border-box';
       
@@ -167,10 +170,10 @@ function CreateLectureSheetContent() {
       container.innerHTML = lineHtml;
       
       // Calculate available height based on A4 height (11.69in) and margins
-      const headerSpace = 130; 
-      const footerSpace = 60;
-      const topicSpacePx = 60; 
-      const totalPageHeightPx = 11.69 * 96;
+      const headerSpace = 135; // Header area approximate height
+      const footerSpace = 65;  // Footer area approximate height
+      const topicSpacePx = 65; // Topic area approximate height
+      const totalPageHeightPx = 11.69 * 96; // 96 DPI
       const availableHeightPx = totalPageHeightPx - (mT * 96) - (mB * 96) - headerSpace - footerSpace;
       
       const newPages: string[] = [];
@@ -183,8 +186,9 @@ function CreateLectureSheetContent() {
         const effectiveLimit = (newPages.length === 0) ? (availableHeightPx - topicSpacePx) : availableHeightPx;
 
         if (currentHeight > 0 && currentHeight + h > effectiveLimit) {
-          // Push current chunk and start a new one
-          if (currentChunk.trim() !== "" && currentChunk.replace(/(&nbsp;|<br\/?>|\s)/g, '').trim() !== "") {
+          // Push current chunk if it has actual content
+          const cleanChunk = currentChunk.replace(/(&nbsp;|<br\/?>|\s)/g, '').trim();
+          if (cleanChunk !== "") {
             newPages.push(currentChunk);
           }
           currentChunk = line.innerHTML + "<br/>";
@@ -195,12 +199,13 @@ function CreateLectureSheetContent() {
         }
       });
       
-      // Final chunk push
-      if (currentChunk.trim() !== "" && currentChunk.replace(/(&nbsp;|<br\/?>|\s)/g, '').trim() !== "") {
+      // Final chunk push with strict content check
+      const finalClean = currentChunk.replace(/(&nbsp;|<br\/?>|\s)/g, '').trim();
+      if (finalClean !== "") {
         newPages.push(currentChunk);
       }
       
-      // Strict filter for empty pages
+      // Strict filter for completely empty pages to prevent blank slides
       const filteredPages = newPages.filter(p => {
         const textOnly = p.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, '').trim();
         return textOnly.length > 0;
