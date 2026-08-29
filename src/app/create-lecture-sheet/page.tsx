@@ -201,7 +201,7 @@ function CreateLectureSheetContent() {
       setPageStyles(prev => ({ ...initialStyles, ...prev }));
       setManualPages(prev => ({ ...initialManual, ...prev }));
     }
-  }, [isPrintMode, data.content, printSettings.marginTop, printSettings.marginBottom, printSettings.marginLeft, printSettings.marginRight]);
+  }, [isPrintMode, data.content, printSettings.marginTop, printSettings.marginBottom, printSettings.marginLeft, printSettings.marginRight, manualPages]);
 
   const subjects = useMemo(() => data.classId ? getSubjectsForClass(data.classId) : [], [data.classId]);
 
@@ -238,24 +238,17 @@ function CreateLectureSheetContent() {
 
   const handleFormatting = (command: string, value: string | null = null) => {
     const selection = window.getSelection();
-    
-    // Ensure we are working with CSS styles for precision
     document.execCommand('styleWithCSS', false, 'true');
 
     if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
-      // Selective Formatting: Apply only to selected text
       if (command === 'fontSize') {
-        // execCommand fontSize is limited (1-7), so we manually wrap or use a trick
-        // Here we use fontSize command then target the produced elements if possible, 
-        // but for simplicity and robustness in contentEditable:
         const span = document.createElement('span');
         span.style.fontSize = value + 'pt';
         const range = selection.getRangeAt(0);
         try {
           range.surroundContents(span);
         } catch (e) {
-          // If range is complex (crosses blocks), use execCommand or manual wrapping
-          document.execCommand('fontSize', false, '4'); // Placeholder
+          document.execCommand('fontSize', false, '4'); 
         }
       } else if (command === 'bold') {
         document.execCommand('bold', false);
@@ -263,7 +256,6 @@ function CreateLectureSheetContent() {
         document.execCommand('foreColor', false, value || '');
       }
     } else if (activeEditIdx !== null) {
-      // Global Page Formatting: Apply to whole page container via state
       if (command === 'fontSize') updatePageStyle(activeEditIdx, 'fontSize', parseFloat(value || '10.5'));
       if (command === 'bold') updatePageStyle(activeEditIdx, 'bold', !pageStyles[activeEditIdx].bold);
       if (command === 'foreColor') updatePageStyle(activeEditIdx, 'color', value);
@@ -368,10 +360,10 @@ function CreateLectureSheetContent() {
                       <div className="space-y-4">
                         <label className="text-[10px] font-black text-slate-500 uppercase">পেজ মার্জিন (ইঞ্চি)</label>
                         <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1"><label className="text-[9px] font-bold">উপরে</label><Input type="text" value={pageStyles[activeEditIdx].mT} onChange={e => updatePageStyle(activeEditIdx, 'mT', e.target.value)} className="h-7 text-xs font-bold" /></div>
-                          <div className="space-y-1"><label className="text-[9px] font-bold">নিচে</label><Input type="text" value={pageStyles[activeEditIdx].mB} onChange={e => updatePageStyle(activeEditIdx, 'mB', e.target.value)} className="h-7 text-xs font-bold" /></div>
-                          <div className="space-y-1"><label className="text-[9px] font-bold">বামে</label><Input type="text" value={pageStyles[activeEditIdx].mL} onChange={e => updatePageStyle(activeEditIdx, 'mL', e.target.value)} className="h-7 text-xs font-bold" /></div>
-                          <div className="space-y-1"><label className="text-[9px] font-bold">ডানে</label><Input type="text" value={pageStyles[activeEditIdx].mR} onChange={e => updatePageStyle(activeEditIdx, 'mR', e.target.value)} className="h-7 text-xs font-bold" /></div>
+                          <div className="space-y-1"><label className="text-[9px] font-bold">উপরে</label><Input type="text" value={pageStyles[activeEditIdx].mT} onChange={e => updatePageStyle(activeEditIdx!, 'mT', e.target.value)} className="h-7 text-xs font-bold" /></div>
+                          <div className="space-y-1"><label className="text-[9px] font-bold">নিচে</label><Input type="text" value={pageStyles[activeEditIdx].mB} onChange={e => updatePageStyle(activeEditIdx!, 'mB', e.target.value)} className="h-7 text-xs font-bold" /></div>
+                          <div className="space-y-1"><label className="text-[9px] font-bold">বামে</label><Input type="text" value={pageStyles[activeEditIdx].mL} onChange={e => updatePageStyle(activeEditIdx!, 'mL', e.target.value)} className="h-7 text-xs font-bold" /></div>
+                          <div className="space-y-1"><label className="text-[9px] font-bold">ডানে</label><Input type="text" value={pageStyles[activeEditIdx].mR} onChange={e => updatePageStyle(activeEditIdx!, 'mR', e.target.value)} className="h-7 text-xs font-bold" /></div>
                         </div>
                       </div>
 
@@ -417,9 +409,9 @@ function CreateLectureSheetContent() {
                         <div className="grid grid-cols-4 gap-1">
                           {['left', 'center', 'right', 'justify'].map(a => (
                             <Button 
-                              key={a} variant={pageStyles[activeEditIdx].align === a ? 'secondary' : 'ghost'} 
+                              key={a} variant={pageStyles[activeEditIdx!].align === a ? 'secondary' : 'ghost'} 
                               size="icon" className="h-8 w-full" 
-                              onClick={() => updatePageStyle(activeEditIdx, 'align', a)}
+                              onClick={() => updatePageStyle(activeEditIdx!, 'align', a)}
                             >
                               {a === 'left' && <AlignLeft className="w-4 h-4" />}
                               {a === 'center' && <AlignCenter className="w-4 h-4" />}
@@ -496,7 +488,11 @@ function CreateLectureSheetContent() {
                       </header>
                       {idx === 0 && <h2 className="text-[13pt] font-bold text-center underline uppercase mb-4">{data.topic || 'লেকচার শিট'}</h2>}
                       <div 
-                        contentEditable={activeEditIdx === idx} onBlur={(e) => setManualPages(prev => ({ ...prev, [idx]: e.currentTarget.innerHTML }))}
+                        contentEditable={activeEditIdx === idx} 
+                        onBlur={(e) => {
+                          const val = e.currentTarget.innerHTML;
+                          setManualPages(prev => ({ ...prev, [idx]: val }));
+                        }}
                         className={cn("content-area flex-1 font-kalpurush outline-none", activeEditIdx === idx && "bg-blue-50/20 p-1 rounded border border-dashed border-blue-300")}
                         style={{ lineHeight: '1.2', fontSize: `${style.fontSize}pt`, fontWeight: style.bold ? 'bold' : 'normal', color: style.color, textAlign: style.align as any }}
                         dangerouslySetInnerHTML={{ __html: manualPages[idx] || pageHtml }}
