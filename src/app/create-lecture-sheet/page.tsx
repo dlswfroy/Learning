@@ -161,16 +161,15 @@ function CreateLectureSheetContent() {
       container.style.width = (8.27 - mL - mR) + 'in';
       
       const tempLines = contentHtml.split('\n');
-      const lineHtml = tempLines.map(line => `<div class="measure-line" style="margin-bottom: 0px;">${line.trim() || '&nbsp;'}</div>`).join('');
+      const lineHtml = tempLines.map(line => `<div class="measure-line" style="margin-bottom: 0px; min-height: 1.2em;">${line.trim() || '&nbsp;'}</div>`).join('');
       container.innerHTML = lineHtml;
       
       // Calculate available height dynamically
-      // Header is approx 110px, Footer is 50px. Total buffer ~1.7 inches.
-      const headerSpace = 110;
-      const footerSpace = 50;
+      const headerSpace = 130; // Increased buffer for safety
+      const footerSpace = 60;
       const totalPageHeightPx = 11.69 * 96;
       const availableHeightPx = totalPageHeightPx - (mT * 96) - (mB * 96) - headerSpace - footerSpace;
-      const topicSpacePx = 60; // Extra buffer for topic on first page
+      const topicSpacePx = 60; 
       
       const newPages: string[] = [];
       let currentChunk = "";
@@ -178,7 +177,7 @@ function CreateLectureSheetContent() {
 
       const lines = container.querySelectorAll('.measure-line');
       lines.forEach((line) => {
-        const h = (line as HTMLElement).offsetHeight;
+        const h = (line as HTMLElement).offsetHeight || 18; // Fallback height
         const effectiveLimit = (newPages.length === 0) ? (availableHeightPx - topicSpacePx) : availableHeightPx;
 
         if (currentHeight > 0 && currentHeight + h > effectiveLimit) {
@@ -197,7 +196,6 @@ function CreateLectureSheetContent() {
         newPages.push(currentChunk);
       }
       
-      // Final sanity filter: Ensure no empty pages
       setPaginatedPages(newPages.filter(p => p.replace(/<br\/>/g, '').trim() !== ""));
     }
   }, [isPrintMode, data.content, printSettings.marginTop, printSettings.marginBottom, printSettings.marginLeft, printSettings.marginRight]);
@@ -220,8 +218,8 @@ function CreateLectureSheetContent() {
         marginBottom: parseFloat(String(printSettings.marginBottom)) || 0.5,
         marginLeft: parseFloat(String(printSettings.marginLeft)) || 0.5,
         marginRight: parseFloat(String(printSettings.marginRight)) || 0.5,
-        watermarkRotation: parseInt(printSettings.watermarkRotation.toString()) || 0,
-        watermarkImageSize: parseInt(printSettings.watermarkImageSize.toString()) || 70
+        watermarkRotation: parseInt(printSettings.watermarkRotation?.toString()) || 0,
+        watermarkImageSize: parseInt(printSettings.watermarkImageSize?.toString()) || 70
       },
       userId: user.uid,
       updatedAt: serverTimestamp(),
@@ -293,9 +291,10 @@ function CreateLectureSheetContent() {
 
   return (
     <div className="max-w-[1400px] mx-auto space-y-8 pb-32 font-kalpurush">
+      {/* Invisible measurement container for pagination */}
       <div 
         ref={measurementRef} 
-        className="fixed invisible pointer-events-none whitespace-pre-wrap text-[10.5pt]" 
+        className="fixed invisible pointer-events-none whitespace-pre-wrap text-[10.5pt] font-kalpurush box-border" 
         style={{ width: '7.27in', lineHeight: '1.2' }} 
       />
 
@@ -409,7 +408,7 @@ function CreateLectureSheetContent() {
                         if (val === '' || val === '.' || !isNaN(parseFloat(val))) {
                           setPrintSettings(p => ({...p, marginTop: val}));
                         }
-                      }} className="h-8 font-bold no-arrows" />
+                      }} className="h-8 font-bold no-arrows" style={{ appearance: 'none', MozAppearance: 'textfield' }} />
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold">নিচে (Bottom)</label>
@@ -418,7 +417,7 @@ function CreateLectureSheetContent() {
                         if (val === '' || val === '.' || !isNaN(parseFloat(val))) {
                           setPrintSettings(p => ({...p, marginBottom: val}));
                         }
-                      }} className="h-8 font-bold no-arrows" />
+                      }} className="h-8 font-bold no-arrows" style={{ appearance: 'none', MozAppearance: 'textfield' }} />
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold">বামে (Left)</label>
@@ -427,7 +426,7 @@ function CreateLectureSheetContent() {
                         if (val === '' || val === '.' || !isNaN(parseFloat(val))) {
                           setPrintSettings(p => ({...p, marginLeft: val}));
                         }
-                      }} className="h-8 font-bold no-arrows" />
+                      }} className="h-8 font-bold no-arrows" style={{ appearance: 'none', MozAppearance: 'textfield' }} />
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold">ডানে (Right)</label>
@@ -436,7 +435,7 @@ function CreateLectureSheetContent() {
                         if (val === '' || val === '.' || !isNaN(parseFloat(val))) {
                           setPrintSettings(p => ({...p, marginRight: val}));
                         }
-                      }} className="h-8 font-bold no-arrows" />
+                      }} className="h-8 font-bold no-arrows" style={{ appearance: 'none', MozAppearance: 'textfield' }} />
                     </div>
                   </div>
                </div>
@@ -474,22 +473,18 @@ function CreateLectureSheetContent() {
                             </div>
                             <div className="space-y-1">
                               <label className="text-[10px] font-bold text-slate-500">এঙ্গেল (ডিগ্রি)</label>
-                              <div className="relative">
-                                <Input 
-                                  type="text" 
-                                  value={printSettings.watermarkRotation} 
-                                  onChange={e => {
-                                    const val = e.target.value;
-                                    if (val === '' || val === '-') {
-                                      setPrintSettings(p => ({...p, watermarkRotation: val}));
-                                    } else {
-                                      const parsed = parseInt(val);
-                                      if (!isNaN(parsed)) setPrintSettings(p => ({...p, watermarkRotation: parsed}));
-                                    }
-                                  }} 
-                                  className="h-8 font-bold text-xs no-arrows" 
-                                />
-                              </div>
+                              <Input 
+                                type="text" 
+                                value={printSettings.watermarkRotation} 
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  if (val === '' || val === '-' || !isNaN(parseInt(val))) {
+                                    setPrintSettings(p => ({...p, watermarkRotation: val}));
+                                  }
+                                }} 
+                                className="h-8 font-bold text-xs no-arrows" 
+                                style={{ appearance: 'none', MozAppearance: 'textfield' }}
+                              />
                             </div>
                           </div>
                         </div>
@@ -522,22 +517,18 @@ function CreateLectureSheetContent() {
                           </div>
                           <div className="space-y-1">
                             <label className="text-[10px] font-bold text-slate-500">এঙ্গেল (ডিগ্রি)</label>
-                            <div className="relative">
-                                <Input 
-                                  type="text" 
-                                  value={printSettings.watermarkRotation} 
-                                  onChange={e => {
-                                    const val = e.target.value;
-                                    if (val === '' || val === '-') {
-                                      setPrintSettings(p => ({...p, watermarkRotation: val}));
-                                    } else {
-                                      const parsed = parseInt(val);
-                                      if (!isNaN(parsed)) setPrintSettings(p => ({...p, watermarkRotation: parsed}));
-                                    }
-                                  }} 
-                                  className="h-8 font-bold text-xs no-arrows" 
-                                />
-                            </div>
+                            <Input 
+                              type="text" 
+                              value={printSettings.watermarkRotation} 
+                              onChange={e => {
+                                const val = e.target.value;
+                                if (val === '' || val === '-' || !isNaN(parseInt(val))) {
+                                  setPrintSettings(p => ({...p, watermarkRotation: val}));
+                                }
+                              }} 
+                              className="h-8 font-bold text-xs no-arrows" 
+                              style={{ appearance: 'none', MozAppearance: 'textfield' }}
+                            />
                           </div>
                           <div className="space-y-1">
                             <label className="text-[10px] font-bold text-slate-500 flex justify-between">লোগো সাইজ (%) <span>{toBengaliNumber(printSettings.watermarkImageSize)}%</span></label>
@@ -572,19 +563,21 @@ function CreateLectureSheetContent() {
                  return (
                  <div 
                    key={idx}
-                   className="paper shadow-2xl bg-white relative overflow-hidden flex flex-col shrink-0" 
+                   className="paper shadow-2xl bg-white relative overflow-hidden shrink-0" 
                    style={{ 
                      width: '8.27in', 
                      height: '11.69in',
                      padding: `${mT}in ${mR}in ${mB}in ${mL}in`,
-                     lineHeight: '1.2'
+                     lineHeight: '1.2',
+                     display: 'block'
                    }}
                  >
+                    {/* Integrated Watermark into Paper Container */}
                     <div 
                       className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden" 
                       style={{ 
                         opacity: printSettings.watermarkOpacity / 100, 
-                        transform: `rotate(${parseInt(printSettings.watermarkRotation.toString()) || 0}deg)`, 
+                        transform: `rotate(${parseInt(printSettings.watermarkRotation?.toString()) || 0}deg)`, 
                         whiteSpace: 'nowrap' 
                       }}
                     >
@@ -608,6 +601,7 @@ function CreateLectureSheetContent() {
                       )}
                     </div>
 
+                    {/* Integrated Header and Content into Paper Container */}
                     <div className="relative z-10 flex flex-col h-full text-black">
                       <header className="text-center border-b-2 border-black pb-1 mb-2">
                         <h1 className="font-black text-[23px] text-black leading-tight">{data.institution || softwareConfig?.appName || 'শিক্ষা প্রতিষ্ঠানের নাম'}</h1>
@@ -622,7 +616,7 @@ function CreateLectureSheetContent() {
                       )}
 
                       <div 
-                        className="content-area text-[10.5pt] text-justify flex-1"
+                        className="content-area text-[10.5pt] text-justify flex-1 font-kalpurush"
                         style={{ lineHeight: '1.2' }}
                         dangerouslySetInnerHTML={{ __html: pageHtml }}
                       />
@@ -698,9 +692,11 @@ function CreateLectureSheetContent() {
             width: 8.27in !important; 
             height: 11.69in !important; 
             break-after: page; 
-            display: flex !important;
+            break-inside: avoid;
+            display: block !important;
             visibility: visible !important;
             box-sizing: border-box !important;
+            overflow: hidden !important;
           }
           @page { size: A4; margin: 0; }
         }
