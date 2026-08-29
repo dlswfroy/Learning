@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, Save, FileText, ArrowLeft, Loader2, BookOpen, ScanText, Eye, Settings2, SlidersHorizontal } from 'lucide-react';
+import { Printer, Save, FileText, ArrowLeft, Loader2, BookOpen, ScanText, Eye, Settings2, SlidersHorizontal, Image as ImageIcon, X, Type } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useDoc } from '@/firebase';
 import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
@@ -80,6 +80,7 @@ function CreateLectureSheetContent() {
   const [isScanning, setIsScanning] = useState(false);
   const [existingData, setExistingData] = useState<any>(null);
   const ocrInputRef = useRef<HTMLInputElement>(null);
+  const watermarkImageRef = useRef<HTMLInputElement>(null);
   const measurementRef = useRef<HTMLDivElement>(null);
   
   const softwareDocRef = useMemo(() => doc(db, 'config', 'software'), [db]);
@@ -99,7 +100,11 @@ function CreateLectureSheetContent() {
     marginBottom: 0.5,
     marginLeft: 0.5,
     marginRight: 0.5,
-    watermarkOpacity: 8
+    watermarkOpacity: 8,
+    watermarkText: '',
+    watermarkFontSize: 80,
+    watermarkImageUrl: '',
+    watermarkType: 'text' as 'text' | 'image'
   });
 
   const [paginatedPages, setPaginatedPages] = useState<string[]>([]);
@@ -124,26 +129,24 @@ function CreateLectureSheetContent() {
             content: docData.content || '',
             type: docData.type || 'written'
           });
-          if (docData.printSettings) setPrintSettings(docData.printSettings);
+          if (docData.printSettings) {
+            setPrintSettings(prev => ({...prev, ...docData.printSettings}));
+          }
         }
       } catch (e) {} finally { setLoading(false); }
     }
     if (user && db) loadSheet();
   }, [editId, db, user, router]);
 
-  // Enhanced Pagination Logic for Preview
   useEffect(() => {
     if (isPrintMode && data.content && measurementRef.current) {
       const container = measurementRef.current;
       const contentHtml = formatMath(data.content);
       
-      // Split content by paragraphs or lines to measure
       const tempLines = contentHtml.split('\n');
       const lineHtml = tempLines.map(line => `<div class="measure-line" style="margin-bottom: 0px;">${line || '&nbsp;'}</div>`).join('');
       container.innerHTML = lineHtml;
       
-      // A4 is 11.69 inches. 96 DPI standard.
-      // Subtract header height (~1.5 inches) and margins
       const availableHeightPx = (11.69 - printSettings.marginTop - printSettings.marginBottom - 1.5) * 96;
       
       const newPages: string[] = [];
@@ -222,6 +225,18 @@ function CreateLectureSheetContent() {
       setIsScanning(false);
       if (ocrInputRef.current) ocrInputRef.current.value = '';
     }
+  };
+
+  const handleWatermarkImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      setPrintSettings(p => ({ ...p, watermarkImageUrl: base64, watermarkType: 'image' }));
+      toast({ title: "সফল", description: "জলছাপ লোগো সেট করা হয়েছে।" });
+    };
+    reader.readAsDataURL(file);
   };
 
   const handlePrintView = () => {
@@ -341,6 +356,8 @@ function CreateLectureSheetContent() {
                   <Button onClick={() => window.print()} className="gap-2 font-bold bg-primary px-8 shadow-lg"><Printer className="w-4 h-4" /> প্রিন্ট করুন</Button>
                 </div>
              </div>
+             
+             {/* Main Controls */}
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 p-4 bg-white rounded-xl border border-slate-200">
                 <div className="space-y-2">
                    <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1"><Settings2 className="w-3 h-3" /> মার্জিন (টপ)</label>
@@ -363,6 +380,52 @@ function CreateLectureSheetContent() {
                    <div className="pt-2"><Slider value={[printSettings.watermarkOpacity]} max={100} step={1} onValueChange={([v]) => setPrintSettings(p => ({...p, watermarkOpacity: v}))} /></div>
                 </div>
              </div>
+
+             {/* Watermark Controls */}
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-4 bg-white rounded-xl border border-indigo-200">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-indigo-600 uppercase flex items-center gap-1"><Type className="w-3 h-3" /> জলছাপ টেক্সট</label>
+                  <Input 
+                    placeholder="জলছাপ লেখা..." 
+                    value={printSettings.watermarkText} 
+                    onChange={e => setPrintSettings(p => ({...p, watermarkText: e.target.value, watermarkType: 'text'}))} 
+                    className="h-8 font-bold border-indigo-100" 
+                  />
+                </div>
+                <div className="space-y-2">
+                   <label className="text-[10px] font-bold text-indigo-600 uppercase flex items-center gap-1"><Type className="w-3 h-3" /> টেক্সট সাইজ ({toBengaliNumber(printSettings.watermarkFontSize)}pt)</label>
+                   <Input 
+                    type="number" 
+                    value={printSettings.watermarkFontSize} 
+                    onChange={e => setPrintSettings(p => ({...p, watermarkFontSize: parseInt(e.target.value) || 0}))} 
+                    className="h-8 font-bold border-indigo-100" 
+                  />
+                </div>
+                <div className="space-y-2">
+                   <label className="text-[10px] font-bold text-indigo-600 uppercase flex items-center gap-1"><ImageIcon className="w-3 h-3" /> জলছাপ লোগো</label>
+                   <div className="flex gap-2">
+                      <Button variant="outline" size="sm" className="h-8 gap-2 font-bold flex-1 border-indigo-100" onClick={() => watermarkImageRef.current?.click()}>
+                        <ImageIcon className="w-3.5 h-3.5" /> লোগো আপলোড
+                      </Button>
+                      {printSettings.watermarkImageUrl && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setPrintSettings(p => ({...p, watermarkImageUrl: '', watermarkType: 'text'}))}>
+                          <X className="w-4 h-4" />
+                        </Button>
+                      )}
+                   </div>
+                   <input type="file" ref={watermarkImageRef} className="hidden" accept="image/*" onChange={handleWatermarkImage} />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-indigo-600 uppercase flex items-center gap-1"><SlidersHorizontal className="w-3 h-3" /> জলছাপের ধরন</label>
+                  <Select value={printSettings.watermarkType} onValueChange={v => setPrintSettings(p => ({...p, watermarkType: v as any}))}>
+                    <SelectTrigger className="h-8 font-bold border-indigo-100"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="text">টেক্সট জলছাপ</SelectItem>
+                      <SelectItem value="image">লোগো জলছাপ</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+             </div>
           </div>
 
           <div className="print-area py-10 flex flex-col items-center bg-slate-200 min-h-screen gap-10">
@@ -377,8 +440,25 @@ function CreateLectureSheetContent() {
                    lineHeight: '1.2'
                  }}
                >
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden" style={{ opacity: printSettings.watermarkOpacity / 100, transform: 'rotate(-45deg)', whiteSpace: 'nowrap' }}>
-                    <span className="text-[80pt] font-black text-black">{softwareConfig?.appName || 'টপ গ্রেড টিউটোরিয়ালস'}</span>
+                  {/* Watermark Logic */}
+                  <div 
+                    className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden" 
+                    style={{ 
+                      opacity: printSettings.watermarkOpacity / 100, 
+                      transform: printSettings.watermarkType === 'image' ? 'none' : 'rotate(-45deg)', 
+                      whiteSpace: 'nowrap' 
+                    }}
+                  >
+                    {printSettings.watermarkType === 'image' && printSettings.watermarkImageUrl ? (
+                      <img src={printSettings.watermarkImageUrl} alt="Watermark" className="max-w-[70%] max-h-[70%] object-contain" />
+                    ) : (
+                      <span 
+                        style={{ fontSize: `${printSettings.watermarkFontSize}pt` }} 
+                        className="font-black text-black"
+                      >
+                        {printSettings.watermarkText || data.institution || softwareConfig?.appName || 'টপ গ্রেড টিউটোরিয়ালস'}
+                      </span>
+                    )}
                   </div>
 
                   <div className="relative z-10 flex flex-col h-full text-black">
