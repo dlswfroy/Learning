@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, Suspense, useMemo, useRef } from 'react';
+import { useState, useEffect, Suspense, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { CLASSES, getSubjectsForClass } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
@@ -218,23 +218,58 @@ function CreateLectureSheetContent() {
 
   const subjects = useMemo(() => data.classId ? getSubjectsForClass(data.classId) : [], [data.classId]);
 
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     if (!user || !db) return;
+    
+    // Sync current editing content if user is focused on a page (even in preview)
+    let currentManualPages = { ...manualPages };
+    const activeEl = document.activeElement;
+    if (activeEl && activeEl.getAttribute('contenteditable') === 'true') {
+      const paper = activeEl.closest('.paper');
+      if (paper) {
+        const match = paper.className.match(/paper-idx-(\d+)/);
+        if (match) {
+          const idx = parseInt(match[1]);
+          const currentHTML = (activeEl as HTMLElement).innerHTML || "";
+          currentManualPages[idx] = currentHTML;
+          setManualPages(prev => ({ ...prev, [idx]: currentHTML }));
+        }
+      }
+    }
+
     setSaving(true);
     const docId = editId || doc(collection(db, 'lecture-sheets')).id;
     const ref = doc(db, 'lecture-sheets', docId);
-    const payload: any = { ...data, printSettings, pageStyles, manualPages, userId: user.uid, updatedAt: serverTimestamp() };
+    const payload: any = { 
+      ...data, 
+      printSettings, 
+      pageStyles, 
+      manualPages: currentManualPages, 
+      userId: user.uid, 
+      updatedAt: serverTimestamp() 
+    };
     if (!editId) payload.createdAt = serverTimestamp();
 
     setDoc(ref, payload, { merge: true })
-      .then(() => { setSaving(false); toast({ title: "সফল!", description: "লেকচার শিট সেভ হয়েছে।" }); if (!editId) router.replace(`/create-lecture-sheet?id=${docId}`); })
-      .catch(async (error) => { setSaving(false); errorEmitter.emit('permission-error', new FirestorePermissionError({ path: ref.path, operation: 'write', requestResourceData: payload })); });
-  };
+      .then(() => { 
+        setSaving(false); 
+        toast({ title: "সফল!", description: "লেকচার শিট সরাসরি সেভ হয়েছে।" }); 
+        if (!editId) router.replace(`/create-lecture-sheet?id=${docId}`); 
+      })
+      .catch(async (error) => { 
+        setSaving(false); 
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ 
+          path: ref.path, 
+          operation: 'write', 
+          requestResourceData: payload 
+        })); 
+      });
+  }, [user, db, editId, data, printSettings, pageStyles, manualPages, router]);
 
   // Keyboard Shortcut: Ctrl + S / Cmd + S
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
         handleSave();
       }
