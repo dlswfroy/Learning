@@ -28,8 +28,8 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 
 function formatMath(text: string) {
   if (!text) return '';
-  // Remove all $ signs from Gemini output to keep formulas clean
-  let formatted = text.replace(/\$/g, '');
+  // Remove all $ signs and LaTeX delimiters from Gemini output to keep formulas clean
+  let formatted = text.replace(/\$|\\\(|\\\)|\\\[|\\\]/g, '');
   
   formatted = formatted.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
   
@@ -60,7 +60,8 @@ function formatMath(text: string) {
     '\\\\cap': '∩', '\\\\emptyset': '∅', '\\\\forall': '∀', '\\\\exists': '∃', 
     '\\\\Rightarrow': '⇒', '\\\\leftarrow': '←', '\\\\Leftarrow': '⇐', 
     '\\\\leftrightarrow': '↔', '\\\\Leftrightarrow': '⇔',
-    '\\\\left': '', '\\\\right': '', '\\\\\%': '%', '\\\\setminus': '\\', '\\\\backslash': '\\'
+    '\\\\left': '', '\\\\right': '', '\\\\\%': '%', '\\\\setminus': '\\', '\\\\backslash': '\\',
+    '\\\\propto': '∝', '\\\\parallel': '∥', '\\\\perp': '⊥'
   };
   
   Object.entries(symbolMap).forEach(([key, val]) => { 
@@ -231,7 +232,6 @@ function CreateLectureSheetContent() {
   const handleSave = useCallback(() => {
     if (!user || !db) return;
     
-    // Capture latest HTML from all visible pages to ensure direct edits are saved
     let currentManualPages = { ...manualPages };
     const activeEl = document.activeElement;
     if (activeEl && activeEl.getAttribute('contenteditable') === 'true') {
@@ -338,8 +338,7 @@ function CreateLectureSheetContent() {
     if (hasSelection) {
       document.execCommand('styleWithCSS', false, 'true');
       if (command === 'fontSize') {
-        // Specifically handle font size in pt for selection
-        document.execCommand('styleWithCSS', false, 'false'); // Use tags temporarily to catch them
+        document.execCommand('styleWithCSS', false, 'false');
         document.execCommand('fontSize', false, '7');
         const editableDiv = document.querySelector(`.paper-idx-${activeEditIdx} .content-area`) as HTMLElement;
         if (editableDiv) {
@@ -376,7 +375,7 @@ function CreateLectureSheetContent() {
   };
 
   const handleDeletePage = (idx: number) => {
-    if (!confirm("আপনি কি এই পাতাটি মুছে ফেলতে চান?")) return;
+    if (!confirm("আপনি কি নিশ্চিতভাবে এই পাতাটি মুছে ফেলতে চান?")) return;
     
     const newPaginated = paginatedPages.filter((_, i) => i !== idx);
     setPaginatedPages(newPaginated);
@@ -385,7 +384,11 @@ function CreateLectureSheetContent() {
       const next: Record<number, string> = {};
       newPaginated.forEach((content, i) => {
         const oldIdx = i < idx ? i : i + 1;
-        next[i] = prev[oldIdx] !== undefined ? prev[oldIdx] : content;
+        if (prev[oldIdx] !== undefined) {
+          next[i] = prev[oldIdx];
+        } else {
+          next[i] = content;
+        }
       });
       return next;
     });
@@ -394,7 +397,9 @@ function CreateLectureSheetContent() {
       const next: Record<number, any> = {};
       newPaginated.forEach((_, i) => {
         const oldIdx = i < idx ? i : i + 1;
-        if (prev[oldIdx]) next[i] = prev[oldIdx];
+        if (prev[oldIdx]) {
+          next[i] = prev[oldIdx];
+        }
       });
       return next;
     });
@@ -759,8 +764,8 @@ function CreateLectureSheetContent() {
           .math-dot::after { content: "·"; position: absolute; top: -0.6em; left: 50%; transform: translateX(-50%); font-weight: bold; font-size: 1.2em; }
           .math-sqrt { display: inline-flex; align-items: center; }
           .math-sqrt-stem { border-top: 0.5pt solid black; padding-top: 1px; }
-          .math-sup { font-size: 0.7em; vertical-align: super; }
-          .math-sub { font-size: 0.7em; vertical-align: sub; }
+          .math-sup { font-size: 0.7em; vertical-align: super; display: inline-block; }
+          .math-sub { font-size: 0.7em; vertical-align: sub; display: inline-block; }
           .math-text { font-family: 'Kalpurush', sans-serif; font-style: normal; }
           .paper { color: black !important; overflow: hidden; }
           .no-arrows::-webkit-inner-spin-button, .no-arrows::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }

@@ -22,7 +22,10 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 
 function formatMath(text: string) {
   if (!text) return '';
-  let formatted = text.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
+  // Remove all $ signs and LaTeX delimiters from Gemini output to keep formulas clean
+  let formatted = text.replace(/\$|\\\(|\\\)|\\\[|\\\]/g, '');
+  
+  formatted = formatted.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
   
   formatted = formatted.replace(/\\text\{([^}]+)\}/g, '<span class="math-text">$1</span>');
 
@@ -51,7 +54,8 @@ function formatMath(text: string) {
     '\\\\cap': '∩', '\\\\emptyset': '∅', '\\\\forall': '∀', '\\\\exists': '∃', 
     '\\\\Rightarrow': '⇒', '\\\\leftarrow': '←', '\\\\Leftarrow': '⇐', 
     '\\\\leftrightarrow': '↔', '\\\\Leftrightarrow': '⇔',
-    '\\\\left': '', '\\\\right': '', '\\\\\%': '%', '\\\\setminus': '\\', '\\\\backslash': '\\'
+    '\\\\left': '', '\\\\right': '', '\\\\\%': '%', '\\\\setminus': '\\', '\\\\backslash': '\\',
+    '\\\\propto': '∝', '\\\\parallel': '∥', '\\\\perp': '⊥'
   };
   
   Object.entries(symbolMap).forEach(([key, val]) => { 
@@ -365,8 +369,8 @@ export default function SubjectPage() {
         .math-dot::after { content: "·"; position: absolute; top: -0.6em; left: 50%; transform: translateX(-50%); font-weight: bold; font-size: 1.2em; }
         .math-sqrt { display: inline-flex; align-items: center; }
         .math-sqrt-stem { border-top: 0.5pt solid black; padding-top: 1px; }
-        .math-sup { font-size: 0.7em; vertical-align: super; }
-        .math-sub { font-size: 0.7em; vertical-align: sub; }
+        .math-sup { font-size: 0.7em; vertical-align: super; display: inline-block; }
+        .math-sub { font-size: 0.7em; vertical-align: sub; display: inline-block; }
         .math-text { font-family: 'Kalpurush', sans-serif; font-style: normal; }
         .paper-preview { color: black !important; line-height: 1.2; }
       `}</style>
