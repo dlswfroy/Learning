@@ -260,21 +260,19 @@ function CreateLectureSheetContent() {
             span.innerHTML = font.innerHTML;
             font.parentNode?.replaceChild(span, font);
           });
-          const htmlValue = editableDiv.innerHTML;
-          setManualPages(prev => ({ ...prev, [activeEditIdx!]: htmlValue }));
+          // Do not sync manualPages here to prevent selection loss on re-render
         }
       } else {
         document.execCommand(command, false, value || '');
-        const editableDiv = document.querySelector(`.paper-idx-${activeEditIdx} .content-area`) as HTMLElement;
-        if (editableDiv) {
-          const htmlValue = editableDiv.innerHTML;
-          setManualPages(prev => ({ ...prev, [activeEditIdx!]: htmlValue }));
-        }
       }
     } else if (activeEditIdx !== null) {
       if (command === 'fontSize') updatePageStyle(activeEditIdx, 'fontSize', parseFloat(value || '10.5'));
       if (command === 'bold') updatePageStyle(activeEditIdx, 'bold', !pageStyles[activeEditIdx].bold);
       if (command === 'foreColor') updatePageStyle(activeEditIdx, 'color', value);
+      if (command.startsWith('justify')) {
+        const alignMap: any = { justifyLeft: 'left', justifyCenter: 'center', justifyRight: 'right', justifyFull: 'justify' };
+        updatePageStyle(activeEditIdx, 'align', alignMap[command]);
+      }
     }
   };
 
@@ -412,7 +410,7 @@ function CreateLectureSheetContent() {
                         <div className="flex items-center gap-3">
                           <input 
                             type="color" value={pageStyles[activeEditIdx].color} 
-                            onMouseDown={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.preventDefault()}
                             onChange={(e) => handleFormatting('foreColor', e.target.value)}
                             className="w-10 h-8 rounded border-0 cursor-pointer p-0"
                           />
@@ -423,19 +421,21 @@ function CreateLectureSheetContent() {
                       <div className="space-y-2">
                         <label className="text-[10px] font-bold text-slate-500 uppercase">বিন্যাস (Alignment)</label>
                         <div className="grid grid-cols-4 gap-1">
-                          {['left', 'center', 'right', 'justify'].map(a => (
+                          {['left', 'center', 'right', 'justify'].map(a => {
+                             const command = a === 'justify' ? 'justifyFull' : `justify${a.charAt(0).toUpperCase() + a.slice(1)}`;
+                             return (
                             <Button 
                               key={a} variant={pageStyles[activeEditIdx!].align === a ? 'secondary' : 'ghost'} 
                               size="icon" className="h-8 w-full" 
                               onMouseDown={e => e.preventDefault()}
-                              onClick={() => updatePageStyle(activeEditIdx!, 'align', a)}
+                              onClick={() => handleFormatting(command)}
                             >
                               {a === 'left' && <AlignLeft className="w-4 h-4" />}
                               {a === 'center' && <AlignCenter className="w-4 h-4" />}
                               {a === 'right' && <AlignRight className="w-4 h-4" />}
                               {a === 'justify' && <AlignJustify className="w-4 h-4" />}
                             </Button>
-                          ))}
+                          )})}
                         </div>
                       </div>
                     </div>
