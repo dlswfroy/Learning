@@ -359,7 +359,7 @@ function CreateLectureSheetContent() {
       </div>
 
       {isPrintMode && (
-        <div className="no-print flex flex-col h-screen fixed inset-0 bg-slate-100 z-[2000] font-kalpurush">
+        <div className="no-print flex flex-col h-screen fixed inset-0 top-0 left-0 bg-slate-100 z-[9999] font-kalpurush overflow-hidden">
           <header className="h-14 bg-white border-b flex items-center justify-between px-6 shrink-0 shadow-sm z-50">
              <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center"><Eye className="w-5 h-5" /></div>

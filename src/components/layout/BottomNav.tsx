@@ -1,17 +1,21 @@
 
 "use client";
 
+import { Suspense } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { LayoutDashboard, PlusCircle, Settings, BookOpen, Library, Users, NotebookPen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/firebase';
 
-export function BottomNav() {
+function BottomNavContent() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { user, loading } = useUser();
 
-  if (loading || !user || pathname === '/auth') {
+  const isPrintMode = searchParams.get('print') === 'true';
+
+  if (loading || !user || pathname === '/auth' || isPrintMode) {
     return null;
   }
 
@@ -50,5 +54,13 @@ export function BottomNav() {
         })}
       </div>
     </nav>
+  );
+}
+
+export function BottomNav() {
+  return (
+    <Suspense fallback={null}>
+      <BottomNavContent />
+    </Suspense>
   );
 }

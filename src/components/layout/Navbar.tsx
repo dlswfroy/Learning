@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useMemo } from 'react';
-import { usePathname } from 'next/navigation';
+import { useMemo, Suspense } from 'react';
+import { usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { BookOpenText, LogIn, LogOut, Settings as SettingsIcon } from 'lucide-react';
 import { useUser, useAuth, useFirestore, useDoc } from '@/firebase';
@@ -20,11 +20,14 @@ import {
 import { toast } from '@/hooks/use-toast';
 import { doc } from 'firebase/firestore';
 
-export function Navbar() {
+function NavbarContent() {
   const { user, loading } = useUser();
   const auth = useAuth();
   const db = useFirestore();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const isPrintMode = searchParams.get('print') === 'true';
 
   const softwareDocRef = useMemo(() => doc(db, 'config', 'software'), [db]);
   const { data: softwareConfig } = useDoc(softwareDocRef);
@@ -47,7 +50,7 @@ export function Navbar() {
     }
   };
 
-  if (pathname === '/auth') {
+  if (pathname === '/auth' || isPrintMode) {
     return null;
   }
 
@@ -120,5 +123,13 @@ export function Navbar() {
         )}
       </div>
     </nav>
+  );
+}
+
+export function Navbar() {
+  return (
+    <Suspense fallback={null}>
+      <NavbarContent />
+    </Suspense>
   );
 }
