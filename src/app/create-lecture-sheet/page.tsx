@@ -114,6 +114,7 @@ function CreateLectureSheetContent() {
   const [pageStyles, setPageStyles] = useState<Record<number, any>>({});
   const [activeEditIdx, setActiveEditIdx] = useState<number | null>(null);
   const [manualPages, setManualPages] = useState<Record<number, string>>({});
+  const [globalFontSize, setGlobalFontSize] = useState(10.5);
 
   useEffect(() => { if (!userLoading && !user) router.push('/auth'); }, [user, userLoading, router]);
   
@@ -135,7 +136,10 @@ function CreateLectureSheetContent() {
             type: docData.type || 'written'
           });
           if (docData.printSettings) setPrintSettings(prev => ({ ...prev, ...docData.printSettings }));
-          if (docData.pageStyles) setPageStyles(docData.pageStyles);
+          if (docData.pageStyles) {
+            setPageStyles(docData.pageStyles);
+            if (docData.pageStyles[0]?.fontSize) setGlobalFontSize(docData.pageStyles[0].fontSize);
+          }
           if (docData.manualPages) setManualPages(docData.manualPages);
         }
       } catch (e) {} finally { setLoading(false); }
@@ -146,14 +150,12 @@ function CreateLectureSheetContent() {
   useEffect(() => {
     if (!isPrintMode) return;
 
-    // Prioritize manualPages if they exist from Firestore or local state
     if (Object.keys(manualPages).length > 0 && paginatedPages.length === 0) {
       const sortedIndices = Object.keys(manualPages).map(Number).sort((a, b) => a - b);
       setPaginatedPages(sortedIndices.map(idx => manualPages[idx]));
       return;
     }
 
-    // Only regenerate if manualPages are empty
     if (data.content && measurementRef.current && Object.keys(manualPages).length === 0) {
       const container = measurementRef.current;
       const contentHtml = formatMath(data.content);
@@ -165,7 +167,7 @@ function CreateLectureSheetContent() {
 
       container.style.width = (8.27 - mL - mR) + 'in';
       container.style.fontFamily = 'Kalpurush, sans-serif';
-      container.style.fontSize = '10.5pt';
+      container.style.fontSize = globalFontSize + 'pt';
       container.style.lineHeight = '1.2';
       
       const tempLines = contentHtml.split('\n');
@@ -210,21 +212,20 @@ function CreateLectureSheetContent() {
       const initialStyles: Record<number, any> = {};
       const initialManual: Record<number, string> = {};
       pagesToRender.forEach((p, i) => {
-         initialStyles[i] = { fontSize: 10.5, bold: false, color: '#000000', align: 'justify', mT, mB, mL, mR };
+         initialStyles[i] = { fontSize: globalFontSize, bold: false, color: '#000000', align: 'justify', mT, mB, mL, mR };
          initialManual[i] = p;
       });
       
       setPageStyles(initialStyles);
       setManualPages(initialManual);
     }
-  }, [isPrintMode, data.content, printSettings]);
+  }, [isPrintMode, data.content, printSettings, globalFontSize]);
 
   const subjects = useMemo(() => data.classId ? getSubjectsForClass(data.classId) : [], [data.classId]);
 
   const handleSave = useCallback(() => {
     if (!user || !db) return;
     
-    // CRITICAL: Sync current manual edits from DOM to ensure latest character is saved
     let currentManualPages = { ...manualPages };
     const activeEl = document.activeElement;
     if (activeEl && activeEl.getAttribute('contenteditable') === 'true') {
@@ -243,7 +244,6 @@ function CreateLectureSheetContent() {
     const docId = editId || doc(collection(db, 'lecture-sheets')).id;
     const ref = doc(db, 'lecture-sheets', docId);
     
-    // Build payload using currentManualPages which has the latest synced DOM content
     const payload: any = { 
       ...data, 
       printSettings, 
@@ -257,7 +257,6 @@ function CreateLectureSheetContent() {
     setDoc(ref, payload, { merge: true })
       .then(() => { 
         setSaving(false); 
-        // Update local state AND paginatedPages to ensure consistency
         setManualPages(currentManualPages);
         const sortedIndices = Object.keys(currentManualPages).map(Number).sort((a, b) => a - b);
         setPaginatedPages(sortedIndices.map(idx => currentManualPages[idx]));
@@ -275,7 +274,6 @@ function CreateLectureSheetContent() {
       });
   }, [user, db, editId, data, printSettings, pageStyles, manualPages, router, toast]);
 
-  // Keyboard Shortcut: Ctrl + S / Cmd + S for direct save
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
@@ -303,6 +301,17 @@ function CreateLectureSheetContent() {
 
   const updatePageStyle = (idx: number, key: string, val: any) => {
     setPageStyles(prev => ({ ...prev, [idx]: { ...prev[idx], [key]: val } }));
+  };
+
+  const handleGlobalFontSizeChange = (size: number) => {
+    setGlobalFontSize(size);
+    setPageStyles(prev => {
+      const updated = { ...prev };
+      Object.keys(updated).forEach(idx => {
+        updated[parseInt(idx)] = { ...updated[parseInt(idx)], fontSize: size };
+      });
+      return updated;
+    });
   };
 
   const handleFormatting = (command: string, value: string | null = null) => {
@@ -505,6 +514,25 @@ function CreateLectureSheetContent() {
                ) : (
                  <div className="space-y-8 animate-in fade-in duration-500">
                    <div className="space-y-4">
+                      <h4 className="text-xs font-black text-slate-500 uppercase flex items-center gap-2"><Type className="w-3.5 h-3.5" /> গ্লোবাল ফন্ট সাইজ</h4>
+                      <div className="p-4 rounded-xl border-2 border-slate-100 bg-slate-50/30 space-y-3">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">ফন্ট সাইজ (pt)</label>
+                          <span className="text-xs font-black text-primary">{toBengaliNumber(globalFontSize)}pt</span>
+                        </div>
+                        <Slider 
+                          value={[globalFontSize]} 
+                          min={8} max={24} step={0.5} 
+                          onMouseDown={(e) => e.preventDefault()}
+                          onValueChange={([v]) => handleGlobalFontSizeChange(v)} 
+                        />
+                        <p className="text-[8px] font-bold text-muted-foreground italic leading-tight">এটি পরিবর্তন করলে সকল পাতার ফন্ট সাইজ একসাথে পরিবর্তিত হবে।</p>
+                      </div>
+                   </div>
+
+                   <Separator />
+
+                   <div className="space-y-4">
                       <h4 className="text-xs font-black text-slate-500 uppercase flex items-center gap-2"><Settings2 className="w-3.5 h-3.5" /> গ্লোবাল মার্জিন</h4>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1"><label className="text-[10px] font-bold">উপরে</label><Input type="text" value={printSettings.marginTop} onChange={e => setPrintSettings(p => ({...p, marginTop: e.target.value}))} onMouseDown={e => e.stopPropagation()} className="h-8 font-bold no-arrows" /></div>
@@ -579,7 +607,7 @@ function CreateLectureSheetContent() {
 
             <main className="print-main-area flex-1 overflow-y-auto bg-slate-200 pt-16 pb-24 flex flex-col items-center gap-10 relative">
                {paginatedPages.map((pageHtml, idx) => {
-                 const style = pageStyles[idx] || { fontSize: 10.5, bold: false, color: '#000000', align: 'justify', mT: 0.5, mB: 0.5, mL: 0.5, mR: 0.5 };
+                 const style = pageStyles[idx] || { fontSize: globalFontSize, bold: false, color: '#000000', align: 'justify', mT: 0.5, mB: 0.5, mL: 0.5, mR: 0.5 };
                  const mT = parseFloat(String(style.mT)) || 0.5;
                  const mB = parseFloat(String(style.mB)) || 0.5;
                  const mL = parseFloat(String(style.mL)) || 0.5;
