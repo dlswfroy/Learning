@@ -151,7 +151,7 @@ function CreateLectureSheetContent() {
       return;
     }
 
-    if (data.content && measurementRef.current && Object.keys(manualPages).length === 0) {
+    if (data.content && measurementRef.current) {
       const container = measurementRef.current;
       const contentHtml = formatMath(data.content);
       
@@ -195,20 +195,27 @@ function CreateLectureSheetContent() {
       });
       
       if (currentChunk.trim() !== "") newPages.push(currentChunk);
-      const filteredPages = newPages.filter(p => p.replace(/<[^>]*>/g, '').trim().length > 0);
-      const finalPages = filteredPages.length > 0 ? filteredPages : [""];
-      setPaginatedPages(finalPages);
+      
+      const finalPages = newPages.filter(p => {
+        const textContent = p.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, '').trim();
+        return textContent.length > 0;
+      });
+
+      const pagesToRender = finalPages.length > 0 ? finalPages : [""];
+      setPaginatedPages(pagesToRender);
       
       const initialStyles: Record<number, any> = {};
       const initialManual: Record<number, string> = {};
-      finalPages.forEach((p, i) => {
+      pagesToRender.forEach((p, i) => {
          initialStyles[i] = { fontSize: 10.5, bold: false, color: '#000000', align: 'justify', mT, mB, mL, mR };
          initialManual[i] = p;
       });
-      setPageStyles(prev => ({ ...initialStyles, ...prev }));
-      setManualPages(prev => ({ ...initialManual, ...prev }));
+      
+      // When re-paginating from raw content, clear old manual ghost pages
+      setPageStyles(initialStyles);
+      setManualPages(initialManual);
     }
-  }, [isPrintMode, data.content, printSettings, manualPages, paginatedPages.length]);
+  }, [isPrintMode, data.content, printSettings]);
 
   const subjects = useMemo(() => data.classId ? getSubjectsForClass(data.classId) : [], [data.classId]);
 
@@ -260,7 +267,6 @@ function CreateLectureSheetContent() {
             span.innerHTML = font.innerHTML;
             font.parentNode?.replaceChild(span, font);
           });
-          // Do not sync manualPages here to prevent selection loss on re-render
         }
       } else {
         document.execCommand(command, false, value || '');
@@ -446,7 +452,7 @@ function CreateLectureSheetContent() {
                       <h4 className="text-xs font-black text-slate-500 uppercase flex items-center gap-2"><Settings2 className="w-3.5 h-3.5" /> গ্লোবাল মার্জিন</h4>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1"><label className="text-[10px] font-bold">উপরে</label><Input type="text" value={printSettings.marginTop} onChange={e => setPrintSettings(p => ({...p, marginTop: e.target.value}))} onMouseDown={e => e.stopPropagation()} className="h-8 font-bold no-arrows" /></div>
-                        <div className="space-y-1"><label className="text-[10px] font-bold">নিচে</label><Input type="text" value={printSettings.marginBottom} onChange={e => setPrintSettings(p => ({...p, marginBottom: e.target.value}))} onMouseDown={e => e.stopPropagation()} className="h-8 font-bold no-arrows" /></div>
+                        <div className="space-y-1"><label className="text-[10px] font-bold">নিছে</label><Input type="text" value={printSettings.marginBottom} onChange={e => setPrintSettings(p => ({...p, marginBottom: e.target.value}))} onMouseDown={e => e.stopPropagation()} className="h-8 font-bold no-arrows" /></div>
                         <div className="space-y-1"><label className="text-[10px] font-bold">বামে</label><Input type="text" value={printSettings.marginLeft} onChange={e => setPrintSettings(p => ({...p, marginLeft: e.target.value}))} onMouseDown={e => e.stopPropagation()} className="h-8 font-bold no-arrows" /></div>
                         <div className="space-y-1"><label className="text-[10px] font-bold">ডানে</label><Input type="text" value={printSettings.marginRight} onChange={e => setPrintSettings(p => ({...p, marginRight: e.target.value}))} onMouseDown={e => e.stopPropagation()} className="h-8 font-bold no-arrows" /></div>
                       </div>
@@ -518,7 +524,10 @@ function CreateLectureSheetContent() {
             <main className="print-main-area flex-1 overflow-y-auto bg-slate-200 pt-16 pb-24 flex flex-col items-center gap-10 relative">
                {paginatedPages.map((pageHtml, idx) => {
                  const style = pageStyles[idx] || { fontSize: 10.5, bold: false, color: '#000000', align: 'justify', mT: 0.5, mB: 0.5, mL: 0.5, mR: 0.5 };
-                 const { mT, mB, mL, mR } = style;
+                 const mT = parseFloat(String(style.mT)) || 0.5;
+                 const mB = parseFloat(String(style.mB)) || 0.5;
+                 const mL = parseFloat(String(style.mL)) || 0.5;
+                 const mR = parseFloat(String(style.mR)) || 0.5;
 
                  return (
                  <div 
@@ -544,7 +553,7 @@ function CreateLectureSheetContent() {
                       <div 
                         contentEditable={activeEditIdx === idx} 
                         onBlur={(e) => {
-                          const htmlValue = e.currentTarget.innerHTML;
+                          const htmlValue = e.currentTarget?.innerHTML || "";
                           setManualPages(prev => ({ ...prev, [idx]: htmlValue }));
                         }}
                         className={cn("content-area flex-1 font-kalpurush outline-none", activeEditIdx === idx && "bg-blue-50/20 p-1 rounded border border-dashed border-blue-300")}
@@ -585,7 +594,7 @@ function CreateLectureSheetContent() {
           .no-print { display: none !important; }
           .print-view-container { position: static !important; height: auto !important; overflow: visible !important; display: block !important; background: white !important; }
           .print-main-area { background: white !important; padding: 0 !important; margin: 0 !important; overflow: visible !important; display: block !important; height: auto !important; position: static !important; }
-          .paper { position: relative !important; margin: 0 !important; box-shadow: none !important; width: 8.27in !important; height: 11.69in !important; break-after: page; break-inside: avoid; display: block !important; }
+          .paper { position: relative !important; margin: 0 !important; box-shadow: none !important; width: 8.27in !important; height: 11.68in !important; break-after: page; break-inside: avoid; display: block !important; }
           @page { size: A4; margin: 0; }
         }
       `}} />
