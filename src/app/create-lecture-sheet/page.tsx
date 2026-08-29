@@ -118,15 +118,6 @@ function CreateLectureSheetContent() {
     if (user && db) loadSheet();
   }, [editId, db, user, router]);
 
-  useEffect(() => {
-    if (isPrintMode && !loading && !userLoading && data.content) {
-      const timer = setTimeout(() => {
-        window.print();
-      }, 800);
-      return () => clearTimeout(timer);
-    }
-  }, [isPrintMode, loading, userLoading, data.content]);
-
   const subjects = useMemo(() => data.classId ? getSubjectsForClass(data.classId) : [], [data.classId]);
 
   const handleSave = () => {
@@ -319,9 +310,12 @@ function CreateLectureSheetContent() {
       </div>
 
       {isPrintMode && (
-        <div className="no-print flex justify-center py-4 border-b bg-muted/10">
-          <Button variant="outline" onClick={() => router.back()} className="gap-2 font-bold border-primary text-primary">
-            <ArrowLeft className="w-4 h-4" /> লাইব্রেরিতে ফিরে যান
+        <div className="no-print flex justify-center gap-4 py-6 border-b bg-slate-100 shadow-inner sticky top-0 z-[100]">
+          <Button variant="outline" onClick={() => router.back()} className="gap-2 font-bold border-primary text-primary bg-white shadow-sm">
+            <ArrowLeft className="w-4 h-4" /> এডিটরে ফিরুন
+          </Button>
+          <Button onClick={() => window.print()} className="gap-2 font-bold bg-primary shadow-lg shadow-primary/20 px-8">
+            <Printer className="w-4 h-4" /> প্রিন্ট করুন
           </Button>
         </div>
       )}
@@ -333,16 +327,16 @@ function CreateLectureSheetContent() {
               body { background: #f0f2f5 !important; }
               .paper { 
                 background: white !important; 
-                margin: 0 auto !important; 
-                padding: 0 !important; 
-                box-shadow: 0 0 15px rgba(0,0,0,0.1);
+                margin: 20px auto !important; 
+                padding: 0.5in !important; 
+                box-shadow: 0 0 20px rgba(0,0,0,0.15);
                 min-height: 11in;
+                width: 8.27in !important;
                 position: relative;
                 z-index: 1;
               }
             ` : ''}
             .paper { 
-              width: 100% !important; 
               text-align: justify; 
               color: black !important;
               line-height: 1.2;
@@ -379,7 +373,7 @@ function CreateLectureSheetContent() {
             .math-text { font-family: 'Kalpurush', sans-serif; font-style: normal; }
           }
           @media print {
-            .paper { margin: 0 !important; box-shadow: none !important; padding: 0 !important; padding-top: 0 !important; }
+            .paper { margin: 0 !important; box-shadow: none !important; padding: 0 !important; padding-top: 0 !important; width: 100% !important; }
             @page { size: auto; margin: 0.5in !important; }
           }
         `}} />
