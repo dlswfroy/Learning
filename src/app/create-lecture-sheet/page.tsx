@@ -191,7 +191,7 @@ function CreateLectureSheetContent() {
   if (loading || userLoading) return <div className="flex flex-col items-center justify-center p-20 min-h-[50vh] font-kalpurush"><Loader2 className="w-12 h-12 animate-spin text-primary mb-4" /><p className="text-muted-foreground font-bold">অ্যাক্সেস চেক করা হচ্ছে...</p></div>;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-32 font-kalpurush">
+    <div className="max-w-[1400px] mx-auto space-y-8 pb-32 font-kalpurush">
       <div className={cn("no-print space-y-8", isPrintMode && "hidden")}>
         <header className="flex items-center justify-between border-b pb-4">
           <div className="flex items-center gap-4">
@@ -204,79 +204,103 @@ function CreateLectureSheetContent() {
           </div>
         </header>
 
-        <Card className="shadow-md">
-          <CardHeader className="bg-primary/5 border-b py-3">
-            <div className="flex justify-between items-center">
-              <CardTitle className="text-base flex items-center gap-2 font-bold"><FileText className="w-4 h-4 text-primary" /> শিট সংক্রান্ত তথ্য</CardTitle>
-              <div className="flex gap-2">
-                <input type="file" ref={ocrInputRef} className="hidden" accept="image/*" onChange={handleOCR} />
-                <Button 
-                  onClick={() => ocrInputRef.current?.click()} 
-                  disabled={isScanning}
-                  variant="outline" 
-                  className="gap-2 border-indigo-600 text-indigo-700 font-bold hover:bg-indigo-50"
-                  title="লোকাল স্ক্যান (Non-AI)"
-                >
-                  {isScanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanText className="w-4 h-4" />}
-                  এআই স্ক্যান (Local)
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold">প্রতিষ্ঠানের নাম</label>
-                <input className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm" value={data.institution || ''} onChange={Eisen => setData(prev => ({...prev, institution: Eisen.target.value}))} />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold">শ্রেণি</label>
-                <Select onValueChange={v => setData(prev => ({...prev, classId: v}))} value={data.classId || ''}>
-                  <SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
-                  <SelectContent>{CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold">বিষয়</label>
-                <Select onValueChange={v => setData(prev => ({...prev, subject: v}))} value={data.subject || ''} disabled={!data.classId}>
-                  <SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
-                  <SelectContent>{subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold">শিটের ধরন</label>
-                <Select onValueChange={v => setData(prev => ({...prev, type: v}))} value={data.type || 'written'}>
-                  <SelectTrigger><SelectValue placeholder="ধরণ নির্বাচন করুন" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="written">লিখিত</SelectItem>
-                    <SelectItem value="mcq">বহুনির্বাচনি</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-semibold">টপিক / শিরোনাম</label>
-              <input className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm" value={data.topic || ''} onChange={Eisen => setData(prev => ({...prev, topic: Eisen.target.value}))} placeholder="যেমন: গাণিতিক সূত্রাবলী বা সেট থিওরি আলোচনা" />
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex flex-col lg:flex-row gap-8 items-start">
+          {/* Sidebar Menu for Sheet Information */}
+          <aside className="w-full lg:w-80 shrink-0 space-y-6 sticky top-24">
+            <Card className="shadow-md border-primary/10">
+              <CardHeader className="bg-primary/5 border-b py-3">
+                <CardTitle className="text-base flex items-center gap-2 font-bold text-primary">
+                  <FileText className="w-4 h-4" /> শিট সংক্রান্ত তথ্য
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-5">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold">প্রতিষ্ঠানের নাম</label>
+                  <input 
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
+                    value={data.institution || ''} 
+                    onChange={Eisen => setData(prev => ({...prev, institution: Eisen.target.value}))} 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold">শ্রেণি</label>
+                  <Select onValueChange={v => setData(prev => ({...prev, classId: v}))} value={data.classId || ''}>
+                    <SelectTrigger className="font-bold"><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
+                    <SelectContent>
+                      {CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold">বিষয়</label>
+                  <Select onValueChange={v => setData(prev => ({...prev, subject: v}))} value={data.subject || ''} disabled={!data.classId}>
+                    <SelectTrigger className="font-bold"><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
+                    <SelectContent>
+                      {subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold">শিটের ধরন</label>
+                  <Select onValueChange={v => setData(prev => ({...prev, type: v}))} value={data.type || 'written'}>
+                    <SelectTrigger className="font-bold"><SelectValue placeholder="ধরণ নির্বাচন করুন" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="written">লিখিত</SelectItem>
+                      <SelectItem value="mcq">বহুনির্বাচনি</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold">টপিক / শিরোনাম</label>
+                  <input 
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
+                    value={data.topic || ''} 
+                    onChange={Eisen => setData(prev => ({...prev, topic: Eisen.target.value}))} 
+                    placeholder="যেমন: গাণিতিক সূত্রাবলী" 
+                  />
+                </div>
 
-        <Card className="shadow-sm">
-          <CardContent className="pt-6">
-            <label className="text-sm font-bold mb-2 block">লেকচার কন্টেন্ট</label>
-            <Textarea 
-              placeholder="এখানে আপনার লেকচার নোট লিখুন... সেট লিখতে {x \in \mathbb{N} : x < 4} এভাবে টাইপ করুন।" 
-              value={data.content || ''} 
-              onChange={Eisen => setData(prev => ({...prev, content: Eisen.target.value}))} 
-              className="min-h-[400px] text-base leading-relaxed font-bold" 
-              style={{ lineHeight: '1.2' }}
-            />
-          </CardContent>
-        </Card>
+                <div className="pt-4 border-t space-y-4">
+                  <input type="file" ref={ocrInputRef} className="hidden" accept="image/*" onChange={handleOCR} />
+                  <Button 
+                    onClick={() => ocrInputRef.current?.click()} 
+                    disabled={isScanning}
+                    variant="outline" 
+                    className="w-full gap-2 border-indigo-600 text-indigo-700 font-bold hover:bg-indigo-50"
+                  >
+                    {isScanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanText className="w-4 h-4" />}
+                    এআই স্ক্যান (Local)
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
 
-        <div className="flex gap-4 pt-8">
-          <Button onClick={handleSave} disabled={saving} className="gap-2 px-8 font-bold"><Save className="w-4 h-4" /> সেভ করুন</Button>
-          <Button onClick={() => window.print()} variant="secondary" className="gap-2 px-10 shadow-lg font-bold"><Printer className="w-4 h-4" /> প্রিন্ট</Button>
+            <div className="space-y-3">
+              <Button onClick={handleSave} disabled={saving} className="w-full gap-2 font-bold h-11"><Save className="w-4 h-4" /> সেভ করুন</Button>
+              <Button onClick={() => window.print()} variant="secondary" className="w-full gap-2 shadow-lg font-bold h-11"><Printer className="w-4 h-4" /> প্রিন্ট</Button>
+            </div>
+          </aside>
+
+          {/* Main Editor Section */}
+          <div className="flex-1 w-full space-y-6">
+            <Card className="shadow-sm border-primary/5">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between mb-4 border-b pb-2">
+                  <label className="text-sm font-bold text-primary flex items-center gap-2">
+                    <BookOpen className="w-4 h-4" /> লেকচার কন্টেন্ট এডিটর
+                  </label>
+                  <span className="text-[10px] text-muted-foreground font-bold italic">ম্যাথ ফরমেট সাপোর্ট করে</span>
+                </div>
+                <Textarea 
+                  placeholder="এখানে আপনার লেকচার নোট লিখুন... সেট লিখতে {x \in \mathbb{N} : x < 4} এভাবে টাইপ করুন।" 
+                  value={data.content || ''} 
+                  onChange={Eisen => setData(prev => ({...prev, content: Eisen.target.value}))} 
+                  className="min-h-[600px] text-base leading-relaxed font-bold border-none focus-visible:ring-0 shadow-none px-0" 
+                  style={{ lineHeight: '1.2' }}
+                />
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
 
