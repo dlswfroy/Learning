@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, Save, FileText, ArrowLeft, Loader2, BookOpen, ScanText, Eye, Settings2, SlidersHorizontal, Image as ImageIcon, X, Type } from 'lucide-react';
+import { Printer, Save, FileText, ArrowLeft, Loader2, BookOpen, ScanText, Eye, Settings2, SlidersHorizontal, Image as ImageIcon, X, Type, Compass, RotateCw } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useDoc } from '@/firebase';
 import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
@@ -18,6 +18,8 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import { cn } from '@/lib/utils';
 import Tesseract from 'tesseract.js';
 import { Slider } from '@/components/ui/slider';
+import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
 
 function toBengaliNumber(n: number | string | undefined | null): string {
   if (n === undefined || n === null || n === '') return '';
@@ -103,6 +105,7 @@ function CreateLectureSheetContent() {
     watermarkOpacity: 8,
     watermarkText: '',
     watermarkFontSize: 80,
+    watermarkRotation: -45,
     watermarkImageUrl: '',
     watermarkType: 'text' as 'text' | 'image'
   });
@@ -130,7 +133,11 @@ function CreateLectureSheetContent() {
             type: docData.type || 'written'
           });
           if (docData.printSettings) {
-            setPrintSettings(prev => ({...prev, ...docData.printSettings}));
+            setPrintSettings(prev => ({
+              ...prev, 
+              ...docData.printSettings,
+              watermarkRotation: docData.printSettings.watermarkRotation !== undefined ? docData.printSettings.watermarkRotation : -45
+            }));
           }
         }
       } catch (e) {} finally { setLoading(false); }
@@ -344,149 +351,199 @@ function CreateLectureSheetContent() {
       </div>
 
       {isPrintMode && (
-        <div className="no-print space-y-6">
-          <div className="flex flex-col gap-6 p-6 bg-slate-100 border-b sticky top-0 z-[100] shadow-md rounded-b-xl">
-             <div className="flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                   <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center"><Eye className="w-5 h-5" /></div>
-                   <h3 className="font-bold text-lg">প্রিন্ট প্রিভিউ ও লেআউট সেটিংস (মোট {toBengaliNumber(paginatedPages.length)} পাতা)</h3>
-                </div>
-                <div className="flex gap-3">
-                  <Button variant="outline" onClick={() => router.back()} className="gap-2 font-bold border-primary text-primary bg-white"><ArrowLeft className="w-4 h-4" /> এডিটরে ফিরুন</Button>
-                  <Button onClick={() => window.print()} className="gap-2 font-bold bg-primary px-8 shadow-lg"><Printer className="w-4 h-4" /> প্রিন্ট করুন</Button>
-                </div>
+        <div className="no-print flex flex-col h-screen fixed inset-0 bg-slate-100 z-[100] font-kalpurush">
+          <header className="h-14 bg-white border-b flex items-center justify-between px-6 shrink-0 shadow-sm">
+             <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center"><Eye className="w-5 h-5" /></div>
+                <h3 className="font-bold text-lg">প্রিন্ট প্রিভিউ ও লেআউট (মোট {toBengaliNumber(paginatedPages.length)} পাতা)</h3>
              </div>
-             
-             {/* Main Controls */}
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 p-4 bg-white rounded-xl border border-slate-200">
-                <div className="space-y-2">
-                   <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1"><Settings2 className="w-3 h-3" /> মার্জিন (টপ)</label>
-                   <Input type="number" step="0.1" value={printSettings.marginTop} onChange={e => setPrintSettings(p => ({...p, marginTop: parseFloat(e.target.value)}))} className="h-8 font-bold" />
-                </div>
-                <div className="space-y-2">
-                   <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1"><Settings2 className="w-3 h-3" /> মার্জিন (বটম)</label>
-                   <Input type="number" step="0.1" value={printSettings.marginBottom} onChange={e => setPrintSettings(p => ({...p, marginBottom: parseFloat(e.target.value)}))} className="h-8 font-bold" />
-                </div>
-                <div className="space-y-2">
-                   <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1"><Settings2 className="w-3 h-3" /> মার্জিন (বাম)</label>
-                   <Input type="number" step="0.1" value={printSettings.marginLeft} onChange={e => setPrintSettings(p => ({...p, marginLeft: parseFloat(e.target.value)}))} className="h-8 font-bold" />
-                </div>
-                <div className="space-y-2">
-                   <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1"><Settings2 className="w-3 h-3" /> মার্জিন (ডান)</label>
-                   <Input type="number" step="0.1" value={printSettings.marginRight} onChange={e => setPrintSettings(p => ({...p, marginRight: parseFloat(e.target.value)}))} className="h-8 font-bold" />
-                </div>
-                <div className="space-y-2">
-                   <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1"><SlidersHorizontal className="w-3 h-3" /> জলছাপ ব্রাইটনেস ({toBengaliNumber(printSettings.watermarkOpacity)}%)</label>
-                   <div className="pt-2"><Slider value={[printSettings.watermarkOpacity]} max={100} step={1} onValueChange={([v]) => setPrintSettings(p => ({...p, watermarkOpacity: v}))} /></div>
-                </div>
+             <div className="flex gap-3">
+               <Button variant="outline" size="sm" onClick={() => router.back()} className="gap-2 font-bold border-primary text-primary bg-white"><ArrowLeft className="w-4 h-4" /> এডিটরে ফিরুন</Button>
+               <Button size="sm" onClick={() => window.print()} className="gap-2 font-bold bg-primary px-6 shadow-lg"><Printer className="w-4 h-4" /> প্রিন্ট করুন</Button>
              </div>
-
-             {/* Watermark Controls */}
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-4 bg-white rounded-xl border border-indigo-200">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-indigo-600 uppercase flex items-center gap-1"><Type className="w-3 h-3" /> জলছাপ টেক্সট</label>
-                  <Input 
-                    placeholder="জলছাপ লেখা..." 
-                    value={printSettings.watermarkText} 
-                    onChange={e => setPrintSettings(p => ({...p, watermarkText: e.target.value, watermarkType: 'text'}))} 
-                    className="h-8 font-bold border-indigo-100" 
-                  />
-                </div>
-                <div className="space-y-2">
-                   <label className="text-[10px] font-bold text-indigo-600 uppercase flex items-center gap-1"><Type className="w-3 h-3" /> টেক্সট সাইজ ({toBengaliNumber(printSettings.watermarkFontSize)}pt)</label>
-                   <Input 
-                    type="number" 
-                    value={printSettings.watermarkFontSize} 
-                    onChange={e => setPrintSettings(p => ({...p, watermarkFontSize: parseInt(e.target.value) || 0}))} 
-                    className="h-8 font-bold border-indigo-100" 
-                  />
-                </div>
-                <div className="space-y-2">
-                   <label className="text-[10px] font-bold text-indigo-600 uppercase flex items-center gap-1"><ImageIcon className="w-3 h-3" /> জলছাপ লোগো</label>
-                   <div className="flex gap-2">
-                      <Button variant="outline" size="sm" className="h-8 gap-2 font-bold flex-1 border-indigo-100" onClick={() => watermarkImageRef.current?.click()}>
-                        <ImageIcon className="w-3.5 h-3.5" /> লোগো আপলোড
-                      </Button>
-                      {printSettings.watermarkImageUrl && (
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setPrintSettings(p => ({...p, watermarkImageUrl: '', watermarkType: 'text'}))}>
-                          <X className="w-4 h-4" />
-                        </Button>
-                      )}
-                   </div>
-                   <input type="file" ref={watermarkImageRef} className="hidden" accept="image/*" onChange={handleWatermarkImage} />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-indigo-600 uppercase flex items-center gap-1"><SlidersHorizontal className="w-3 h-3" /> জলছাপের ধরন</label>
-                  <Select value={printSettings.watermarkType} onValueChange={v => setPrintSettings(p => ({...p, watermarkType: v as any}))}>
-                    <SelectTrigger className="h-8 font-bold border-indigo-100"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="text">টেক্সট জলছাপ</SelectItem>
-                      <SelectItem value="image">লোগো জলছাপ</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-             </div>
-          </div>
-
-          <div className="print-area py-10 flex flex-col items-center bg-slate-200 min-h-screen gap-10">
-             {paginatedPages.map((pageHtml, idx) => (
-               <div 
-                 key={idx}
-                 className="paper shadow-2xl bg-white relative overflow-hidden flex flex-col" 
-                 style={{ 
-                   width: '8.27in', 
-                   height: '11.69in',
-                   padding: `${printSettings.marginTop}in ${printSettings.marginRight}in ${printSettings.marginBottom}in ${printSettings.marginLeft}in`,
-                   lineHeight: '1.2'
-                 }}
-               >
-                  {/* Watermark Logic */}
-                  <div 
-                    className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden" 
-                    style={{ 
-                      opacity: printSettings.watermarkOpacity / 100, 
-                      transform: printSettings.watermarkType === 'image' ? 'none' : 'rotate(-45deg)', 
-                      whiteSpace: 'nowrap' 
-                    }}
-                  >
-                    {printSettings.watermarkType === 'image' && printSettings.watermarkImageUrl ? (
-                      <img src={printSettings.watermarkImageUrl} alt="Watermark" className="max-w-[70%] max-h-[70%] object-contain" />
-                    ) : (
-                      <span 
-                        style={{ fontSize: `${printSettings.watermarkFontSize}pt` }} 
-                        className="font-black text-black"
-                      >
-                        {printSettings.watermarkText || data.institution || softwareConfig?.appName || 'টপ গ্রেড টিউটোরিয়ালস'}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="relative z-10 flex flex-col h-full text-black">
-                    <header className="text-center border-b-2 border-black pb-1 mb-2">
-                      <h1 className="font-black text-[23px] text-black leading-tight">{data.institution || softwareConfig?.appName || 'শিক্ষা প্রতিষ্ঠানের নাম'}</h1>
-                      <div className="flex justify-center gap-8 text-[10pt] font-bold mt-1">
-                        <span>শ্রেণি: {CLASSES.find(c => c.id === data.classId)?.label || ''} শ্রেণি</span>
-                        <span>বিষয়: {data.subject}</span>
-                      </div>
-                    </header>
-                    
-                    {idx === 0 && (
-                      <h2 className="text-[13pt] font-bold text-center underline uppercase mb-4">{data.topic || 'লেকচার শিট'}</h2>
-                    )}
-
-                    <div 
-                      className="content-area text-[10.5pt] text-justify flex-1"
-                      style={{ lineHeight: '1.2' }}
-                      dangerouslySetInnerHTML={{ __html: pageHtml }}
-                    />
-                    
-                    <footer className="mt-auto pt-4 flex justify-between text-[9pt] font-bold border-t border-slate-200">
-                      <span>পাতা: {toBengaliNumber(idx + 1)} / {toBengaliNumber(paginatedPages.length)}</span>
-                      <span>{softwareConfig?.appName || 'টপ গ্রেড টিউটোরিয়ালস'}</span>
-                    </footer>
+          </header>
+          
+          <div className="flex-1 flex overflow-hidden">
+            {/* Sidebar Settings */}
+            <aside className="w-80 bg-white border-r overflow-y-auto p-6 space-y-8 shrink-0">
+               <div className="space-y-4">
+                  <h4 className="text-xs font-black text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                    <Settings2 className="w-3.5 h-3.5" /> পেজ মার্জিন (ইঞ্চি)
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold">উপরে (Top)</label>
+                      <Input type="number" step="0.1" value={printSettings.marginTop} onChange={e => setPrintSettings(p => ({...p, marginTop: parseFloat(e.target.value)}))} className="h-8 font-bold" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold">নিচে (Bottom)</label>
+                      <Input type="number" step="0.1" value={printSettings.marginBottom} onChange={e => setPrintSettings(p => ({...p, marginBottom: parseFloat(e.target.value)}))} className="h-8 font-bold" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold">বামে (Left)</label>
+                      <Input type="number" step="0.1" value={printSettings.marginLeft} onChange={e => setPrintSettings(p => ({...p, marginLeft: parseFloat(e.target.value)}))} className="h-8 font-bold" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold">ডানে (Right)</label>
+                      <Input type="number" step="0.1" value={printSettings.marginRight} onChange={e => setPrintSettings(p => ({...p, marginRight: parseFloat(e.target.value)}))} className="h-8 font-bold" />
+                    </div>
                   </div>
                </div>
-             ))}
+
+               <Separator />
+
+               <div className="space-y-5">
+                  <h4 className="text-xs font-black text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                    <SlidersHorizontal className="w-3.5 h-3.5" /> জলছাপ সেটিংস
+                  </h4>
+                  
+                  <div className="space-y-6">
+                    {/* Text Watermark Option */}
+                    <div className="p-4 rounded-xl border-2 bg-slate-50/50 space-y-4">
+                      <div className="flex items-center gap-3">
+                        <Checkbox 
+                          id="text-wm" 
+                          checked={printSettings.watermarkType === 'text'} 
+                          onCheckedChange={() => setPrintSettings(p => ({...p, watermarkType: 'text'}))} 
+                        />
+                        <label htmlFor="text-wm" className="text-sm font-black flex items-center gap-2 cursor-pointer">
+                          <Type className="w-4 h-4 text-indigo-600" /> টেক্সট জলছাপ
+                        </label>
+                      </div>
+                      
+                      {printSettings.watermarkType === 'text' && (
+                        <div className="space-y-3 pt-2 animate-in fade-in duration-300">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-500">লেখা</label>
+                            <Input value={printSettings.watermarkText} onChange={e => setPrintSettings(p => ({...p, watermarkText: e.target.value}))} placeholder="জলছাপ লেখা..." className="h-8 font-bold text-xs" />
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-slate-500">সাইজ (pt)</label>
+                              <Input type="number" value={printSettings.watermarkFontSize} onChange={e => setPrintSettings(p => ({...p, watermarkFontSize: parseInt(e.target.value) || 0}))} className="h-8 font-bold text-xs" />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-slate-500">এঙ্গেল (ডিগ্রি)</label>
+                              <div className="relative">
+                                <Input type="number" value={printSettings.watermarkRotation} onChange={e => setPrintSettings(p => ({...p, watermarkRotation: parseInt(e.target.value) || 0}))} className="h-8 font-bold text-xs pr-7" />
+                                <RotateCw className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400" />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Image Watermark Option */}
+                    <div className="p-4 rounded-xl border-2 bg-slate-50/50 space-y-4">
+                      <div className="flex items-center gap-3">
+                        <Checkbox 
+                          id="image-wm" 
+                          checked={printSettings.watermarkType === 'image'} 
+                          onCheckedChange={() => setPrintSettings(p => ({...p, watermarkType: 'image'}))} 
+                        />
+                        <label htmlFor="image-wm" className="text-sm font-black flex items-center gap-2 cursor-pointer">
+                          <ImageIcon className="w-4 h-4 text-emerald-600" /> লোগো জলছাপ
+                        </label>
+                      </div>
+                      
+                      {printSettings.watermarkType === 'image' && (
+                        <div className="space-y-3 pt-2 animate-in fade-in duration-300">
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm" className="h-8 gap-2 font-bold flex-1 bg-white" onClick={() => watermarkImageRef.current?.click()}>
+                              <ImageIcon className="w-3.5 h-3.5" /> লোগো আপলোড
+                            </Button>
+                            {printSettings.watermarkImageUrl && (
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setPrintSettings(p => ({...p, watermarkImageUrl: ''}))}>
+                                <X className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-500">এঙ্গেল (ডিগ্রি)</label>
+                            <div className="relative">
+                              <Input type="number" value={printSettings.watermarkRotation} onChange={e => setPrintSettings(p => ({...p, watermarkRotation: parseInt(e.target.value) || 0}))} className="h-8 font-bold text-xs pr-7" />
+                              <Compass className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400" />
+                            </div>
+                          </div>
+                          <input type="file" ref={watermarkImageRef} className="hidden" accept="image/*" onChange={handleWatermarkImage} />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 pt-4 border-t">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center justify-between">
+                      জলছাপ ব্রাইটনেস <span>{toBengaliNumber(printSettings.watermarkOpacity)}%</span>
+                    </label>
+                    <div className="pt-2">
+                      <Slider value={[printSettings.watermarkOpacity]} max={100} step={1} onValueChange={([v]) => setPrintSettings(p => ({...p, watermarkOpacity: v}))} />
+                    </div>
+                  </div>
+               </div>
+            </aside>
+
+            {/* Paper Preview Area */}
+            <main className="flex-1 overflow-y-auto bg-slate-200 py-10 flex flex-col items-center gap-10 custom-scrollbar">
+               {paginatedPages.map((pageHtml, idx) => (
+                 <div 
+                   key={idx}
+                   className="paper shadow-2xl bg-white relative overflow-hidden flex flex-col shrink-0" 
+                   style={{ 
+                     width: '8.27in', 
+                     height: '11.69in',
+                     padding: `${printSettings.marginTop}in ${printSettings.marginRight}in ${printSettings.marginBottom}in ${printSettings.marginLeft}in`,
+                     lineHeight: '1.2'
+                   }}
+                 >
+                    {/* Watermark Rendering */}
+                    <div 
+                      className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden" 
+                      style={{ 
+                        opacity: printSettings.watermarkOpacity / 100, 
+                        transform: `rotate(${printSettings.watermarkRotation}deg)`, 
+                        whiteSpace: 'nowrap' 
+                      }}
+                    >
+                      {printSettings.watermarkType === 'image' && printSettings.watermarkImageUrl ? (
+                        <img src={printSettings.watermarkImageUrl} alt="Watermark" className="max-w-[70%] max-h-[70%] object-contain" />
+                      ) : (
+                        <span 
+                          style={{ fontSize: `${printSettings.watermarkFontSize}pt` }} 
+                          className="font-black text-black"
+                        >
+                          {printSettings.watermarkText || data.institution || softwareConfig?.appName || 'টপ গ্রেড টিউটোরিয়ালস'}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="relative z-10 flex flex-col h-full text-black">
+                      <header className="text-center border-b-2 border-black pb-1 mb-2">
+                        <h1 className="font-black text-[23px] text-black leading-tight">{data.institution || softwareConfig?.appName || 'শিক্ষা প্রতিষ্ঠানের নাম'}</h1>
+                        <div className="flex justify-center gap-8 text-[10pt] font-bold mt-1">
+                          <span>শ্রেণি: {CLASSES.find(c => c.id === data.classId)?.label || ''} শ্রেণি</span>
+                          <span>বিষয়: {data.subject}</span>
+                        </div>
+                      </header>
+                      
+                      {idx === 0 && (
+                        <h2 className="text-[13pt] font-bold text-center underline uppercase mb-4">{data.topic || 'লেকচার শিট'}</h2>
+                      )}
+
+                      <div 
+                        className="content-area text-[10.5pt] text-justify flex-1"
+                        style={{ lineHeight: '1.2' }}
+                        dangerouslySetInnerHTML={{ __html: pageHtml }}
+                      />
+                      
+                      <footer className="mt-auto pt-4 flex justify-between text-[9pt] font-bold border-t border-slate-200">
+                        <span>পাতা: {toBengaliNumber(idx + 1)} / {toBengaliNumber(paginatedPages.length)}</span>
+                        <span>{softwareConfig?.appName || 'টপ গ্রেড টিউটোরিয়ালস'}</span>
+                      </footer>
+                    </div>
+                 </div>
+               ))}
+            </main>
           </div>
         </div>
       )}
@@ -504,19 +561,26 @@ function CreateLectureSheetContent() {
           .math-sub { font-size: 0.7em; vertical-align: sub; }
           .math-text { font-family: 'Kalpurush', sans-serif; font-style: normal; }
           .paper { color: black !important; }
+          .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+          .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+          .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+          .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         }
         @media print {
           body * { visibility: hidden; }
-          .print-area, .print-area * { visibility: visible; }
-          .print-area { position: absolute; left: 0; top: 0; width: 100%; padding: 0 !important; background: white !important; display: block !important; }
-          .paper { margin: 0 !important; box-shadow: none !important; width: 100% !important; height: 11.69in !important; padding: 0 !important; page-break-after: always; position: relative; }
+          .print-area, .print-area *, .paper, .paper * { visibility: visible; }
+          .paper { 
+            position: relative !important; 
+            margin: 0 !important; 
+            box-shadow: none !important; 
+            width: 100% !important; 
+            height: 11.69in !important; 
+            padding: 0.5in !important; 
+            page-break-after: always; 
+            display: block !important;
+          }
           @page { size: A4; margin: 0; }
           .no-print { display: none !important; }
-          .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
-          .math-num { border-bottom: 0.5pt solid black; padding: 0 1px; }
-          .math-den { padding: 0 1px; }
-          .math-sqrt { display: inline-flex; align-items: center; }
-          .math-sqrt-stem { border-top: 0.5pt solid black; padding-top: 1px; }
         }
       `}} />
     </div>
