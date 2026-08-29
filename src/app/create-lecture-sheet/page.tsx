@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, Save, FileText, ArrowLeft, Loader2, BookOpen, ScanText, Eye, Settings2, SlidersHorizontal, Image as ImageIcon, X, Type, Bold, AlignLeft, AlignCenter, AlignRight, AlignJustify, Edit3, FileDown } from 'lucide-react';
+import { Printer, Save, FileText, ArrowLeft, Loader2, BookOpen, ScanText, Eye, Settings2, SlidersHorizontal, Image as ImageIcon, X, Type, Bold, AlignLeft, AlignCenter, AlignRight, AlignJustify, Edit3, FileDown, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useDoc } from '@/firebase';
 import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
@@ -28,7 +28,10 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 
 function formatMath(text: string) {
   if (!text) return '';
-  let formatted = text.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
+  // Strip redundant dollar signs common in Gemini output
+  let formatted = text.replace(/\$/g, '');
+  
+  formatted = formatted.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
   
   formatted = formatted.replace(/\\text\{([^}]+)\}/g, '<span class="math-text">$1</span>');
 
@@ -346,6 +349,36 @@ function CreateLectureSheetContent() {
     }
   };
 
+  const handleDeletePage = (idx: number) => {
+    if (!confirm("আপনি কি এই পাতাটি মুছে ফেলতে চান?")) return;
+    
+    const newPaginated = paginatedPages.filter((_, i) => i !== idx);
+    setPaginatedPages(newPaginated);
+    
+    setManualPages(prev => {
+      const next: Record<number, string> = {};
+      newPaginated.forEach((content, i) => {
+        const oldIdx = i < idx ? i : i + 1;
+        next[i] = prev[oldIdx] !== undefined ? prev[oldIdx] : content;
+      });
+      return next;
+    });
+
+    setPageStyles(prev => {
+      const next: Record<number, any> = {};
+      newPaginated.forEach((_, i) => {
+        const oldIdx = i < idx ? i : i + 1;
+        if (prev[oldIdx]) next[i] = prev[oldIdx];
+      });
+      return next;
+    });
+
+    if (activeEditIdx === idx) setActiveEditIdx(null);
+    else if (activeEditIdx !== null && activeEditIdx > idx) setActiveEditIdx(activeEditIdx - 1);
+    
+    toast({ title: "সফল", description: "পাতাটি মুছে ফেলা হয়েছে।" });
+  };
+
   if (loading || userLoading) return <div className="flex flex-col items-center justify-center p-20 min-h-[50vh]"><Loader2 className="w-12 h-12 animate-spin text-primary mb-4" /><p className="font-bold">অ্যাক্সেস চেক করা হচ্ছে...</p></div>;
 
   return (
@@ -618,7 +651,10 @@ function CreateLectureSheetContent() {
                    key={idx} className={cn(`paper paper-idx-${idx} shadow-2xl bg-white relative overflow-hidden shrink-0 group transition-all`, activeEditIdx === idx && "ring-4 ring-blue-500 shadow-blue-200")}
                    style={{ width: '8.27in', height: '11.69in', padding: `${mT}in ${mR}in ${mB}in ${mL}in`, lineHeight: '1.2', boxSizing: 'border-box' }}
                  >
-                    <div className="no-print absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-50"><Button size="sm" variant={activeEditIdx === idx ? 'default' : 'secondary'} className="gap-2 font-bold shadow-lg" onClick={() => setActiveEditIdx(idx)}><Edit3 className="w-3.5 h-3.5" /> এডিট করুন</Button></div>
+                    <div className="no-print absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-50 flex gap-2">
+                      <Button size="sm" variant={activeEditIdx === idx ? 'default' : 'secondary'} className="gap-2 font-bold shadow-lg" onClick={() => setActiveEditIdx(idx)}><Edit3 className="w-3.5 h-3.5" /> এডিট করুন</Button>
+                      <Button size="sm" variant="destructive" className="gap-2 font-bold shadow-lg" onClick={() => handleDeletePage(idx)}><Trash2 className="w-3.5 h-3.5" /> মুছে ফেলুন</Button>
+                    </div>
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden" style={{ opacity: (printSettings.watermarkOpacity || 0) / 100, transform: `rotate(${printSettings.watermarkRotation || 0}deg)`, whiteSpace: 'nowrap' }}>
                       {printSettings.watermarkType === 'image' && printSettings.watermarkImageUrl ? (
                         <img src={printSettings.watermarkImageUrl} alt="Watermark" style={{ width: `${printSettings.watermarkImageSize || 70}%`, height: 'auto', objectFit: 'contain' }} />
@@ -665,7 +701,7 @@ function CreateLectureSheetContent() {
           .math-sup { font-size: 0.7em; vertical-align: super; }
           .math-sub { font-size: 0.7em; vertical-align: sub; }
           .math-text { font-family: 'Kalpurush', sans-serif; font-style: normal; }
-          .paper { color: black !important; }
+          .paper { color: black !important; overflow: hidden; }
           .no-arrows::-webkit-inner-spin-button, .no-arrows::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
           .no-arrows { -moz-appearance: textfield; }
           .print-view-container { top: 0 !important; }
@@ -719,6 +755,7 @@ function CreateLectureSheetContent() {
             display: block !important; 
             box-sizing: border-box !important; 
             border: none !important; 
+            overflow: hidden !important;
           }
           @page { 
             size: A4; 
