@@ -156,7 +156,6 @@ function CreateLectureSheetContent() {
   useEffect(() => {
     if (!isPrintMode) return;
 
-    // Check if we should restore from manualPages or re-paginate from editor content
     if (Object.keys(manualPages).length > 0) {
       const sortedIndices = Object.keys(manualPages).map(Number).sort((a, b) => a - b);
       const restoredPages = sortedIndices.map(idx => manualPages[idx]);
@@ -164,7 +163,8 @@ function CreateLectureSheetContent() {
       const editorText = data.content.replace(/<[^>]*>/g, '').replace(/\s/g, '');
       const manualCombinedText = restoredPages.join('').replace(/<[^>]*>/g, '').replace(/\s|&nbsp;/g, '');
       
-      if (Math.abs(editorText.length - manualCombinedText.length) < 15) {
+      // If editor has significantly more content, force re-pagination to create new pages
+      if (Math.abs(editorText.length - manualCombinedText.length) < 25) {
         setPaginatedPages(restoredPages);
         return;
       }
@@ -226,7 +226,7 @@ function CreateLectureSheetContent() {
       const initialStyles: Record<number, any> = {};
       const initialManual: Record<number, string> = {};
       pagesToRender.forEach((p, i) => {
-         initialStyles[i] = { fontSize: globalFontSize, lineHeight: globalLineHeight, bold: false, underline: false, color: '#000000', align: 'justify', mT, mB, mL, mR };
+         initialStyles[i] = pageStyles[i] || { fontSize: globalFontSize, lineHeight: globalLineHeight, bold: false, underline: false, color: '#000000', align: 'justify', mT, mB, mL, mR };
          initialManual[i] = p;
       });
       
@@ -240,28 +240,27 @@ function CreateLectureSheetContent() {
   const handleSave = useCallback(() => {
     if (!user || !db) return;
     
-    let currentManualPages = { ...manualPages };
-    
-    // Sync current DOM content to manualPages if in print mode
+    setSaving(true);
+    let updatedFullContent = data.content;
+    let updatedManualPages = { ...manualPages };
+
+    // Source of truth synchronization based on current mode
     if (isPrintMode) {
       const papers = document.querySelectorAll('.paper');
+      const tempManual: Record<number, string> = {};
       papers.forEach(paper => {
         const match = paper.className.match(/paper-idx-(\d+)/);
         if (match) {
           const idx = parseInt(match[1]);
           const contentArea = paper.querySelector('.content-area');
-          if (contentArea) {
-            currentManualPages[idx] = contentArea.innerHTML || "";
-          }
+          if (contentArea) tempManual[idx] = contentArea.innerHTML || "";
         }
       });
+      updatedManualPages = tempManual;
+      const sortedIndices = Object.keys(tempManual).map(Number).sort((a, b) => a - b);
+      updatedFullContent = sortedIndices.map(idx => tempManual[idx]).join('\n\n');
     }
 
-    // Merge manual pages into data.content to sync both editors
-    const sortedIndices = Object.keys(currentManualPages).map(Number).sort((a, b) => a - b);
-    const updatedFullContent = sortedIndices.map(idx => currentManualPages[idx]).join('\n\n');
-
-    setSaving(true);
     const docId = editId || doc(collection(db, 'lecture-sheets')).id;
     const ref = doc(db, 'lecture-sheets', docId);
     
@@ -270,7 +269,7 @@ function CreateLectureSheetContent() {
       content: updatedFullContent,
       printSettings, 
       pageStyles, 
-      manualPages: currentManualPages, 
+      manualPages: updatedManualPages, 
       userId: user.uid, 
       updatedAt: serverTimestamp() 
     };
@@ -279,9 +278,9 @@ function CreateLectureSheetContent() {
     setDoc(ref, payload, { merge: true })
       .then(() => { 
         setSaving(false); 
-        setManualPages(currentManualPages);
+        setManualPages(updatedManualPages);
         setData(prev => ({ ...prev, content: updatedFullContent }));
-        setPaginatedPages(sortedIndices.map(idx => currentManualPages[idx]));
+        setPaginatedPages(Object.keys(updatedManualPages).map(Number).sort((a, b) => a - b).map(i => updatedManualPages[i]));
         
         toast({ title: "সফল!", description: "লেকচার শিট সরাসরি সেভ হয়েছে এবং এডিটর সিঙ্ক হয়েছে।" }); 
         if (!editId) router.replace(`/create-lecture-sheet?id=${docId}`); 
