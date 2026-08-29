@@ -238,22 +238,33 @@ function CreateLectureSheetContent() {
 
   const handleFormatting = (command: string, value: string | null = null) => {
     const selection = window.getSelection();
-    document.execCommand('styleWithCSS', false, 'true');
+    const hasSelection = selection && selection.rangeCount > 0 && !selection.isCollapsed;
 
-    if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
+    if (hasSelection) {
+      document.execCommand('styleWithCSS', false, 'true');
       if (command === 'fontSize') {
-        const span = document.createElement('span');
-        span.style.fontSize = value + 'pt';
-        const range = selection.getRangeAt(0);
-        try {
-          range.surroundContents(span);
-        } catch (e) {
-          document.execCommand('fontSize', false, '4'); 
+        // CONTENTEDITABLE FONT SIZE PT HACK
+        document.execCommand('fontSize', false, '7');
+        const editableDiv = document.querySelector(`.paper-idx-${activeEditIdx} .content-area`);
+        if (editableDiv) {
+          const fonts = editableDiv.querySelectorAll('font[size="7"]');
+          fonts.forEach(font => {
+            const span = document.createElement('span');
+            span.style.fontSize = value + 'pt';
+            span.innerHTML = font.innerHTML;
+            font.parentNode?.replaceChild(span, font);
+          });
+          setManualPages(prev => ({ ...prev, [activeEditIdx!]: editableDiv.innerHTML }));
         }
       } else if (command === 'bold') {
         document.execCommand('bold', false);
       } else if (command === 'foreColor') {
         document.execCommand('foreColor', false, value || '');
+      }
+      
+      const editableDiv = document.querySelector(`.paper-idx-${activeEditIdx} .content-area`);
+      if (editableDiv) {
+        setManualPages(prev => ({ ...prev, [activeEditIdx!]: editableDiv.innerHTML }));
       }
     } else if (activeEditIdx !== null) {
       if (command === 'fontSize') updatePageStyle(activeEditIdx, 'fontSize', parseFloat(value || '10.5'));
@@ -348,7 +359,7 @@ function CreateLectureSheetContent() {
           </header>
           
           <div className="flex-1 flex overflow-hidden">
-            <aside className="no-print w-80 bg-white border-r overflow-y-auto p-6 space-y-8 shrink-0 pb-32">
+            <aside className="no-print w-80 bg-white border-r overflow-y-auto p-6 space-y-8 shrink-0 pb-32 custom-scrollbar">
                {activeEditIdx !== null && pageStyles[activeEditIdx] ? (
                  <div className="space-y-6 animate-in slide-in-from-left-4 duration-300">
                     <div className="flex items-center justify-between">
@@ -360,10 +371,10 @@ function CreateLectureSheetContent() {
                       <div className="space-y-4">
                         <label className="text-[10px] font-black text-slate-500 uppercase">পেজ মার্জিন (ইঞ্চি)</label>
                         <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1"><label className="text-[9px] font-bold">উপরে</label><Input type="text" value={pageStyles[activeEditIdx].mT} onChange={e => updatePageStyle(activeEditIdx!, 'mT', e.target.value)} className="h-7 text-xs font-bold" /></div>
-                          <div className="space-y-1"><label className="text-[9px] font-bold">নিচে</label><Input type="text" value={pageStyles[activeEditIdx].mB} onChange={e => updatePageStyle(activeEditIdx!, 'mB', e.target.value)} className="h-7 text-xs font-bold" /></div>
-                          <div className="space-y-1"><label className="text-[9px] font-bold">বামে</label><Input type="text" value={pageStyles[activeEditIdx].mL} onChange={e => updatePageStyle(activeEditIdx!, 'mL', e.target.value)} className="h-7 text-xs font-bold" /></div>
-                          <div className="space-y-1"><label className="text-[9px] font-bold">ডানে</label><Input type="text" value={pageStyles[activeEditIdx].mR} onChange={e => updatePageStyle(activeEditIdx!, 'mR', e.target.value)} className="h-7 text-xs font-bold" /></div>
+                          <div className="space-y-1"><label className="text-[9px] font-bold">উপরে</label><Input type="text" value={pageStyles[activeEditIdx].mT} onChange={e => updatePageStyle(activeEditIdx!, 'mT', e.target.value)} className="h-7 text-xs font-bold no-arrows" /></div>
+                          <div className="space-y-1"><label className="text-[9px] font-bold">নিচে</label><Input type="text" value={pageStyles[activeEditIdx].mB} onChange={e => updatePageStyle(activeEditIdx!, 'mB', e.target.value)} className="h-7 text-xs font-bold no-arrows" /></div>
+                          <div className="space-y-1"><label className="text-[9px] font-bold">বামে</label><Input type="text" value={pageStyles[activeEditIdx].mL} onChange={e => updatePageStyle(activeEditIdx!, 'mL', e.target.value)} className="h-7 text-xs font-bold no-arrows" /></div>
+                          <div className="space-y-1"><label className="text-[9px] font-bold">ডানে</label><Input type="text" value={pageStyles[activeEditIdx].mR} onChange={e => updatePageStyle(activeEditIdx!, 'mR', e.target.value)} className="h-7 text-xs font-bold no-arrows" /></div>
                         </div>
                       </div>
 
@@ -474,7 +485,7 @@ function CreateLectureSheetContent() {
 
                  return (
                  <div 
-                   key={idx} className={cn("paper shadow-2xl bg-white relative overflow-hidden shrink-0 group transition-all", activeEditIdx === idx && "ring-4 ring-blue-500 shadow-blue-200")}
+                   key={idx} className={cn(`paper paper-idx-${idx} shadow-2xl bg-white relative overflow-hidden shrink-0 group transition-all`, activeEditIdx === idx && "ring-4 ring-blue-500 shadow-blue-200")}
                    style={{ width: '8.27in', height: '11.69in', padding: `${mT}in ${mR}in ${mB}in ${mL}in`, lineHeight: '1.2' }}
                  >
                     <div className="no-print absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-50"><Button size="sm" variant={activeEditIdx === idx ? 'default' : 'secondary'} className="gap-2 font-bold shadow-lg" onClick={() => setActiveEditIdx(idx)}><Edit3 className="w-3.5 h-3.5" /> এডিট করুন</Button></div>
@@ -490,8 +501,8 @@ function CreateLectureSheetContent() {
                       <div 
                         contentEditable={activeEditIdx === idx} 
                         onBlur={(e) => {
-                          const val = e.currentTarget.innerHTML;
-                          setManualPages(prev => ({ ...prev, [idx]: val }));
+                          const html = e.currentTarget.innerHTML;
+                          setManualPages(prev => ({ ...prev, [idx]: html }));
                         }}
                         className={cn("content-area flex-1 font-kalpurush outline-none", activeEditIdx === idx && "bg-blue-50/20 p-1 rounded border border-dashed border-blue-300")}
                         style={{ lineHeight: '1.2', fontSize: `${style.fontSize}pt`, fontWeight: style.bold ? 'bold' : 'normal', color: style.color, textAlign: style.align as any }}
@@ -522,6 +533,9 @@ function CreateLectureSheetContent() {
           .no-arrows::-webkit-inner-spin-button, .no-arrows::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
           .no-arrows { -moz-appearance: textfield; }
           .print-view-container { top: 0 !important; }
+          .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+          .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+          .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         }
         @media print {
           body { background: white !important; margin: 0 !important; padding: 0 !important; height: auto !important; overflow: visible !important; }
