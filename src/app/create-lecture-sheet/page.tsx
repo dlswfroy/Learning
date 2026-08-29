@@ -231,6 +231,18 @@ function CreateLectureSheetContent() {
       .catch(async (error) => { setSaving(false); errorEmitter.emit('permission-error', new FirestorePermissionError({ path: ref.path, operation: 'write', requestResourceData: payload })); });
   };
 
+  // Keyboard Shortcut: Ctrl + S / Cmd + S
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleSave]);
+
   const handleOCR = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -337,7 +349,7 @@ function CreateLectureSheetContent() {
               </CardContent>
             </Card>
             <div className="space-y-3">
-              <Button onClick={handleSave} disabled={saving} className="w-full gap-2 font-bold h-11"><Save className="w-4 h-4" /> সেভ করুন</Button>
+              <Button onClick={handleSave} disabled={saving} className="w-full gap-2 font-bold h-11"><Save className="w-4 h-4" /> সেভ করুন (Ctrl+S)</Button>
               <Button onClick={() => { if(!data.content) return; const p = new URLSearchParams(window.location.search); p.set('print', 'true'); if(editId) p.set('id', editId); router.push(`${window.location.pathname}?${p.toString()}`); }} variant="outline" className="w-full gap-2 border-primary text-primary font-bold h-11"><Eye className="w-4 h-4" /> প্রিন্ট ভিউ</Button>
             </div>
           </aside>
@@ -362,6 +374,7 @@ function CreateLectureSheetContent() {
              <div className="flex gap-3">
                <Button variant="outline" size="sm" onMouseDown={e => e.preventDefault()} onClick={() => router.back()} className="gap-2 font-bold border-primary text-primary bg-white"><ArrowLeft className="w-4 h-4" /> এডিটরে ফিরুন</Button>
                <Button variant="outline" size="sm" onMouseDown={e => e.preventDefault()} onClick={() => window.print()} className="gap-2 font-bold text-red-600 bg-white border-red-200"><FileDown className="w-4 h-4" /> পিডিএফ সেভ করুন</Button>
+               <Button size="sm" onMouseDown={e => e.preventDefault()} onClick={handleSave} disabled={saving} className="gap-2 font-bold bg-green-600 hover:bg-green-700 px-4"><Save className="w-4 h-4" /> সেভ (Ctrl+S)</Button>
                <Button size="sm" onMouseDown={e => e.preventDefault()} onClick={() => window.print()} className="gap-2 font-bold bg-primary px-6"><Printer className="w-4 h-4" /> প্রিন্ট করুন</Button>
              </div>
           </header>
