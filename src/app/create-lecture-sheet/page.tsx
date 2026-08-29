@@ -589,12 +589,56 @@ function CreateLectureSheetContent() {
           .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         }
         @media print {
-          body { background: white !important; margin: 0 !important; padding: 0 !important; height: auto !important; overflow: visible !important; }
+          html, body { 
+            background: white !important; 
+            margin: 0 !important; 
+            padding: 0 !important; 
+            height: auto !important; 
+            overflow: visible !important; 
+            width: 100% !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
           .no-print { display: none !important; }
-          .print-view-container { position: static !important; height: auto !important; overflow: visible !important; display: block !important; background: white !important; }
-          .print-main-area { background: white !important; padding: 0 !important; margin: 0 !important; overflow: visible !important; display: block !important; height: auto !important; position: static !important; }
-          .paper { position: relative !important; margin: 0 !important; box-shadow: none !important; width: 8.27in !important; height: 11.69in !important; break-after: page; break-inside: avoid; display: block !important; box-sizing: border-box !important; border: none !important; }
-          @page { size: A4; margin: 0 !important; }
+          .print-view-container { 
+            position: absolute !important; 
+            top: 0 !important; 
+            left: 0 !important; 
+            margin: 0 !important; 
+            padding: 0 !important; 
+            height: auto !important; 
+            overflow: visible !important; 
+            display: block !important; 
+            background: white !important; 
+            width: 100% !important;
+          }
+          .print-main-area { 
+            background: white !important; 
+            padding: 0 !important; 
+            margin: 0 !important; 
+            overflow: visible !important; 
+            display: block !important; 
+            height: auto !important; 
+            position: static !important; 
+            width: 100% !important;
+          }
+          .paper { 
+            position: relative !important; 
+            margin: 0 !important; 
+            box-shadow: none !important; 
+            width: 8.27in !important; 
+            height: 11.69in !important; 
+            page-break-after: always !important;
+            break-after: page !important;
+            break-inside: avoid !important;
+            display: block !important; 
+            box-sizing: border-box !important; 
+            border: none !important; 
+          }
+          @page { 
+            size: A4; 
+            margin: 0 !important; 
+          }
         }
       `}} />
     </div>
