@@ -356,7 +356,7 @@ function CreateLectureSheetContent() {
       </div>
 
       {isPrintMode && (
-        <div className="flex flex-col h-screen fixed inset-0 top-0 left-0 bg-slate-100 z-[9999] font-kalpurush overflow-hidden">
+        <div className="print-view-container flex flex-col h-screen fixed inset-0 top-0 left-0 bg-slate-100 z-[9999] font-kalpurush overflow-hidden">
           <header className="no-print h-14 bg-white border-b flex items-center justify-between px-6 shrink-0 shadow-sm z-50">
              <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center"><Eye className="w-5 h-5" /></div>
@@ -516,7 +516,7 @@ function CreateLectureSheetContent() {
                </div>
             </aside>
 
-            <main className="flex-1 overflow-y-auto bg-slate-200 pt-16 pb-24 flex flex-col items-center gap-10 custom-scrollbar relative">
+            <main className="print-main-area flex-1 overflow-y-auto bg-slate-200 pt-16 pb-24 flex flex-col items-center gap-10 custom-scrollbar relative">
                {paginatedPages.map((pageHtml, idx) => (
                  <div 
                    key={idx}
@@ -616,14 +616,35 @@ function CreateLectureSheetContent() {
         @media print {
           body { background: white !important; margin: 0 !important; padding: 0 !important; }
           .no-print { display: none !important; }
-          main { background: white !important; padding: 0 !important; margin: 0 !important; overflow: visible !important; display: block !important; }
+          .print-view-container { 
+            position: static !important; 
+            height: auto !important; 
+            overflow: visible !important; 
+            display: block !important; 
+            background: white !important;
+            z-index: auto !important;
+          }
+          .print-view-container > div {
+            display: block !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+          .print-main-area { 
+            background: white !important; 
+            padding: 0 !important; 
+            margin: 0 !important; 
+            overflow: visible !important; 
+            display: block !important; 
+            height: auto !important;
+            position: static !important;
+          }
           .paper { 
             position: relative !important; 
             margin: 0 !important; 
             box-shadow: none !important; 
             width: 100% !important; 
             height: 11.69in !important; 
-            page-break-after: always; 
+            break-after: page; 
             display: flex !important;
             visibility: visible !important;
           }
