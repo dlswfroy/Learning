@@ -23,7 +23,10 @@ import {
   ListChecks,
   ArrowLeft,
   CheckCircle2,
-  X
+  X,
+  PlusCircle,
+  FilePlus,
+  HelpCircle
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -35,21 +38,21 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
-import { CLASSES } from '@/lib/constants';
+import { CLASSES, getSubjectsForClass } from '@/lib/constants';
 import { toast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-
-const BENGALI_ORDINALS: Record<string, string> = {
-  '1': 'প্রথম অধ্যায়', '2': 'দ্বিতীয় অধ্যায়', '3': 'তৃতীয় অধ্যায়', '4': 'চতুর্থ অধ্যায়', '5': 'পঞ্চম অধ্যায়',
-  '6': 'ষষ্ঠ অধ্যায়', '7': 'সপ্তম অধ্যায়', '8': 'অষ্টম অধ্যায়', '9': 'নবম অধ্যায়', '10': 'দশম অধ্যায়',
-  '11': 'একাদশ অধ্যায়', '12': 'দ্বাদশ অধ্যায়', '13': 'ত্রয়োদশ অধ্যায়', '14': 'চতুর্দশ অধ্যায়', '15': 'পঞ্চদশ অধ্যায়',
-  '16': 'ষোড়শ অধ্যায়', '17': 'সপ্তদশ অধ্যায়', '18': 'অষ্টাদশ অধ্যায়', '19': 'ঊনবিংশ অধ্যায়', '20': 'বিংশ অধ্যায়',
-};
 
 function toBengaliNumber(n: number | string | undefined | null): string {
   if (n === undefined || n === null || n === '') return '';
@@ -57,23 +60,7 @@ function toBengaliNumber(n: number | string | undefined | null): string {
   return n.toString().replace(/\d/g, (digit) => bengaliDigits[parseInt(digit)]);
 }
 
-function getStandardizedChapterName(chapter: string): string {
-  if (!chapter) return 'শিরোনামহীন';
-  const ordinalWords: Record<string, string> = { 'প্রথম': '1', 'দ্বিতীয়': '2', 'তৃতীয়': '3', '১ম': '1', '২য়': '2' };
-  let normalized = chapter.toString().toLowerCase().trim();
-  Object.entries(ordinalWords).forEach(([bnWord, num]) => { normalized = normalized.replace(new RegExp(bnWord, 'g'), num); });
-  const match = normalized.match(/\d+/);
-  if (match) return BENGALI_ORDINALS[match[0]] || `${toBengaliNumber(match[0])}তম অধ্যায়`;
-  return normalized || 'শিরোনামহীন';
-}
-
-function getChapterOrder(label: string): number {
-  if (label === 'শিরোনামহীন') return 999;
-  const entry = Object.entries(BENGALI_ORDINALS).find(([num, text]) => text === label);
-  return entry ? parseInt(entry[0]) : 500;
-}
-
-type ViewMode = 'classes' | 'subjects' | 'chapters' | 'types' | 'content';
+type ViewMode = 'classes' | 'subjects' | 'content';
 
 export default function MyLibraryPage() {
   const db = useFirestore();
@@ -83,9 +70,6 @@ export default function MyLibraryPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('classes');
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
-  const [selectedChapter, setSelectedChapter] = useState<string | null>(null);
-  const [selectedType, setSelectedType] = useState<'questions' | 'sheets' | null>(null);
-  const [selectedSubType, setSelectedSubType] = useState<'creative' | 'mcq' | 'all' | null>(null);
 
   // Selection states
   const [isSelecting, setIsSelecting] = useState(false);
@@ -107,12 +91,10 @@ export default function MyLibraryPage() {
     let ss = libraryData.sheets;
     if (selectedClass) { qs = qs.filter(q => q.classId === selectedClass); ss = ss.filter(s => s.classId === selectedClass); }
     if (selectedSubject) { qs = qs.filter(q => q.subject === selectedSubject); ss = ss.filter(s => s.subject === selectedSubject); }
-    if (selectedChapter) { 
-      qs = qs.filter(q => getStandardizedChapterName(q.chapter || '') === selectedChapter);
-      ss = ss.filter(s => getStandardizedChapterName(s.topic || '') === selectedChapter);
-    }
     return { questions: qs, sheets: ss };
-  }, [libraryData, selectedClass, selectedSubject, selectedChapter]);
+  }, [libraryData, selectedClass, selectedSubject]);
+
+  const subjects = useMemo(() => selectedClass ? getSubjectsForClass(selectedClass) : [], [selectedClass]);
 
   const toggleSelection = (id: string) => {
     if (!isSelecting) return;
@@ -160,10 +142,9 @@ export default function MyLibraryPage() {
   };
 
   const renderClasses = () => {
-    const classIds = Array.from(new Set([...libraryData.questions.map(q => q.classId), ...libraryData.sheets.map(s => s.classId)]));
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-        {CLASSES.filter(c => classIds.includes(c.id)).map(cls => (
+        {CLASSES.map(cls => (
           <Card key={cls.id} onClick={() => { setSelectedClass(cls.id); setViewMode('subjects'); }} className="cursor-pointer hover:border-primary hover:shadow-md transition-all group border-2">
             <CardContent className="p-6 flex flex-col items-center text-center space-y-3">
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">
@@ -178,11 +159,10 @@ export default function MyLibraryPage() {
   };
 
   const renderSubjects = () => {
-    const subjects = Array.from(new Set([...currentItems.questions.map(q => q.subject), ...currentItems.sheets.map(s => s.subject)]));
     return (
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {subjects.map(sub => (
-          <Card key={sub} onClick={() => { setSelectedSubject(sub); setViewMode('chapters'); }} className="cursor-pointer hover:border-primary hover:shadow-md transition-all group border-2">
+          <Card key={sub} onClick={() => { setSelectedSubject(sub); setViewMode('content'); }} className="cursor-pointer hover:border-primary hover:shadow-md transition-all group border-2">
             <CardContent className="p-6 flex flex-col items-center text-center space-y-3">
               <div className="w-12 h-12 rounded-xl bg-orange-50/10 flex items-center justify-center text-orange-600 group-hover:bg-orange-500 group-hover:text-white transition-all">
                 <Book className="w-6 h-6" />
@@ -195,192 +175,185 @@ export default function MyLibraryPage() {
     );
   };
 
-  const renderChapters = () => {
-    const chapters = Array.from(new Set([
-      ...currentItems.questions.map(q => getStandardizedChapterName(q.chapter || '')),
-      ...currentItems.sheets.map(s => getStandardizedChapterName(s.topic || ''))
-    ])).filter(Boolean).sort((a, b) => getChapterOrder(a) - getChapterOrder(b));
-
+  const renderSubjectContent = () => {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {chapters.map(label => {
-          const qCount = currentItems.questions.filter(q => getStandardizedChapterName(q.chapter || '') === label).length;
-          const sCount = currentItems.sheets.filter(s => getStandardizedChapterName(s.topic || '') === label).length;
-          return (
-            <Card key={label} onClick={() => { setSelectedChapter(label); setViewMode('types'); }} className="cursor-pointer hover:border-primary hover:shadow-md transition-all group border-2">
-              <CardContent className="p-4 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-4 min-w-0 flex-1">
-                  <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent group-hover:bg-accent group-hover:text-white transition-all">
-                    <Folder className="w-5 h-5" />
+      <div className="space-y-10">
+        {/* Creation Section */}
+        <section className="space-y-4">
+          <h3 className="text-sm font-black text-primary flex items-center gap-2 border-b pb-2 uppercase tracking-wider">
+            <PlusCircle className="w-4 h-4" /> নতুন তৈরি করুন
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Link href={`/create-lecture-sheet?classId=${selectedClass}&subject=${encodeURIComponent(selectedSubject || '')}`}>
+              <Card className="hover:border-orange-500 hover:shadow-lg transition-all group border-l-4 border-l-orange-500 cursor-pointer bg-orange-50/30">
+                <CardContent className="p-6 flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-orange-500 flex items-center justify-center text-white group-hover:scale-110 transition-transform">
+                    <FilePlus className="w-6 h-6" />
                   </div>
-                  <p className="font-bold text-sm truncate">{label}</p>
+                  <div>
+                    <h4 className="font-black text-orange-700">লেকচার শিট</h4>
+                    <p className="text-[10px] font-bold text-muted-foreground">নতুন নোট বা লেকচার শিট তৈরি করুন</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Dialog>
+              <DialogTrigger asChild>
+                <Card className="hover:border-primary hover:shadow-lg transition-all group border-l-4 border-l-primary cursor-pointer bg-blue-50/30">
+                  <CardContent className="p-6 flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center text-white group-hover:scale-110 transition-transform">
+                      <BrainCircuit className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="font-black text-primary">প্রশ্নপত্র</h4>
+                      <p className="text-[10px] font-bold text-muted-foreground">বোর্ড স্ট্যান্ডার্ড সৃজনশীল বা MCQ তৈরি করুন</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </DialogTrigger>
+              <DialogContent className="font-kalpurush">
+                <DialogHeader>
+                  <DialogTitle className="font-black text-primary text-xl">প্রশ্নের ধরন নির্বাচন করুন</DialogTitle>
+                </DialogHeader>
+                <div className="grid grid-cols-1 gap-3 py-4">
+                  <Button variant="outline" className="h-14 font-bold gap-3 justify-start px-6" onClick={() => router.push(`/create-question?classId=${selectedClass}&subject=${encodeURIComponent(selectedSubject || '')}&type=creative`)}>
+                    <div className="w-8 h-8 rounded bg-primary/10 text-primary flex items-center justify-center"><FileText className="w-4 h-4" /></div>
+                    সৃজনশীল প্রশ্নপত্র
+                  </Button>
+                  <Button variant="outline" className="h-14 font-bold gap-3 justify-start px-6" onClick={() => router.push(`/create-question?classId=${selectedClass}&subject=${encodeURIComponent(selectedSubject || '')}&type=mcq`)}>
+                    <div className="w-8 h-8 rounded bg-orange-100 text-orange-600 flex items-center justify-center"><ListChecks className="w-4 h-4" /></div>
+                    বহুনির্বাচনি (MCQ) প্রশ্নপত্র
+                  </Button>
                 </div>
-                <Badge className="bg-primary/10 text-primary font-bold">{toBengaliNumber(qCount + sCount)}</Badge>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-    );
-  };
-
-  const renderTypes = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <Card onClick={() => { setSelectedType('questions'); setViewMode('content'); }} className="cursor-pointer hover:border-primary hover:shadow-lg transition-all group border-l-4 border-l-primary">
-        <CardContent className="p-8 flex items-center gap-6">
-          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">
-            <BrainCircuit className="w-8 h-8" />
+              </DialogContent>
+            </Dialog>
           </div>
-          <div className="flex-1">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xl font-black text-primary">নমুনা প্রশ্ন</h3>
-              <Badge className="bg-primary text-white font-bold">{toBengaliNumber(currentItems.questions.length)} টি</Badge>
-            </div>
-            <p className="text-xs text-muted-foreground font-bold">সৃজনশীল ও বহুনির্বাচনি প্রশ্ন ব্যাংক</p>
-          </div>
-        </CardContent>
-      </Card>
-      <Card onClick={() => { setSelectedType('sheets'); setViewMode('content'); }} className="cursor-pointer hover:border-orange-500 hover:shadow-lg transition-all group border-l-4 border-l-orange-500">
-        <CardContent className="p-8 flex items-center gap-6">
-          <div className="w-16 h-16 rounded-2xl bg-orange-50/10 flex items-center justify-center text-orange-600 group-hover:bg-orange-500 group-hover:text-white transition-all">
-            <BookOpen className="w-8 h-8" />
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xl font-black text-orange-600">লেকচার শিট</h3>
-              <Badge className="bg-orange-100 text-black font-bold">{toBengaliNumber(currentItems.sheets.length)} টি</Badge>
-            </div>
-            <p className="text-xs text-muted-foreground font-bold">অধ্যায় ভিত্তিক লেকচার নোট</p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
+        </section>
 
-  const renderFiles = () => {
-    if (selectedType === 'sheets') {
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {currentItems.sheets.map(s => (
-            <Card key={s.id} className="hover:border-orange-400/40 transition-all shadow-sm bg-white">
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-start">
-                   <CardTitle className="text-base font-bold truncate pr-4">{s.topic}</CardTitle>
-                   <div className="flex gap-2">
-                     <Link href={`/create-lecture-sheet?id=${s.id}`}><Button variant="ghost" size="icon" className="h-8 w-8 text-primary"><Edit className="w-4 h-4" /></Button></Link>
-                     <AlertDialog>
-                       <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive"><Trash2 className="w-4 h-4" /></Button></AlertDialogTrigger>
-                       <AlertDialogContent className="font-kalpurush">
-                         <AlertDialogHeader><AlertDialogTitle className="font-bold">মুছে ফেলবেন?</AlertDialogTitle></AlertDialogHeader>
-                         <AlertDialogFooter>
-                           <AlertDialogCancel>বাতিল</AlertDialogCancel>
-                           <AlertDialogAction onClick={() => handleDelete(s.id, 'lecture-sheets')} className="bg-destructive text-white">মুছে ফেলুন</AlertDialogAction>
-                         </AlertDialogFooter>
-                       </AlertDialogContent>
-                     </AlertDialog>
-                   </div>
-                </div>
-              </CardHeader>
-              <CardFooter className="pt-0 flex justify-between items-center text-[10px] font-bold text-muted-foreground">
-                <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {s.updatedAt?.toDate ? format(s.updatedAt.toDate(), 'dd MMM, yy', { locale: bn }) : ''}</span>
-                <Link href={`/create-lecture-sheet?id=${s.id}&print=true`}><Button size="sm" variant="outline" className="h-7 text-[10px] font-bold gap-1 border-orange-500 text-orange-600"><Printer className="w-3 h-3" /> প্রিন্ট</Button></Link>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-      );
-    }
+        {/* Existing Items Section */}
+        <section className="space-y-6">
+          <div className="flex items-center justify-between border-b pb-2">
+            <h3 className="text-sm font-black text-foreground flex items-center gap-2 uppercase tracking-wider">
+              <Folder className="w-4 h-4" /> আমার সংগ্রহ ({toBengaliNumber(currentItems.questions.length + currentItems.sheets.length)})
+            </h3>
+            {currentItems.questions.length > 0 && (
+              <Button 
+                variant={isSelecting ? "destructive" : "outline"} 
+                size="sm" 
+                onClick={() => { setIsSelecting(!isSelecting); setSelectedDocIds([]); }}
+                className="h-8 gap-2 font-bold text-xs"
+              >
+                {isSelecting ? <X className="w-3.5 h-3.5" /> : <ListChecks className="w-3.5 h-3.5" />}
+                {isSelecting ? "বাতিল" : "প্রশ্ন বাছাই করুন"}
+              </Button>
+            )}
+          </div>
 
-    if (!selectedSubType && !isSelecting) {
-      const cqCount = currentItems.questions.filter(q => !q.isMcq).length;
-      const mcqCount = currentItems.questions.filter(q => q.isMcq).length;
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card onClick={() => setSelectedSubType('creative')} className="cursor-pointer hover:border-primary border-2 p-6 flex items-center justify-between group">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all"><FileText className="w-5 h-5" /></div>
-              <span className="font-bold">সৃজনশীল প্রশ্ন</span>
-            </div>
-            <Badge className="font-bold bg-primary/10 text-primary">{toBengaliNumber(cqCount)} টি</Badge>
-          </Card>
-          <Card onClick={() => setSelectedSubType('mcq')} className="cursor-pointer hover:border-orange-500 border-2 p-6 flex items-center justify-between group">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg bg-orange-50/10 flex items-center justify-center text-orange-600 group-hover:bg-orange-500 group-hover:text-white transition-all"><ListChecks className="w-5 h-5" /></div>
-              <span className="font-bold">বহুনির্বাচনি প্রশ্ন</span>
-            </div>
-            <Badge className="font-bold bg-orange-50/10 text-orange-600">{toBengaliNumber(mcqCount)} টি</Badge>
-          </Card>
-        </div>
-      );
-    }
-
-    const filteredQs = isSelecting ? currentItems.questions : currentItems.questions.filter(q => selectedSubType === 'creative' ? !q.isMcq : q.isMcq);
-    
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredQs.map(q => {
-          const isSelected = selectedDocIds.includes(q.id);
-          return (
-            <Card 
-              key={q.id} 
-              onClick={() => isSelecting && toggleSelection(q.id)}
-              className={cn(
-                "transition-all shadow-sm bg-white border-2",
-                isSelecting ? "cursor-pointer" : "hover:border-primary/40",
-                isSelected ? "border-primary bg-primary/5" : "border-border"
-              )}
-            >
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-start">
-                   <div className="flex items-center gap-3 pr-4 min-w-0">
-                     {isSelecting && (
-                       <div className={cn("w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center", isSelected ? "bg-primary border-primary text-white" : "border-muted-foreground/30")}>
-                         {isSelected && <CheckCircle2 className="w-4 h-4" />}
-                       </div>
-                     )}
-                     <CardTitle className="text-base font-bold truncate">
-                       {q.chapter || q.exam}
-                     </CardTitle>
-                   </div>
-                   {!isSelecting && (
-                     <div className="flex gap-2">
-                       <Link href={`/create-question?id=${q.id}`}><Button variant="ghost" size="icon" className="h-8 w-8 text-primary"><Edit className="w-4 h-4" /></Button></Link>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Sheets */}
+            {currentItems.sheets.map(s => (
+              <Card key={s.id} className="hover:border-orange-400/40 transition-all shadow-sm bg-white border-2">
+                <CardHeader className="pb-3 p-4">
+                  <div className="flex justify-between items-start">
+                     <div className="flex items-center gap-3 pr-4 min-w-0">
+                       <div className="w-8 h-8 rounded bg-orange-50 flex items-center justify-center text-orange-600 shrink-0"><BookOpen className="w-4 h-4" /></div>
+                       <CardTitle className="text-sm font-bold truncate">{s.topic}</CardTitle>
+                     </div>
+                     <div className="flex gap-1">
+                       <Link href={`/create-lecture-sheet?id=${s.id}`}><Button variant="ghost" size="icon" className="h-7 w-7 text-primary"><Edit className="w-3.5 h-3.5" /></Button></Link>
                        <AlertDialog>
-                         <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive"><Trash2 className="w-4 h-4" /></Button></AlertDialogTrigger>
+                         <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive"><Trash2 className="w-3.5 h-3.5" /></Button></AlertDialogTrigger>
                          <AlertDialogContent className="font-kalpurush">
                            <AlertDialogHeader><AlertDialogTitle className="font-bold">মুছে ফেলবেন?</AlertDialogTitle></AlertDialogHeader>
                            <AlertDialogFooter>
                              <AlertDialogCancel>বাতিল</AlertDialogCancel>
-                             <AlertDialogAction onClick={() => handleDelete(q.id, 'questions')} className="bg-destructive text-white">মুছে ফেলুন</AlertDialogAction>
+                             <AlertDialogAction onClick={() => handleDelete(s.id, 'lecture-sheets')} className="bg-destructive text-white">মুছে ফেলুন</AlertDialogAction>
                            </AlertDialogFooter>
                          </AlertDialogContent>
                        </AlertDialog>
                      </div>
-                   )}
-                </div>
-              </CardHeader>
-              <CardFooter className="pt-0 flex justify-between items-center text-[10px] font-bold text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Badge variant="outline" className="text-[8px] h-4 font-bold">{q.isMcq ? 'এমসিকিউ' : 'সৃজনশীল'}</Badge>
-                  <Calendar className="w-3 h-3 ml-1" /> {q.updatedAt?.toDate ? format(q.updatedAt.toDate(), 'dd MMM, yy', { locale: bn }) : ''}
-                </span>
-                {!isSelecting && (
-                  <Link href={`/create-question?id=${q.id}&print=true`}><Button size="sm" variant="outline" className="h-7 text-[10px] font-bold gap-1 border-primary text-primary"><Printer className="w-3 h-3" /> প্রিন্ট</Button></Link>
-                )}
-              </CardFooter>
-            </Card>
-          );
-        })}
+                  </div>
+                </CardHeader>
+                <CardFooter className="pt-0 p-4 flex justify-between items-center text-[9px] font-bold text-muted-foreground bg-slate-50/50 rounded-b-lg">
+                  <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {s.updatedAt?.toDate ? format(s.updatedAt.toDate(), 'dd MMM, yy', { locale: bn }) : ''}</span>
+                  <Link href={`/create-lecture-sheet?id=${s.id}&print=true`}><Button size="sm" variant="outline" className="h-6 text-[9px] font-bold gap-1 border-orange-500 text-orange-600"><Printer className="w-3 h-3" /> প্রিন্ট</Button></Link>
+                </CardFooter>
+              </Card>
+            ))}
+
+            {/* Questions */}
+            {currentItems.questions.map(q => {
+              const isSelected = selectedDocIds.includes(q.id);
+              return (
+                <Card 
+                  key={q.id} 
+                  onClick={() => isSelecting && toggleSelection(q.id)}
+                  className={cn(
+                    "transition-all shadow-sm bg-white border-2",
+                    isSelecting ? "cursor-pointer" : "hover:border-primary/40",
+                    isSelected ? "border-primary bg-primary/5" : "border-border"
+                  )}
+                >
+                  <CardHeader className="pb-3 p-4">
+                    <div className="flex justify-between items-start">
+                       <div className="flex items-center gap-3 pr-4 min-w-0">
+                         {isSelecting ? (
+                           <div className={cn("w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center", isSelected ? "bg-primary border-primary text-white" : "border-muted-foreground/30")}>
+                             {isSelected && <CheckCircle2 className="w-4 h-4" />}
+                           </div>
+                         ) : (
+                           <div className="w-8 h-8 rounded bg-primary/5 flex items-center justify-center text-primary shrink-0"><FileText className="w-4 h-4" /></div>
+                         )}
+                         <CardTitle className="text-sm font-bold truncate">
+                           {q.chapter || q.exam}
+                         </CardTitle>
+                       </div>
+                       {!isSelecting && (
+                         <div className="flex gap-1">
+                           <Link href={`/create-question?id=${q.id}`}><Button variant="ghost" size="icon" className="h-7 w-7 text-primary"><Edit className="w-3.5 h-3.5" /></Button></Link>
+                           <AlertDialog>
+                             <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive"><Trash2 className="w-3.5 h-3.5" /></Button></AlertDialogTrigger>
+                             <AlertDialogContent className="font-kalpurush">
+                               <AlertDialogHeader><AlertDialogTitle className="font-bold">মুছে ফেলবেন?</AlertDialogTitle></AlertDialogHeader>
+                               <AlertDialogFooter>
+                                 <AlertDialogCancel>বাতিল</AlertDialogCancel>
+                                 <AlertDialogAction onClick={() => handleDelete(q.id, 'questions')} className="bg-destructive text-white">মুছে ফেলুন</AlertDialogAction>
+                               </AlertDialogFooter>
+                             </AlertDialogContent>
+                           </AlertDialog>
+                         </div>
+                       )}
+                    </div>
+                  </CardHeader>
+                  <CardFooter className="pt-0 p-4 flex justify-between items-center text-[9px] font-bold text-muted-foreground bg-slate-50/50 rounded-b-lg">
+                    <span className="flex items-center gap-1">
+                      <Badge variant="outline" className="text-[8px] h-4 font-bold px-1.5">{q.isMcq ? 'এমসিকিউ' : 'সৃজনশীল'}</Badge>
+                      <Calendar className="w-3 h-3 ml-1" /> {q.updatedAt?.toDate ? format(q.updatedAt.toDate(), 'dd MMM, yy', { locale: bn }) : ''}
+                    </span>
+                    {!isSelecting && (
+                      <Link href={`/create-question?id=${q.id}&print=true`}><Button size="sm" variant="outline" className="h-6 text-[9px] font-bold gap-1 border-primary text-primary"><Printer className="w-3 h-3" /> প্রিন্ট</Button></Link>
+                    )}
+                  </CardFooter>
+                </Card>
+              );
+            })}
+          </div>
+
+          {currentItems.questions.length === 0 && currentItems.sheets.length === 0 && (
+            <div className="p-20 text-center border-dashed border-2 bg-muted/5 rounded-2xl">
+              <HelpCircle className="w-12 h-12 text-muted-foreground/20 mx-auto mb-4" />
+              <p className="text-muted-foreground font-bold">এই বিষয়ে আপনার কোনো সংগ্রহ নেই।</p>
+            </div>
+          )}
+        </section>
       </div>
     );
   };
 
   const handleBack = () => {
     if (isSelecting) { setIsSelecting(false); setSelectedDocIds([]); return; }
-    if (selectedSubType) { setSelectedSubType(null); return; }
-    if (viewMode === 'content') { setViewMode('types'); setSelectedType(null); return; }
-    if (viewMode === 'types') { setViewMode('chapters'); setSelectedChapter(null); return; }
-    if (viewMode === 'chapters') { setViewMode('subjects'); setSelectedSubject(null); return; }
+    if (viewMode === 'content') { setViewMode('subjects'); setSelectedSubject(null); return; }
     if (viewMode === 'subjects') { setViewMode('classes'); setSelectedClass(null); return; }
   };
 
@@ -407,17 +380,6 @@ export default function MyLibraryPage() {
             </div>
           </div>
           <div className="flex gap-2">
-            {viewMode === 'content' && selectedType === 'questions' && (
-              <Button 
-                variant={isSelecting ? "destructive" : "secondary"} 
-                size="sm" 
-                onClick={() => { setIsSelecting(!isSelecting); setSelectedDocIds([]); }}
-                className="gap-2 font-bold"
-              >
-                {isSelecting ? <X className="w-4 h-4" /> : <ListChecks className="w-4 h-4" />}
-                {isSelecting ? "বাতিল করুন" : "প্রশ্ন বাছাই করুন"}
-              </Button>
-            )}
             {viewMode !== 'classes' && (
               <Button variant="outline" size="sm" onClick={handleBack} className="gap-2 font-bold border-primary text-primary">
                 <ArrowLeft className="w-4 h-4" /> ফিরে যান
@@ -427,41 +389,17 @@ export default function MyLibraryPage() {
         </div>
 
         <div className="flex items-center gap-2 text-xs font-bold overflow-x-auto whitespace-nowrap pb-2 text-muted-foreground">
-          <span className={cn("cursor-pointer hover:text-primary", viewMode === 'classes' && "text-primary")} onClick={() => { setViewMode('classes'); setSelectedClass(null); setSelectedSubject(null); setSelectedChapter(null); setSelectedType(null); setSelectedSubType(null); setIsSelecting(false); }}>লাইব্রেরি</span>
+          <span className={cn("cursor-pointer hover:text-primary", viewMode === 'classes' && "text-primary")} onClick={() => { setViewMode('classes'); setSelectedClass(null); setSelectedSubject(null); setIsSelecting(false); }}>লাইব্রেরি</span>
           {selectedClass && (
             <>
               <ChevronRight className="w-3 h-3 shrink-0" />
-              <span className={cn("cursor-pointer hover:text-primary", viewMode === 'subjects' && "text-primary")} onClick={() => { setViewMode('subjects'); setSelectedSubject(null); setSelectedChapter(null); setSelectedType(null); setSelectedSubType(null); setIsSelecting(false); }}>{CLASSES.find(c => c.id === selectedClass)?.label} শ্রেণি</span>
+              <span className={cn("cursor-pointer hover:text-primary", viewMode === 'subjects' && "text-primary")} onClick={() => { setViewMode('subjects'); setSelectedSubject(null); setIsSelecting(false); }}>{CLASSES.find(c => c.id === selectedClass)?.label} শ্রেণি</span>
             </>
           )}
           {selectedSubject && (
             <>
               <ChevronRight className="w-3 h-3 shrink-0" />
-              <span className={cn("cursor-pointer hover:text-primary", viewMode === 'chapters' && "text-primary")} onClick={() => { setViewMode('chapters'); setSelectedSubject(null); setSelectedChapter(null); setSelectedType(null); setSelectedSubType(null); setIsSelecting(false); }}>{selectedSubject}</span>
-            </>
-          )}
-          {selectedChapter && (
-            <>
-              <ChevronRight className="w-3 h-3 shrink-0" />
-              <span className={cn("cursor-pointer hover:text-primary", viewMode === 'types' && "text-primary")} onClick={() => { setViewMode('chapters'); setSelectedChapter(null); setSelectedType(null); setSelectedSubType(null); setIsSelecting(false); }}>অধ্যায়</span>
-            </>
-          )}
-          {selectedType && (
-            <>
-              <ChevronRight className="w-3 h-3 shrink-0" />
-              <span className={cn("cursor-pointer hover:text-primary", !selectedSubType && "text-primary")} onClick={() => { setViewMode('content'); setSelectedSubType(null); }}>{selectedType === 'questions' ? 'নমুনা প্রশ্ন' : 'লেকচার শিট'}</span>
-            </>
-          )}
-          {selectedSubType && !isSelecting && (
-            <>
-              <ChevronRight className="w-3 h-3 shrink-0" />
-              <span className="text-primary">{selectedSubType === 'creative' ? 'সৃজনশীল' : 'বহুনির্বাচনি'}</span>
-            </>
-          )}
-          {isSelecting && (
-            <>
-              <ChevronRight className="w-3 h-3 shrink-0" />
-              <span className="text-primary">প্রশ্ন বাছাই</span>
+              <span className={cn("cursor-pointer hover:text-primary", viewMode === 'content' && "text-primary")} onClick={() => { setViewMode('content'); }}>{selectedSubject}</span>
             </>
           )}
         </div>
@@ -470,9 +408,7 @@ export default function MyLibraryPage() {
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
         {viewMode === 'classes' && renderClasses()}
         {viewMode === 'subjects' && renderSubjects()}
-        {viewMode === 'chapters' && renderChapters()}
-        {viewMode === 'types' && renderTypes()}
-        {viewMode === 'content' && renderFiles()}
+        {viewMode === 'content' && renderSubjectContent()}
       </div>
 
       {isSelecting && selectedDocIds.length > 0 && (
@@ -493,14 +429,6 @@ export default function MyLibraryPage() {
               বোর্ড প্রশ্ন তৈরি করুন
             </Button>
           </Card>
-        </div>
-      )}
-
-      {!isSelecting && (viewMode === 'content' || viewMode === 'types') && (
-        <div className="flex justify-center pt-10">
-           <p className="text-[10px] font-bold text-black flex items-center gap-1">
-             <LibraryIcon className="w-3 h-3" /> মোট আইটেম: {toBengaliNumber((currentItems.questions.length + currentItems.sheets.length))} টি
-           </p>
         </div>
       )}
     </div>
