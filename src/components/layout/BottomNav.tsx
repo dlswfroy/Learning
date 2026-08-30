@@ -26,6 +26,7 @@ function BottomNavContent() {
     { label: 'শিট তৈরি', icon: BookOpen, href: '/create-lecture-sheet' },
     { label: 'শিক্ষার্থী', icon: Users, href: '/students' },
     { label: 'লাইব্রেরি', icon: Library, href: '/my-questions' },
+    { label: 'সেটিংস', icon: Settings, href: '/settings' },
   ];
 
   return (

@@ -9,12 +9,12 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings as SettingsIcon, CheckCircle, Trash2, Loader2, Link as LinkIcon, Filter, BookCopy, User, Globe, Save, Camera, FileText } from 'lucide-react';
+import { Settings as SettingsIcon, CheckCircle, Trash2, Loader2, Link as LinkIcon, Filter, BookCopy, User, Globe, Save, Camera, FileText, Users, ShieldCheck } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useUser, useDoc } from '@/firebase';
-import { collection, addDoc, deleteDoc, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, doc, getDoc, setDoc, serverTimestamp, query, where, getDocs, updateDoc } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -94,6 +94,9 @@ export default function SettingsPage() {
   const [displayName, setDisplayName] = useState('');
   const [photoURL, setPhotoURL] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
+  
+  const [pendingUsers, setPendingUsers] = useState<any[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
 
   const softwareDocRef = useMemo(() => doc(db, 'config', 'software'), [db]);
   const { data: softwareConfig } = useDoc(softwareDocRef);
@@ -130,6 +133,11 @@ export default function SettingsPage() {
   useEffect(() => {
     async function checkAdmin() {
       if (!db || !user) return;
+      if (user.email === 'dlswf.roy@gmail.com') {
+        setIsAdmin(true);
+        setAdminCheckLoading(false);
+        return;
+      }
       try {
         const adminDoc = await getDoc(doc(db, 'config', 'admin'));
         if (adminDoc.exists() && adminDoc.data().adminUid === user.uid) {
@@ -141,6 +149,36 @@ export default function SettingsPage() {
     }
     if (user && db) checkAdmin();
   }, [user, db]);
+
+  const fetchRequests = async () => {
+    if (!isAdmin || !db) return;
+    setLoadingRequests(true);
+    try {
+      const q = query(collection(db, 'users'), where('status', '==', 'pending'));
+      const snap = await getDocs(q);
+      setPendingUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    } catch (e) {} finally {
+      setLoadingRequests(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAdmin) fetchRequests();
+  }, [isAdmin, db]);
+
+  const handleConfirmUser = async (uid: string) => {
+    if (!db) return;
+    try {
+      await updateDoc(doc(db, 'users', uid), { 
+        status: 'active', 
+        updatedAt: serverTimestamp() 
+      });
+      setPendingUsers(prev => prev.filter(u => u.id !== uid));
+      toast({ title: "সফল", description: "ইউজার অ্যাকাউন্ট সক্রিয় করা হয়েছে।" });
+    } catch (e) {
+      toast({ variant: "destructive", title: "ত্রুটি", description: "অনুমোদন ব্যর্থ হয়েছে।" });
+    }
+  };
 
   const booksQuery = useMemo(() => db ? collection(db, 'books') : null, [db]);
   const { data: rawBooks, loading: loadingBooks } = useCollection(booksQuery);
@@ -271,10 +309,15 @@ export default function SettingsPage() {
       </header>
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className={`grid w-full mb-6 bg-secondary/50 p-1 ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'}`}>
+        <TabsList className={`grid w-full mb-6 bg-secondary/50 p-1 ${isAdmin ? 'grid-cols-4' : 'grid-cols-2'}`}>
           <TabsTrigger value="profile" className="gap-2 font-bold text-xs"><User className="w-3.5 h-3.5" /> প্রোফাইল</TabsTrigger>
           <TabsTrigger value="books" className="gap-2 font-bold text-xs"><BookCopy className="w-3.5 h-3.5" /> বই ব্যবস্থাপনা</TabsTrigger>
-          {isAdmin && <TabsTrigger value="software" className="gap-2 font-bold text-xs"><Globe className="w-3.5 h-3.5" /> ব্র্যান্ডিং</TabsTrigger>}
+          {isAdmin && (
+            <>
+              <TabsTrigger value="requests" className="gap-2 font-bold text-xs"><Users className="w-3.5 h-3.5" /> আবেদন</TabsTrigger>
+              <TabsTrigger value="software" className="gap-2 font-bold text-xs"><Globe className="w-3.5 h-3.5" /> ব্র্যান্ডিং</TabsTrigger>
+            </>
+          )}
         </TabsList>
 
         <TabsContent value="profile" className="space-y-4">
@@ -394,39 +437,84 @@ export default function SettingsPage() {
         </TabsContent>
 
         {isAdmin && (
-          <TabsContent value="software" className="space-y-6">
-            <Card className="border-2 border-primary/20">
-              <CardHeader className="p-4"><CardTitle className="text-lg font-black text-primary">সফটওয়্যার ব্র্যান্ডিং</CardTitle></CardHeader>
-              <CardContent className="p-4 space-y-8">
-                <div className="flex flex-col md:flex-row items-center gap-8">
-                  <div className="relative group shrink-0">
-                    <div className="w-24 h-24 rounded-2xl bg-white flex items-center justify-center p-2 border-4 border-primary/10 overflow-hidden shadow-xl">
-                      {appLogoUrl ? <img src={appLogoUrl} className="max-w-full max-h-full object-contain" /> : <Globe className="w-10 h-10 text-primary" />}
+          <>
+            <TabsContent value="requests" className="space-y-6">
+              <Card className="border-2 border-orange-100">
+                <CardHeader className="bg-orange-50/50 p-4 border-b">
+                  <CardTitle className="text-lg flex items-center gap-2 font-bold text-orange-700">
+                    <Users className="w-5 h-5" /> একাউন্ট খোলার আবেদনসমূহ
+                  </CardTitle>
+                  <CardDescription className="font-bold">যেসকল ইউজার রেজিস্ট্রেশন করেছেন তাদের তালিকা এখানে পাবেন।</CardDescription>
+                </CardHeader>
+                <CardContent className="p-4">
+                  {loadingRequests ? (
+                    <div className="p-10 text-center"><Loader2 className="w-8 h-8 animate-spin text-orange-600 mx-auto" /></div>
+                  ) : pendingUsers.length > 0 ? (
+                    <div className="space-y-3">
+                      {pendingUsers.map(userReq => (
+                        <div key={userReq.id} className="p-4 border rounded-xl flex items-center justify-between bg-white hover:bg-slate-50 transition-all shadow-sm">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-black">
+                              {userReq.displayName?.charAt(0) || userReq.email?.charAt(0)}
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-sm">{userReq.displayName || 'নামহীন'}</h4>
+                              <p className="text-xs text-muted-foreground font-bold">{userReq.email}</p>
+                            </div>
+                          </div>
+                          <Button 
+                            onClick={() => handleConfirmUser(userReq.id)} 
+                            size="sm" 
+                            className="bg-green-600 hover:bg-green-700 gap-2 font-bold"
+                          >
+                            <ShieldCheck className="w-4 h-4" /> কনফার্ম করুন
+                          </Button>
+                        </div>
+                      ))}
                     </div>
-                    <button onClick={() => logoInputRef.current?.click()} className="absolute -bottom-2 -right-2 bg-accent text-white p-2 rounded-full shadow-lg">
-                      <Camera className="w-4 h-4" />
-                    </button>
-                    <input type="file" ref={logoInputRef} className="hidden" accept="image/*" onChange={handleLogoChange} />
+                  ) : (
+                    <div className="p-20 text-center border-dashed border-2 bg-muted/5 rounded-2xl">
+                      <p className="text-muted-foreground font-bold">বর্তমানে কোনো পেন্ডিং আবেদন নেই।</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="software" className="space-y-6">
+              <Card className="border-2 border-primary/20">
+                <CardHeader className="p-4"><CardTitle className="text-lg font-black text-primary">সফটওয়্যার ব্র্যান্ডিং</CardTitle></CardHeader>
+                <CardContent className="p-4 space-y-8">
+                  <div className="flex flex-col md:flex-row items-center gap-8">
+                    <div className="relative group shrink-0">
+                      <div className="w-24 h-24 rounded-2xl bg-white flex items-center justify-center p-2 border-4 border-primary/10 overflow-hidden shadow-xl">
+                        {appLogoUrl ? <img src={appLogoUrl} className="max-w-full max-h-full object-contain" /> : <Globe className="w-10 h-10 text-primary" />}
+                      </div>
+                      <button onClick={() => logoInputRef.current?.click()} className="absolute -bottom-2 -right-2 bg-accent text-white p-2 rounded-full shadow-lg">
+                        <Camera className="w-4 h-4" />
+                      </button>
+                      <input type="file" ref={logoInputRef} className="hidden" accept="image/*" onChange={handleLogoChange} />
+                    </div>
+                    <div className="flex-1 w-full space-y-4">
+                      <div className="space-y-2">
+                        <Label className="font-bold">সফটওয়্যারের নাম</Label>
+                        <Input value={appName || ''} onChange={e => setAppName(e.target.value)} placeholder="প্রতিষ্ঠানের নাম লিখুন" className="font-bold text-primary text-[25px]" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-bold">লোগো ছবি লিঙ্ক (ঐচ্ছিক)</Label>
+                        <Input value={appLogoUrl || ''} onChange={e => setAppLogoUrl(e.target.value)} placeholder="https://..." />
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex-1 w-full space-y-4">
-                    <div className="space-y-2">
-                      <Label className="font-bold">সফটওয়্যারের নাম</Label>
-                      <Input value={appName || ''} onChange={e => setAppName(e.target.value)} placeholder="প্রতিষ্ঠানের নাম লিখুন" className="font-bold text-primary text-[25px]" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="font-bold">লোগো ছবি লিঙ্ক (ঐচ্ছিক)</Label>
-                      <Input value={appLogoUrl || ''} onChange={e => setAppLogoUrl(e.target.value)} placeholder="https://..." />
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="flex justify-end border-t bg-muted/20 py-3">
-                <Button onClick={handleUpdateSoftware} disabled={savingSoftware} className="gap-2 font-bold h-9 shadow-lg bg-primary">
-                  {savingSoftware ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} সেভ করুন
-                </Button>
-              </CardFooter>
-            </Card>
-          </TabsContent>
+                </CardContent>
+                <CardFooter className="flex justify-end border-t bg-muted/20 py-3">
+                  <Button onClick={handleUpdateSoftware} disabled={savingSoftware} className="gap-2 font-bold h-9 shadow-lg bg-primary">
+                    {savingSoftware ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} সেভ করুন
+                  </Button>
+                </CardFooter>
+              </Card>
+            </TabsContent>
+          </>
         )}
       </Tabs>
     </div>

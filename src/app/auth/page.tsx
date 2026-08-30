@@ -6,15 +6,16 @@ import { useAuth, useFirestore, useDoc } from '@/firebase';
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
-  updateProfile
+  updateProfile,
+  signOut
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, LogIn, UserPlus, BookOpenText } from 'lucide-react';
+import { Loader2, LogIn, UserPlus, BookOpenText, ShieldAlert } from 'lucide-react';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -38,21 +39,59 @@ export default function AuthPage() {
 
     try {
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        
+        // Admin status check (Hardcoded admin bypasses status check)
+        if (user.email !== 'dlswf.roy@gmail.com') {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (!userDoc.exists() || userDoc.data().status !== 'active') {
+            await signOut(auth);
+            toast({ 
+              variant: "destructive", 
+              title: "অ্যাকাউন্ট নিষ্ক্রিয়", 
+              description: "আপনার অ্যাকাউন্টটি অনুমোদনের জন্য পেন্ডিং আছে। অনুগ্রহ করে এডমিনের অনুমোদনের জন্য অপেক্ষা করুন।" 
+            });
+            setLoading(false);
+            return;
+          }
+        }
+        
         toast({ title: "সফল লগইন", description: "আপনি সফলভাবে লগইন করেছেন।" });
       } else {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(userCredential.user, { displayName: name });
         
+        const isSuperAdmin = userCredential.user.email === 'dlswf.roy@gmail.com';
+        
+        // Create user profile in Firestore
+        await setDoc(doc(db, 'users', userCredential.user.uid), {
+          uid: userCredential.user.uid,
+          email: userCredential.user.email,
+          displayName: name,
+          status: isSuperAdmin ? 'active' : 'pending',
+          createdAt: serverTimestamp()
+        });
+
         const adminDocRef = doc(db, 'config', 'admin');
         const adminDoc = await getDoc(adminDocRef);
         
-        if (!adminDoc.exists()) {
+        if (!adminDoc.exists() && isSuperAdmin) {
           await setDoc(adminDocRef, { adminUid: userCredential.user.uid });
-          toast({ title: "অভিনন্দন!", description: "আপনি প্রথম ইউজার এবং এডমিন হিসেবে নিযুক্ত হলেন।" });
-        } else {
-          toast({ title: "সফল রেজিস্ট্রেশন", description: "আপনার অ্যাকাউন্ট তৈরি হয়েছে।" });
         }
+
+        if (!isSuperAdmin) {
+          await signOut(auth);
+          toast({ 
+            title: "আবেদন জমা হয়েছে", 
+            description: "আপনার একাউন্ট তৈরির আবেদনটি এডমিনের কাছে পাঠানো হয়েছে। অনুমোদন পেলে আপনি লগইন করতে পারবেন।" 
+          });
+          setIsLogin(true);
+          setLoading(false);
+          return;
+        }
+        
+        toast({ title: "সফল রেজিস্ট্রেশন", description: "আপনার অ্যাকাউন্ট তৈরি হয়েছে।" });
       }
       router.push('/');
     } catch (error: any) {
@@ -86,10 +125,10 @@ export default function AuthPage() {
           
           <div className="space-y-1">
             <CardTitle className="text-xl font-bold text-foreground/90">
-              {isLogin ? 'লগইন করুন' : 'নতুন অ্যাকাউন্ট'}
+              {isLogin ? 'লগইন করুন' : 'নতুন অ্যাকাউন্ট আবেদন'}
             </CardTitle>
             <CardDescription className="font-medium text-foreground/60">
-              {isLogin ? 'আপনার ইমেইল ও পাসওয়ার্ড দিয়ে প্রবেশ করুন' : 'সিস্টেমে যুক্ত হতে তথ্য প্রদান করুন'}
+              {isLogin ? 'আপনার ইমেইল ও পাসওয়ার্ড দিয়ে প্রবেশ করুন' : 'সিস্টেমে যুক্ত হতে আবেদন করুন'}
             </CardDescription>
           </div>
         </CardHeader>
@@ -131,7 +170,7 @@ export default function AuthPage() {
             </div>
             <Button className="w-full h-12 font-bold gap-2 text-lg rounded-xl shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 transition-all" disabled={loading}>
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (isLogin ? <LogIn className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />)}
-              {isLogin ? 'লগইন' : 'রেজিস্ট্রেশন'}
+              {isLogin ? 'লগইন' : 'আবেদন জমা দিন'}
             </Button>
           </form>
         </CardContent>
