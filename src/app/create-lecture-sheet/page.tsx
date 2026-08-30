@@ -80,7 +80,7 @@ async function processWatermarkImage(file: File): Promise<string> {
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/png', 0.7));
+        resolve(canvas.toDataURL('image/jpeg', 0.6));
       };
       img.onerror = reject;
       img.src = e.target?.result as string;
@@ -153,6 +153,7 @@ function CreateLectureSheetContent() {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const docData = docSnap.data();
+          // Admin bypass for editing
           if (docData.userId !== user.uid && user.email !== 'dlswf.roy@gmail.com') { router.push('/'); return; }
           setData({
             institution: docData.institution || 'টপ গ্রেড টিউটোরিয়ালস',
@@ -281,8 +282,11 @@ function CreateLectureSheetContent() {
     }
     const docId = editId || doc(collection(db, 'lecture-sheets')).id;
     const ref = doc(db, 'lecture-sheets', docId);
+    
+    // Payload includes current user ID as per Firestore Rules
     const payload: any = { ...data, content: updatedFullContent, printSettings, pageStyles, manualPages: updatedManualPages, userId: user.uid, updatedAt: serverTimestamp() };
     if (!editId) payload.createdAt = serverTimestamp();
+    
     setDoc(ref, payload, { merge: true }).then(() => { 
       setSaving(false); 
       setManualPages(updatedManualPages); 
@@ -316,11 +320,12 @@ function CreateLectureSheetContent() {
           else if (key === '[') { 
             const selection = window.getSelection();
             if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
-              let currentSize = 10.5;
               const parent = selection.anchorNode?.parentElement;
+              let currentSize = 10.5;
               if (parent) {
-                const computedSize = window.getComputedStyle(parent).fontSize;
-                currentSize = parseFloat(computedSize) || 10.5;
+                const style = window.getComputedStyle(parent);
+                // Convert px to pt (1pt = 1.333px)
+                currentSize = (parseFloat(style.fontSize) * 0.75) || 10.5;
               }
               handleFormatting('fontSize', Math.max(1, currentSize - 0.5).toString());
             } else if (activeEditIdx !== null) {
@@ -333,11 +338,11 @@ function CreateLectureSheetContent() {
           else if (key === ']') { 
             const selection = window.getSelection();
             if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
-              let currentSize = 10.5;
               const parent = selection.anchorNode?.parentElement;
+              let currentSize = 10.5;
               if (parent) {
-                const computedSize = window.getComputedStyle(parent).fontSize;
-                currentSize = parseFloat(computedSize) || 10.5;
+                const style = window.getComputedStyle(parent);
+                currentSize = (parseFloat(style.fontSize) * 0.75) || 10.5;
               }
               handleFormatting('fontSize', Math.min(100, currentSize + 0.5).toString());
             } else if (activeEditIdx !== null) {

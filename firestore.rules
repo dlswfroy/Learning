@@ -1,0 +1,60 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Admin check function
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == 'dlswf.roy@gmail.com';
+    }
+
+    // Check if user account is active
+    function isActive() {
+      return request.auth != null && (isAdmin() || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'active');
+    }
+
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+    }
+
+    match /lecture-sheets/{sheetId} {
+      allow read: if request.auth != null;
+      // Allow any active user to write (as per request to remove ID-based restrictions)
+      allow write: if isActive();
+    }
+
+    match /questions/{questionId} {
+      allow read: if request.auth != null;
+      allow write: if isActive();
+    }
+
+    match /books/{bookId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+    
+    match /diary/{diaryId} {
+      allow read: if request.auth != null;
+      allow write: if isActive();
+    }
+
+    match /students/{studentId} {
+      allow read: if request.auth != null;
+      allow write: if isActive();
+    }
+    
+    match /attendance/{attendanceId} {
+      allow read: if request.auth != null;
+      allow write: if isActive();
+    }
+
+    match /fees/{feeId} {
+      allow read: if request.auth != null;
+      allow write: if isActive();
+    }
+
+    match /config/{configId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}
