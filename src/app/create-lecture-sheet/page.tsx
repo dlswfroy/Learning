@@ -395,22 +395,24 @@ function CreateLectureSheetContent() {
   };
 
   const handleGlobalFontSizeChange = (size: number) => {
-    setGlobalFontSize(size);
+    const safeSize = isNaN(size) ? 10.5 : size;
+    setGlobalFontSize(safeSize);
     setPageStyles(prev => {
       const updated = { ...prev };
       Object.keys(updated).forEach(idx => {
-        updated[parseInt(idx)] = { ...updated[parseInt(idx)], fontSize: size };
+        updated[parseInt(idx)] = { ...updated[parseInt(idx)], fontSize: safeSize };
       });
       return updated;
     });
   };
 
   const handleGlobalLineHeightChange = (val: number) => {
-    setGlobalLineHeight(val);
+    const safeVal = isNaN(val) ? 1.2 : val;
+    setGlobalLineHeight(safeVal);
     setPageStyles(prev => {
       const updated = { ...prev };
       Object.keys(updated).forEach(idx => {
-        updated[parseInt(idx)] = { ...updated[parseInt(idx)], lineHeight: val };
+        updated[parseInt(idx)] = { ...updated[parseInt(idx)], lineHeight: safeVal };
       });
       return updated;
     });
@@ -569,10 +571,22 @@ function CreateLectureSheetContent() {
                       <div className="space-y-4">
                         <label className="text-[10px] font-black text-slate-500 uppercase">পেজ মার্জিন (ইঞ্চি)</label>
                         <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1"><label className="text-[9px] font-bold">উপরে</label><Input type="text" value={pageStyles[activeEditIdx].mT} onChange={e => updatePageStyle(activeEditIdx!, 'mT', e.target.value)} onMouseDown={e => e.stopPropagation()} className="h-7 text-xs font-bold no-arrows" /></div>
-                          <div className="space-y-1"><label className="text-[9px] font-bold">নিচে</label><Input type="text" value={pageStyles[activeEditIdx].mB} onChange={e => updatePageStyle(activeEditIdx!, 'mB', e.target.value)} onMouseDown={e => e.stopPropagation()} className="h-7 text-xs font-bold no-arrows" /></div>
-                          <div className="space-y-1"><label className="text-[9px] font-bold">বামে</label><Input type="text" value={pageStyles[activeEditIdx].mL} onChange={e => updatePageStyle(activeEditIdx!, 'mL', e.target.value)} onMouseDown={e => e.stopPropagation()} className="h-7 text-xs font-bold no-arrows" /></div>
-                          <div className="space-y-1"><label className="text-[9px] font-bold">ডানে</label><Input type="text" value={pageStyles[activeEditIdx].mR} onChange={e => updatePageStyle(activeEditIdx!, 'mR', e.target.value)} onMouseDown={e => e.stopPropagation()} className="h-7 text-xs font-bold no-arrows" /></div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold">উপরে</label>
+                            <Input type="text" value={pageStyles[activeEditIdx].mT} onChange={e => { const v = e.target.value; if(v==='' || !isNaN(Number(v))) updatePageStyle(activeEditIdx!, 'mT', v); }} onMouseDown={e => e.stopPropagation()} className="h-7 text-xs font-bold no-arrows" />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold">নিচে</label>
+                            <Input type="text" value={pageStyles[activeEditIdx].mB} onChange={e => { const v = e.target.value; if(v==='' || !isNaN(Number(v))) updatePageStyle(activeEditIdx!, 'mB', v); }} onMouseDown={e => e.stopPropagation()} className="h-7 text-xs font-bold no-arrows" />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold">বামে</label>
+                            <Input type="text" value={pageStyles[activeEditIdx].mL} onChange={e => { const v = e.target.value; if(v==='' || !isNaN(Number(v))) updatePageStyle(activeEditIdx!, 'mL', v); }} onMouseDown={e => e.stopPropagation()} className="h-7 text-xs font-bold no-arrows" />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold">ডানে</label>
+                            <Input type="text" value={pageStyles[activeEditIdx].mR} onChange={e => { const v = e.target.value; if(v==='' || !isNaN(Number(v))) updatePageStyle(activeEditIdx!, 'mR', v); }} onMouseDown={e => e.stopPropagation()} className="h-7 text-xs font-bold no-arrows" />
+                          </div>
                         </div>
                       </div>
 
@@ -746,10 +760,22 @@ function CreateLectureSheetContent() {
                    <div className="space-y-4">
                       <h4 className="text-xs font-black text-slate-500 uppercase flex items-center gap-2"><Settings2 className="w-3.5 h-3.5" /> গ্লোবাল মার্জিন</h4>
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1"><label className="text-[10px] font-bold">উপরে</label><Input type="text" value={printSettings.marginTop} onChange={e => setPrintSettings(p => ({...p, marginTop: e.target.value}))} onMouseDown={e => e.stopPropagation()} className="h-8 font-bold no-arrows" /></div>
-                        <div className="space-y-1"><label className="text-[10px] font-bold">নিছে</label><Input type="text" value={printSettings.marginBottom} onChange={e => setPrintSettings(p => ({...p, marginBottom: e.target.value}))} onMouseDown={e => e.stopPropagation()} className="h-8 font-bold no-arrows" /></div>
-                        <div className="space-y-1"><label className="text-[10px] font-bold">বামে</label><Input type="text" value={printSettings.marginLeft} onChange={e => setPrintSettings(p => ({...p, marginLeft: e.target.value}))} onMouseDown={e => e.stopPropagation()} className="h-8 font-bold no-arrows" /></div>
-                        <div className="space-y-1"><label className="text-[10px] font-bold">ডানে</label><Input type="text" value={printSettings.marginRight} onChange={e => setPrintSettings(p => ({...p, marginRight: e.target.value}))} onMouseDown={e => e.stopPropagation()} className="h-8 font-bold no-arrows" /></div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold">উপরে</label>
+                          <Input type="text" value={printSettings.marginTop} onChange={e => { const v = e.target.value; if(v==='' || !isNaN(Number(v))) setPrintSettings(p => ({...p, marginTop: v})); }} onMouseDown={e => e.stopPropagation()} className="h-8 font-bold no-arrows" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold">নিছে</label>
+                          <Input type="text" value={printSettings.marginBottom} onChange={e => { const v = e.target.value; if(v==='' || !isNaN(Number(v))) setPrintSettings(p => ({...p, marginBottom: v})); }} onMouseDown={e => e.stopPropagation()} className="h-8 font-bold no-arrows" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold">বামে</label>
+                          <Input type="text" value={printSettings.marginLeft} onChange={e => { const v = e.target.value; if(v==='' || !isNaN(Number(v))) setPrintSettings(p => ({...p, marginLeft: v})); }} onMouseDown={e => e.stopPropagation()} className="h-8 font-bold no-arrows" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold">ডানে</label>
+                          <Input type="text" value={printSettings.marginRight} onChange={e => { const v = e.target.value; if(v==='' || !isNaN(Number(v))) setPrintSettings(p => ({...p, marginRight: v})); }} onMouseDown={e => e.stopPropagation()} className="h-8 font-bold no-arrows" />
+                        </div>
                       </div>
                    </div>
 
@@ -797,7 +823,7 @@ function CreateLectureSheetContent() {
                         <div className="space-y-4 pt-2">
                           <div className="space-y-1">
                             <label className="text-[10px] font-bold text-slate-500 uppercase">জলছাপ এঙ্গেল</label>
-                            <Input type="text" value={printSettings.watermarkRotation} onChange={e => setPrintSettings(p => ({...p, watermarkRotation: e.target.value}))} onMouseDown={e => e.stopPropagation()} className="h-8 font-bold no-arrows" />
+                            <Input type="text" value={printSettings.watermarkRotation} onChange={e => { const v = e.target.value; if(v==='' || !isNaN(Number(v))) setPrintSettings(p => ({...p, watermarkRotation: v})); }} onMouseDown={e => e.stopPropagation()} className="h-8 font-bold no-arrows" />
                           </div>
                           
                           <div className="space-y-2">
