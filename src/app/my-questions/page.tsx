@@ -88,20 +88,49 @@ export default function MyLibraryPage() {
 
   const libraryData = useMemo(() => ({ questions: rawQuestions || [], sheets: rawSheets || [] }), [rawQuestions, rawSheets]);
 
+  // Dynamically calculate subjects that have data OR are in constants
+  const currentSubjects = useMemo(() => {
+    if (!selectedClass) return [];
+    const predefined = getSubjectsForClass(selectedClass);
+    const fromDb = [
+      ...libraryData.questions.filter(q => q.classId === selectedClass).map(q => q.subject),
+      ...libraryData.sheets.filter(s => s.classId === selectedClass).map(s => s.subject)
+    ].filter(Boolean) as string[];
+    
+    // Combine unique subjects
+    return Array.from(new Set([...predefined, ...fromDb])).sort((a, b) => a.localeCompare(b, 'bn'));
+  }, [selectedClass, libraryData]);
+
+  // Dynamically calculate chapters that have data OR are in constants
+  const currentChapters = useMemo(() => {
+    if (!selectedClass || !selectedSubject) return [];
+    const predefined = getChaptersForSubject(selectedClass, selectedSubject);
+    const fromDb = [
+      ...libraryData.questions
+        .filter(q => q.classId === selectedClass && q.subject === selectedSubject)
+        .map(q => q.chapter),
+      ...libraryData.sheets
+        .filter(s => s.classId === selectedClass && s.subject === selectedSubject)
+        .map(s => s.topic)
+    ].filter(Boolean) as string[];
+
+    const combined = Array.from(new Set([...predefined, ...fromDb])).sort((a, b) => a.localeCompare(b, 'bn'));
+    return combined.length > 0 ? combined : ['সাধারণ অধ্যায়'];
+  }, [selectedClass, selectedSubject, libraryData]);
+
   const currentItems = useMemo(() => {
     let qs = libraryData.questions;
     let ss = libraryData.sheets;
     if (selectedClass) { qs = qs.filter(q => q.classId === selectedClass); ss = ss.filter(s => s.classId === selectedClass); }
     if (selectedSubject) { qs = qs.filter(q => q.subject === selectedSubject); ss = ss.filter(s => s.subject === selectedSubject); }
     if (selectedChapter) { 
-      qs = qs.filter(q => q.chapter === selectedChapter); 
-      ss = ss.filter(s => s.topic === selectedChapter); 
+      // Filter by the specific chapter/topic name
+      // Handle the "General/Default" folder fallback if necessary
+      qs = qs.filter(q => (q.chapter === selectedChapter) || (!q.chapter && selectedChapter === 'সাধারণ অধ্যায়'));
+      ss = ss.filter(s => (s.topic === selectedChapter) || (!s.topic && selectedChapter === 'সাধারণ অধ্যায়'));
     }
     return { questions: qs, sheets: ss };
   }, [libraryData, selectedClass, selectedSubject, selectedChapter]);
-
-  const subjects = useMemo(() => selectedClass ? getSubjectsForClass(selectedClass) : [], [selectedClass]);
-  const chapters = useMemo(() => (selectedClass && selectedSubject) ? getChaptersForSubject(selectedClass, selectedSubject) : [], [selectedClass, selectedSubject]);
 
   const toggleSelection = (id: string) => {
     if (!isSelecting) return;
@@ -168,7 +197,7 @@ export default function MyLibraryPage() {
   const renderSubjects = () => {
     return (
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {subjects.map(sub => (
+        {currentSubjects.map(sub => (
           <Card key={sub} onClick={() => { setSelectedSubject(sub); setViewMode('chapters'); }} className="cursor-pointer hover:border-primary hover:shadow-md transition-all group border-2">
             <CardContent className="p-6 flex flex-col items-center text-center space-y-3">
               <div className="w-12 h-12 rounded-xl bg-orange-50/10 flex items-center justify-center text-orange-600 group-hover:bg-orange-500 group-hover:text-white transition-all">
@@ -183,10 +212,9 @@ export default function MyLibraryPage() {
   };
 
   const renderChapters = () => {
-    const displayChapters = chapters.length > 0 ? chapters : ['সাধারণ অধ্যায়'];
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        {displayChapters.map(ch => (
+        {currentChapters.map(ch => (
           <Card key={ch} onClick={() => { setSelectedChapter(ch); setViewMode('content'); }} className="cursor-pointer hover:border-primary hover:shadow-md transition-all group border-2 bg-slate-50/30">
             <CardContent className="p-4 flex items-center gap-4">
               <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all">
@@ -283,7 +311,7 @@ export default function MyLibraryPage() {
                   <div className="flex justify-between items-start">
                      <div className="flex items-center gap-3 pr-4 min-w-0">
                        <div className="w-8 h-8 rounded bg-orange-50 flex items-center justify-center text-orange-600 shrink-0"><BookOpen className="w-4 h-4" /></div>
-                       <CardTitle className="text-sm font-bold truncate">{s.topic}</CardTitle>
+                       <CardTitle className="text-sm font-bold truncate">{s.topic || 'শিরোনামহীন শিট'}</CardTitle>
                      </div>
                      <div className="flex gap-1">
                        <Link href={`/create-lecture-sheet?id=${s.id}`}><Button variant="ghost" size="icon" className="h-7 w-7 text-primary"><Edit className="w-3.5 h-3.5" /></Button></Link>
@@ -331,7 +359,7 @@ export default function MyLibraryPage() {
                            <div className="w-8 h-8 rounded bg-primary/5 flex items-center justify-center text-primary shrink-0"><FileText className="w-4 h-4" /></div>
                          )}
                          <CardTitle className="text-sm font-bold truncate">
-                           {q.exam} - {q.chapter || 'অধ্যায় নেই'}
+                           {q.exam || 'পরীক্ষা'} - {q.chapter || 'অধ্যায় নেই'}
                          </CardTitle>
                        </div>
                        {!isSelecting && (
