@@ -61,7 +61,7 @@ function toBengaliNumber(n: number | string | undefined | null): string {
   return n.toString().replace(/\d/g, (digit) => bengaliDigits[parseInt(digit)]);
 }
 
-// Helper to normalize chapter names for merging duplicates
+// Helper to normalize chapter names for merging duplicates (e.g. "১ম" vs "প্রথম")
 function normalizeChapter(name: string): string {
   if (!name) return 'general';
   let n = name.toString().toLowerCase().trim();
@@ -123,9 +123,11 @@ export default function MyLibraryPage() {
 
   const libraryData = useMemo(() => ({ questions: rawQuestions || [], sheets: rawSheets || [] }), [rawQuestions, rawSheets]);
 
+  // Subject list for the selected class
   const currentSubjects = useMemo(() => {
     if (!selectedClass) return [];
     const predefined = getSubjectsForClass(selectedClass);
+    // Find subjects from user's data that might not be in our predefined list
     const fromDb = [
       ...libraryData.questions.filter(q => q.classId === selectedClass).map(q => q.subject),
       ...libraryData.sheets.filter(s => s.classId === selectedClass).map(s => s.subject)
@@ -134,6 +136,7 @@ export default function MyLibraryPage() {
     return Array.from(new Set([...predefined, ...fromDb])).sort((a, b) => a.localeCompare(b, 'bn'));
   }, [selectedClass, libraryData]);
 
+  // Chapter list for the selected subject (Normalized and Merged)
   const currentChapters = useMemo(() => {
     if (!selectedClass || !selectedSubject) return [];
     
@@ -150,7 +153,6 @@ export default function MyLibraryPage() {
     const groups: Record<string, string> = {};
     allNames.forEach(name => {
       const key = normalizeChapter(name);
-      // Prefer predefined name if it matches the key, otherwise keep the first one found
       const isPredefined = predefinedList.includes(name);
       if (!groups[key] || isPredefined) {
         groups[key] = name;
@@ -172,6 +174,7 @@ export default function MyLibraryPage() {
     return sortedChapters.length > 0 ? sortedChapters : ['সাধারণ অধ্যায়'];
   }, [selectedClass, selectedSubject, libraryData]);
 
+  // Filter items for the final content view
   const currentItems = useMemo(() => {
     let qs = libraryData.questions;
     let ss = libraryData.sheets;
@@ -187,6 +190,7 @@ export default function MyLibraryPage() {
     return { questions: qs, sheets: ss };
   }, [libraryData, selectedClass, selectedSubject, selectedChapter]);
 
+  // Statistics calculation for chapter cards
   const getChapterStats = (chapterName: string) => {
     const isGeneral = chapterName === 'সাধারণ অধ্যায়';
     const key = normalizeChapter(chapterName);
