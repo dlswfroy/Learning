@@ -28,18 +28,30 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 function formatMath(text: string) {
   if (!text) return '';
   let formatted = text.replace(/#+\s*\**|\*\*/g, '');
+  
+  // Clean up broken scientific units and powers from OCR/Input (e.g. g=9.8 ms newline -2)
+  formatted = formatted.replace(/([a-zA-Z])\s*\n\s*([-+]?\d+)/g, '$1^$2');
+  formatted = formatted.replace(/ms\s*\n\s*-2/g, 'ms^-2');
+  formatted = formatted.replace(/−/g, '-'); // Replace unicode minus for consistent parsing
+  
   formatted = formatted.replace(/\$|\\\(|\\\)|\\\[|\\\]/g, '');
   formatted = formatted.replace(/\n\s*\n\s*\n+/g, '\n\n');
   formatted = formatted.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
+  
   formatted = formatted.replace(/\\text\{([^}]+)\}/g, '<span class="math-text">$1</span>');
+  
   const fracRegex = /\\frac\{((?:[^{}]|\{[^{}]*\})*)\}\s*\{((?:[^{}]|\{[^{}]*\})*)\}/g;
   formatted = formatted.replace(fracRegex, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
+  
   formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
   formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>');
+  
+  // Improved power/superscript/subscript handling for physics/math
   formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
-  formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
+  formatted = formatted.replace(/\^([-+]?\d+|[a-zA-Z])/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
-  formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
+  formatted = formatted.replace(/_([-+]?\d+|[a-zA-Z])/g, '<sub class="math-sub">$1</sub>');
+  
   const symbolMap: Record<string, string> = {
     '\\\\log': 'log', '\\\\triangle': '△', '\\\\angle': '∠', '\\\\circ': '°',
     '\\\\theta': 'θ', '\\\\pi': 'π', '\\\\pm': '±', '\\\\times': '×',
@@ -70,7 +82,7 @@ async function processWatermarkImage(file: File): Promise<string> {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const maxSide = 600; // Reduced for speed and size
+        const maxSide = 800; // Optimized size
         let width = img.width;
         let height = img.height;
         if (width > height) { if (width > maxSide) { height *= maxSide / width; width = maxSide; } }
@@ -79,7 +91,7 @@ async function processWatermarkImage(file: File): Promise<string> {
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.5)); // Low quality for fast syncing
+        resolve(canvas.toDataURL('image/jpeg', 0.6)); // Balanced quality for DB size
       };
       img.onerror = reject;
       img.src = e.target?.result as string;
@@ -230,7 +242,6 @@ function CreateLectureSheetContent() {
     const hasSelection = selection && selection.rangeCount > 0 && !selection.isCollapsed;
     
     if (hasSelection) {
-      document.execCommand('styleWithCSS', false, 'true');
       if (command === 'fontSize') { 
         const val = value + 'pt';
         const span = document.createElement('span'); 
@@ -240,6 +251,7 @@ function CreateLectureSheetContent() {
           span.appendChild(range.extractContents()); 
           range.insertNode(span);
           
+          // Re-select for repeat use
           const newRange = document.createRange();
           newRange.selectNodeContents(span);
           selection.removeAllRanges();
@@ -288,22 +300,25 @@ function CreateLectureSheetContent() {
     const docId = editId || doc(collection(db, 'lecture-sheets')).id;
     const ref = doc(db, 'lecture-sheets', docId);
     
+    // Ownership bypass as requested - any active user can save
     const payload: any = { 
       ...data, 
       content: updatedFullContent, 
       printSettings, 
       pageStyles, 
       manualPages: updatedManualPages, 
-      userId: user.uid, 
       updatedAt: serverTimestamp() 
     };
-    if (!editId) payload.createdAt = serverTimestamp();
+    if (!editId) {
+      payload.userId = user.uid;
+      payload.createdAt = serverTimestamp();
+    }
     
     setDoc(ref, payload, { merge: true }).then(() => { 
       setSaving(false); 
       setManualPages(updatedManualPages); 
       setData(prev => ({ ...prev, content: updatedFullContent })); 
-      toast({ title: "সফল!", description: "শিটটি দ্রুত সেভ হয়েছে।" }); 
+      toast({ title: "সফল!", description: "শিটটি সংরক্ষিত হয়েছে।" }); 
       if (!editId) router.replace(`/create-lecture-sheet?id=${docId}`); 
     })
     .catch(async (error) => { 
@@ -316,8 +331,8 @@ function CreateLectureSheetContent() {
     const handleKeyDown = (e: KeyboardEvent) => { 
       if ((e.ctrlKey || e.metaKey)) { 
         const key = e.key.toLowerCase();
-        // Allowed browser keys like 'x', 'c', 'v', 'a', 'z', 'y' shouldn't always preventDefault
-        if (['s', 'n', 'd', 'l', 'e', 'r', '[', ']'].includes(key)) {
+        if (['s', 'n', 'd', 'l', 'e', 'r', '[', ']', 'x'].includes(key)) {
+          if (key === 'x') return; // Let browser handle native cut
           e.preventDefault();
           if (key === 's') handleSave();
           else if (key === 'n') setPaginatedPages(prev => [...prev, ""]);
@@ -334,7 +349,8 @@ function CreateLectureSheetContent() {
               let currentSize = 10.5;
               if (parent) {
                 const style = window.getComputedStyle(parent);
-                currentSize = (parseFloat(style.fontSize) / 1.33333) || 10.5;
+                // Convert px back to pt accurately (1pt = 1.333px)
+                currentSize = (parseFloat(style.fontSize) * 0.75) || 10.5;
               }
               handleFormatting('fontSize', Math.max(1, currentSize - 0.5).toString());
             } else if (activeEditIdx !== null) {
@@ -351,7 +367,7 @@ function CreateLectureSheetContent() {
               let currentSize = 10.5;
               if (parent) {
                 const style = window.getComputedStyle(parent);
-                currentSize = (parseFloat(style.fontSize) / 1.33333) || 10.5;
+                currentSize = (parseFloat(style.fontSize) * 0.75) || 10.5;
               }
               handleFormatting('fontSize', Math.min(100, currentSize + 0.5).toString());
             } else if (activeEditIdx !== null) {
@@ -446,7 +462,7 @@ function CreateLectureSheetContent() {
             </Card>
             <div className="space-y-3">
               <Button onClick={handleSave} disabled={saving} className="w-full gap-2 font-bold h-11"><Save className="w-4 h-4" /> সেভ করুন (Ctrl+S)</Button>
-              <Button onClick={() => { if(!data.content) return; const p = new URLSearchParams(window.location.search); p.set('print', 'true'); if(editId) p.set('id', editId); router.push(`${window.location.pathname}?${p.toString()}`); }} variant="outline" className="w-full gap-2 border-primary text-primary font-bold h-11"><Eye className="w-4 h-4" /> প্রিন্ট ভভিউ</Button>
+              <Button onClick={() => { if(!data.content) return; const p = new URLSearchParams(window.location.search); p.set('print', 'true'); if(editId) p.set('id', editId); router.push(`${window.location.pathname}?${p.toString()}`); }} variant="outline" className="w-full gap-2 border-primary text-primary font-bold h-11"><Eye className="w-4 h-4" /> প্রিন্ট প্রিভিউ</Button>
             </div>
           </aside>
           <div className="flex-1 w-full">
@@ -576,8 +592,8 @@ function CreateLectureSheetContent() {
           .math-dot::after { content: "·"; position: absolute; top: -0.6em; left: 50%; transform: translateX(-50%); font-weight: bold; font-size: 1.2em; }
           .math-sqrt { display: inline-flex; align-items: center; }
           .math-sqrt-stem { border-top: 0.5pt solid black; padding-top: 1px; }
-          .math-sup { font-size: 0.7em; vertical-align: super; display: inline-block; }
-          .math-sub { font-size: 0.7em; vertical-align: sub; display: inline-block; }
+          .math-sup { font-size: 0.7em; vertical-align: super; }
+          .math-sub { font-size: 0.7em; vertical-align: sub; }
           .math-text { font-family: 'Kalpurush', sans-serif; font-style: normal; }
           .paper { color: black !important; overflow: hidden; }
           .no-arrows::-webkit-inner-spin-button, .no-arrows::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
