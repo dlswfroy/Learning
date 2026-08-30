@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, Save, FileText, ArrowLeft, Loader2, BookOpen, ScanText, Eye, Settings2, SlidersHorizontal, Image as ImageIcon, X, Type, Bold, Underline, Rows3, AlignLeft, AlignCenter, AlignRight, AlignJustify, Edit3, FileDown, Trash2, PlusCircle, CheckCircle2 } from 'lucide-react';
+import { Printer, Save, FileText, ArrowLeft, Loader2, BookOpen, ScanText, Eye, Settings2, SlidersHorizontal, Image as ImageIcon, X, Type, Bold, Underline, Italic, Rows3, AlignLeft, AlignCenter, AlignRight, AlignJustify, Edit3, FileDown, Trash2, PlusCircle, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useDoc } from '@/firebase';
 import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
@@ -76,7 +76,6 @@ function CreateLectureSheetContent() {
   const [saving, setSaving] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const ocrInputRef = useRef<HTMLInputElement>(null);
-  const watermarkImageRef = useRef<HTMLInputElement>(null);
   const measurementRef = useRef<HTMLDivElement>(null);
   
   const softwareDocRef = useMemo(() => doc(db, 'config', 'software'), [db]);
@@ -199,14 +198,19 @@ function CreateLectureSheetContent() {
       const pagesToRender = newPages.length > 0 ? newPages : [""];
       setPaginatedPages(pagesToRender);
       const initialStyles: Record<number, any> = {}, initialManual: Record<number, string> = {};
-      pagesToRender.forEach((p, i) => { initialStyles[i] = pageStyles[i] || { fontSize: globalFontSize, lineHeight: globalLineHeight, bold: false, underline: false, color: '#000000', align: 'justify', mT, mB, mL, mR }; initialManual[i] = p; });
+      pagesToRender.forEach((p, i) => { initialStyles[i] = pageStyles[i] || { fontSize: globalFontSize, lineHeight: globalLineHeight, bold: false, italic: false, underline: false, color: '#000000', align: 'justify', mT, mB, mL, mR }; initialManual[i] = p; });
       setPageStyles(initialStyles); setManualPages(initialManual);
     }
   }, [isPrintMode, data.content, printSettings, globalFontSize, globalLineHeight, manualPages, pageStyles]);
 
   const subjects = useMemo(() => data.classId ? getSubjectsForClass(data.classId) : [], [data.classId]);
 
-  const updatePageStyle = (idx: number, key: string, val: any) => { setPageStyles(prev => ({ ...prev, [idx]: { ...prev[idx], [key]: val } })); };
+  const updatePageStyle = useCallback((idx: number, key: string, val: any) => { 
+    setPageStyles(prev => {
+      const current = prev[idx] || { fontSize: globalFontSize, lineHeight: globalLineHeight, bold: false, italic: false, underline: false, color: '#000000', align: 'justify', mT: 0.5, mB: 0.5, mL: 0.5, mR: 0.5 };
+      return { ...prev, [idx]: { ...current, [key]: val } };
+    }); 
+  }, [globalFontSize, globalLineHeight]);
 
   const handleFormatting = useCallback((command: string, value: string | null = null) => {
     const selection = window.getSelection();
@@ -215,8 +219,9 @@ function CreateLectureSheetContent() {
     if (hasSelection) {
       document.execCommand('styleWithCSS', false, 'true');
       if (command === 'fontSize') { 
+        const val = value + 'pt';
         const span = document.createElement('span'); 
-        span.style.fontSize = value + 'pt'; 
+        span.style.fontSize = val; 
         const range = selection.getRangeAt(0); 
         span.appendChild(range.extractContents()); 
         range.insertNode(span); 
@@ -225,30 +230,21 @@ function CreateLectureSheetContent() {
         selection.removeAllRanges(); 
         selection.addRange(newRange); 
       }
-      else if (command === 'lineHeight') { 
-        const range = selection.getRangeAt(0); 
-        if (range) { 
-          const span = document.createElement('span'); 
-          span.style.lineHeight = value + ''; 
-          span.appendChild(range.extractContents()); 
-          range.insertNode(span); 
-          const newRange = document.createRange(); 
-          newRange.selectNodeContents(span); 
-          selection.removeAllRanges(); 
-          selection.addRange(newRange); 
-        } 
-      }
       else document.execCommand(command, false, value || '');
     } else if (activeEditIdx !== null) {
       const numVal = parseFloat(value || '0');
       if (command === 'fontSize' && !isNaN(numVal)) updatePageStyle(activeEditIdx, 'fontSize', numVal);
-      if (command === 'lineHeight' && !isNaN(numVal)) updatePageStyle(activeEditIdx, 'lineHeight', numVal);
-      if (command === 'bold') updatePageStyle(activeEditIdx, 'bold', !pageStyles[activeEditIdx].bold);
-      if (command === 'underline') updatePageStyle(activeEditIdx, 'underline', !pageStyles[activeEditIdx].underline);
-      if (command === 'foreColor') updatePageStyle(activeEditIdx, 'color', value);
-      if (command.startsWith('justify')) { const alignMap: any = { justifyLeft: 'left', justifyCenter: 'center', justifyRight: 'right', justifyFull: 'justify' }; updatePageStyle(activeEditIdx, 'align', alignMap[command]); }
+      else if (command === 'lineHeight' && !isNaN(numVal)) updatePageStyle(activeEditIdx, 'lineHeight', numVal);
+      else if (command === 'bold') updatePageStyle(activeEditIdx, 'bold', !pageStyles[activeEditIdx]?.bold);
+      else if (command === 'italic') updatePageStyle(activeEditIdx, 'italic', !pageStyles[activeEditIdx]?.italic);
+      else if (command === 'underline') updatePageStyle(activeEditIdx, 'underline', !pageStyles[activeEditIdx]?.underline);
+      else if (command === 'foreColor') updatePageStyle(activeEditIdx, 'color', value);
+      else if (command.startsWith('justify')) { 
+        const alignMap: any = { justifyLeft: 'left', justifyCenter: 'center', justifyRight: 'right', justifyFull: 'justify' }; 
+        updatePageStyle(activeEditIdx, 'align', alignMap[command]); 
+      }
     }
-  }, [activeEditIdx, pageStyles]);
+  }, [activeEditIdx, pageStyles, updatePageStyle]);
 
   const handleSave = useCallback(() => {
     if (!user || !db) return;
@@ -284,32 +280,33 @@ function CreateLectureSheetContent() {
     const handleKeyDown = (e: KeyboardEvent) => { 
       if ((e.ctrlKey || e.metaKey)) { 
         const key = e.key.toLowerCase();
-        if (key === 's') { e.preventDefault(); handleSave(); } 
-        else if (key === 'e') { e.preventDefault(); handleFormatting('justifyCenter'); }
-        else if (key === 'l') { e.preventDefault(); handleFormatting('justifyLeft'); }
-        else if (key === 'r') { e.preventDefault(); handleFormatting('justifyRight'); }
-        else if (key === 'd' || key === 'u') { e.preventDefault(); handleFormatting('underline'); }
-        else if (key === 'n') { e.preventDefault(); setPaginatedPages(prev => [...prev, ""]); }
-        else if (key === 'b') { e.preventDefault(); handleFormatting('bold'); }
-        else if (key === 'z') { e.preventDefault(); document.execCommand('undo', false); }
-        else if (key === 'x') { e.preventDefault(); document.execCommand('cut', false); }
-        else if (key === '[' || key === ']') { 
-          e.preventDefault(); 
-          const selection = window.getSelection();
-          const hasSelection = selection && selection.rangeCount > 0 && !selection.isCollapsed;
-          
-          let currentSize = 10.5;
-          if (activeEditIdx !== null) {
-            currentSize = pageStyles[activeEditIdx]?.fontSize || globalFontSize;
-          }
-          
-          const diff = key === '[' ? -0.5 : 0.5;
-          const newSize = Math.max(1, Math.min(100, currentSize + diff));
-          
-          handleFormatting('fontSize', newSize.toString());
-          if (activeEditIdx !== null && !hasSelection) {
-            setFontSizeDraft(newSize.toString());
-          }
+        
+        // Prevent browser defaults for specific shortcuts
+        if (['s', 'n', 'd', 'l', 'e', 'r', '[', ']', 'y', 'u'].includes(key)) {
+          e.preventDefault();
+        }
+
+        if (key === 's') handleSave();
+        else if (key === 'n') setPaginatedPages(prev => [...prev, ""]);
+        else if (key === 'b') handleFormatting('bold');
+        else if (key === 'i') handleFormatting('italic');
+        else if (key === 'u' || key === 'd') handleFormatting('underline');
+        else if (key === 'l') handleFormatting('justifyLeft');
+        else if (key === 'e') handleFormatting('justifyCenter');
+        else if (key === 'r') handleFormatting('justifyRight');
+        else if (key === 'y') document.execCommand('redo', false);
+        else if (key === 'z') { /* Let browser handle undo or document.execCommand('undo') */ }
+        else if (key === '[') { 
+          const currentSize = (activeEditIdx !== null ? pageStyles[activeEditIdx]?.fontSize : globalFontSize) || 10.5;
+          const nextVal = Math.max(1, currentSize - 1);
+          handleFormatting('fontSize', nextVal.toString());
+          if (activeEditIdx !== null) setFontSizeDraft(nextVal.toString());
+        }
+        else if (key === ']') { 
+          const currentSize = (activeEditIdx !== null ? pageStyles[activeEditIdx]?.fontSize : globalFontSize) || 10.5;
+          const nextVal = Math.min(100, currentSize + 1);
+          handleFormatting('fontSize', nextVal.toString());
+          if (activeEditIdx !== null) setFontSizeDraft(nextVal.toString());
         }
       } 
     };
@@ -419,9 +416,17 @@ function CreateLectureSheetContent() {
                     <div className="p-4 rounded-xl border-2 border-blue-100 bg-blue-50/30 space-y-6">
                       <div className="space-y-4"><label className="text-[10px] font-black text-slate-500 uppercase">পেজ মার্জিন (ইঞ্চি)</label><div className="grid grid-cols-2 gap-3"><div className="space-y-1"><label className="text-[9px] font-bold">উপরে</label><Input type="text" value={pageStyles[activeEditIdx].mT} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) updatePageStyle(activeEditIdx!, 'mT', v); }} className="h-7 text-xs font-bold no-arrows" /></div><div className="space-y-1"><label className="text-[9px] font-bold">নিচে</label><Input type="text" value={pageStyles[activeEditIdx].mB} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) updatePageStyle(activeEditIdx!, 'mB', v); }} className="h-7 text-xs font-bold no-arrows" /></div><div className="space-y-1"><label className="text-[9px] font-bold">বামে</label><Input type="text" value={pageStyles[activeEditIdx].mL} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) updatePageStyle(activeEditIdx!, 'mL', v); }} className="h-7 text-xs font-bold no-arrows" /></div><div className="space-y-1"><label className="text-[9px] font-bold">ডানে</label><Input type="text" value={pageStyles[activeEditIdx].mR} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) updatePageStyle(activeEditIdx!, 'mR', v); }} className="h-7 text-xs font-bold no-arrows" /></div></div></div>
                       <Separator className="bg-blue-100" />
-                      <div className="space-y-2"><label className="text-[10px] font-bold text-slate-500 flex justify-between">ফন্ট সাইজ (pt) <span>{toBengaliNumber(pageStyles[activeEditIdx].fontSize)}pt</span></label><Input type="text" value={fontSizeDraft} onChange={e => { const val = e.target.value; if (val === '' || /^\d*\.?\d*$/.test(val)) { setFontSizeDraft(val); handleFormatting('fontSize', val); } }} className="h-8 text-xs font-bold no-arrows mb-2" /><Slider value={[pageStyles[activeEditIdx].fontSize]} min={1} max={100} step={0.5} onValueChange={([v]) => { handleFormatting('fontSize', v.toString()); setFontSizeDraft(v.toString()); }} /></div>
-                      <div className="space-y-2"><label className="text-[10px] font-bold text-slate-500 flex justify-between">লাইন স্পেসিং <span>{toBengaliNumber(pageStyles[activeEditIdx].lineHeight)}</span></label><Input type="text" value={lineHeightDraft} onChange={e => { const val = e.target.value; if (val === '' || /^\d*\.?\d*$/.test(val)) { setLineHeightDraft(val); handleFormatting('lineHeight', val); } }} className="h-8 text-xs font-bold no-arrows mb-2" /><Slider value={[pageStyles[activeEditIdx].lineHeight]} min={0.5} max={5.0} step={0.1} onValueChange={([v]) => { handleFormatting('lineHeight', v.toString()); setLineHeightDraft(v.toString()); }} /></div>
-                      <div className="flex items-center justify-between"><label className="text-[10px] font-bold text-slate-500 uppercase">টেক্সট স্টাইল</label><div className="flex gap-2"><Button variant={pageStyles[activeEditIdx].bold ? 'default' : 'outline'} size="icon" className="h-8 w-8" onClick={() => handleFormatting('bold')}><Bold className="w-4 h-4" /></Button><Button variant={pageStyles[activeEditIdx].underline ? 'default' : 'outline'} size="icon" className="h-8 w-8" onClick={() => handleFormatting('underline')}><Underline className="w-4 h-4" /></Button></div></div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-slate-500 flex justify-between">ফন্ট সাইজ (pt) <span>{toBengaliNumber(pageStyles[activeEditIdx].fontSize)}pt</span></label>
+                        <Input type="text" value={fontSizeDraft} onChange={e => { const val = e.target.value; if (val === '' || /^\d*\.?\d*$/.test(val)) { setFontSizeDraft(val); handleFormatting('fontSize', val); } }} className="h-8 text-xs font-bold no-arrows mb-2" />
+                        <Slider value={[pageStyles[activeEditIdx].fontSize]} min={1} max={100} step={0.5} onValueChange={([v]) => { handleFormatting('fontSize', v.toString()); setFontSizeDraft(v.toString()); }} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-slate-500 flex justify-between">লাইন স্পেসিং <span>{toBengaliNumber(pageStyles[activeEditIdx].lineHeight)}</span></label>
+                        <Input type="text" value={lineHeightDraft} onChange={e => { const val = e.target.value; if (val === '' || /^\d*\.?\d*$/.test(val)) { setLineHeightDraft(val); handleFormatting('lineHeight', val); } }} className="h-8 text-xs font-bold no-arrows mb-2" />
+                        <Slider value={[pageStyles[activeEditIdx].lineHeight]} min={0.5} max={5.0} step={0.1} onValueChange={([v]) => { handleFormatting('lineHeight', v.toString()); setLineHeightDraft(v.toString()); }} />
+                      </div>
+                      <div className="flex items-center justify-between"><label className="text-[10px] font-bold text-slate-500 uppercase">টেক্সট স্টাইল</label><div className="flex gap-2"><Button variant={pageStyles[activeEditIdx].bold ? 'default' : 'outline'} size="icon" className="h-8 w-8" onClick={() => handleFormatting('bold')}><Bold className="w-4 h-4" /></Button><Button variant={pageStyles[activeEditIdx].italic ? 'default' : 'outline'} size="icon" className="h-8 w-8" onClick={() => handleFormatting('italic')}><Italic className="w-4 h-4" /></Button><Button variant={pageStyles[activeEditIdx].underline ? 'default' : 'outline'} size="icon" className="h-8 w-8" onClick={() => handleFormatting('underline')}><Underline className="w-4 h-4" /></Button></div></div>
                       <div className="space-y-2"><label className="text-[10px] font-bold text-slate-500 uppercase">রং (Color)</label><div className="flex items-center gap-3"><input type="color" value={pageStyles[activeEditIdx].color} onChange={(e) => handleFormatting('foreColor', e.target.value)} className="w-10 h-8 rounded border-0 cursor-pointer p-0" /><span className="text-[10px] font-mono font-bold uppercase">{pageStyles[activeEditIdx].color}</span></div></div>
                     </div>
                  </div>
@@ -432,10 +437,48 @@ function CreateLectureSheetContent() {
                    <Separator /><div className="space-y-4"><h4 className="text-xs font-black text-slate-500 uppercase flex items-center gap-2"><Settings2 className="w-3.5 h-3.5" /> গ্লোবাল মার্জিন</h4><div className="grid grid-cols-2 gap-4"><div className="space-y-1"><label className="text-[10px] font-bold">উপরে</label><Input type="text" value={printSettings.marginTop} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) setPrintSettings(p => ({...p, marginTop: v})); }} className="h-8 font-bold no-arrows" /></div><div className="space-y-1"><label className="text-[10px] font-bold">নিচে</label><Input type="text" value={printSettings.marginBottom} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) setPrintSettings(p => ({...p, marginBottom: v})); }} className="h-8 font-bold no-arrows" /></div><div className="space-y-1"><label className="text-[10px] font-bold">বামে</label><Input type="text" value={printSettings.marginLeft} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) setPrintSettings(p => ({...p, marginLeft: v})); }} className="h-8 font-bold no-arrows" /></div><div className="space-y-1"><label className="text-[10px] font-bold">ডানে</label><Input type="text" value={printSettings.marginRight} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) setPrintSettings(p => ({...p, marginRight: v})); }} className="h-8 font-bold no-arrows" /></div></div></div>
                  </div>
                )}
+
+               <Separator className="my-6" />
+               <div className="space-y-4">
+                 <h4 className="text-xs font-black text-slate-500 uppercase flex items-center gap-2"><SlidersHorizontal className="w-3.5 h-3.5" /> জলছাপ সেটিংস</h4>
+                 <div className="p-4 rounded-xl border-2 border-slate-100 bg-slate-50/30 space-y-4">
+                   <div className="flex gap-2">
+                     <Button variant={printSettings.watermarkType === 'text' ? 'default' : 'outline'} className="flex-1 h-8 text-[10px] font-bold gap-1" onClick={() => setPrintSettings(p => ({...p, watermarkType: 'text'}))}><Type className="w-3 h-3" /> টেক্সট</Button>
+                     <Button variant={printSettings.watermarkType === 'image' ? 'default' : 'outline'} className="flex-1 h-8 text-[10px] font-bold gap-1" onClick={() => setPrintSettings(p => ({...p, watermarkType: 'image'}))}><ImageIcon className="w-3 h-3" /> লোগো</Button>
+                   </div>
+                   
+                   {printSettings.watermarkType === 'text' ? (
+                     <div className="space-y-1">
+                       <label className="text-[10px] font-bold">জলছাপ টেক্সট</label>
+                       <Input value={printSettings.watermarkText || ''} onChange={e => setPrintSettings(p => ({...p, watermarkText: e.target.value}))} placeholder="প্রতিষ্ঠানের নাম" className="h-8 text-xs font-bold" />
+                     </div>
+                   ) : (
+                     <div className="space-y-1">
+                       <label className="text-[10px] font-bold">লোগো ইউআরএল</label>
+                       <Input value={printSettings.watermarkImageUrl || ''} onChange={e => setPrintSettings(p => ({...p, watermarkImageUrl: e.target.value}))} placeholder="https://..." className="h-8 text-xs font-bold" />
+                     </div>
+                   )}
+
+                   <div className="space-y-1">
+                     <label className="text-[10px] font-bold">জলছাপ এঙ্গেল</label>
+                     <Input type="number" value={printSettings.watermarkRotation} onChange={e => setPrintSettings(p => ({...p, watermarkRotation: parseInt(e.target.value) || 0}))} className="h-8 text-xs font-bold" />
+                   </div>
+
+                   <div className="space-y-2">
+                     <label className="text-[10px] font-bold flex justify-between">জলছাপ সাইজ (%) <span>{toBengaliNumber(printSettings.watermarkImageSize)}%</span></label>
+                     <Slider value={[printSettings.watermarkImageSize || 70]} min={10} max={200} step={1} onValueChange={([v]) => setPrintSettings(p => ({...p, watermarkImageSize: v}))} />
+                   </div>
+
+                   <div className="space-y-2">
+                     <label className="text-[10px] font-bold flex justify-between">জলছাপ ব্রাইটনেস <span>{toBengaliNumber(printSettings.watermarkOpacity)}%</span></label>
+                     <Slider value={[printSettings.watermarkOpacity || 10]} min={0} max={100} step={1} onValueChange={([v]) => setPrintSettings(p => ({...p, watermarkOpacity: v}))} />
+                   </div>
+                 </div>
+               </div>
             </aside>
             <main className="print-main-area flex-1 overflow-y-auto bg-slate-200 pt-16 pb-24 flex flex-col items-center gap-10 relative">
                {paginatedPages.map((pageHtml, idx) => {
-                 const style = pageStyles[idx] || { fontSize: globalFontSize, lineHeight: globalLineHeight, bold: false, underline: false, color: '#000000', align: 'justify', mT: 0.5, mB: 0.5, mL: 0.5, mR: 0.5 };
+                 const style = pageStyles[idx] || { fontSize: globalFontSize, lineHeight: globalLineHeight, bold: false, italic: false, underline: false, color: '#000000', align: 'justify', mT: 0.5, mB: 0.5, mL: 0.5, mR: 0.5 };
                  const mT = parseFloat(String(style.mT)) || 0.5, mB = parseFloat(String(style.mB)) || 0.5, mL = parseFloat(String(style.mL)) || 0.5, mR = parseFloat(String(style.mR)) || 0.5;
                  return (
                  <div key={idx} className={cn(`paper paper-idx-${idx} shadow-2xl bg-white relative overflow-hidden shrink-0 group transition-all`, activeEditIdx === idx && "ring-4 ring-blue-500 shadow-blue-200")} style={{ width: '8.27in', height: '11.69in', padding: `${mT}in ${mR}in ${mB}in ${mL}in`, lineHeight: '1.2', boxSizing: 'border-box' }}>
@@ -449,7 +492,7 @@ function CreateLectureSheetContent() {
                         <div className="flex justify-center gap-8 text-[10pt] font-bold mt-1"><span>শ্রেণি: {CLASSES.find(c => c.id === data.classId)?.label || ''} শ্রেণি</span><span>বিষয়: {data.subject}</span></div>
                       </header>
                       {idx === 0 && <h2 className="text-[13pt] font-bold text-center underline uppercase mb-4">{data.topic || 'লেকচার শিট'}</h2>}
-                      <div contentEditable={activeEditIdx === idx} onBlur={(e) => { const htmlValue = e.currentTarget?.innerHTML || ""; setManualPages(prev => ({ ...prev, [idx]: htmlValue })); }} onFocus={() => setActiveEditIdx(idx)} className={cn("content-area flex-1 font-kalpurush outline-none", activeEditIdx === idx && "bg-blue-50/20 p-1 rounded border border-dashed border-blue-300")} style={{ lineHeight: String(style.lineHeight), fontSize: `${style.fontSize}pt`, fontWeight: style.bold ? 'bold' : 'normal', textDecoration: style.underline ? 'underline' : 'none', color: style.color, textAlign: style.align as any }} dangerouslySetInnerHTML={{ __html: manualPages[idx] || pageHtml }} />
+                      <div contentEditable={activeEditIdx === idx} onBlur={(e) => { const htmlValue = e.currentTarget?.innerHTML || ""; setManualPages(prev => ({ ...prev, [idx]: htmlValue })); }} onFocus={() => setActiveEditIdx(idx)} className={cn("content-area flex-1 font-kalpurush outline-none", activeEditIdx === idx && "bg-blue-50/20 p-1 rounded border border-dashed border-blue-300")} style={{ lineHeight: String(style.lineHeight), fontSize: `${style.fontSize}pt`, fontWeight: style.bold ? 'bold' : 'normal', fontStyle: style.italic ? 'italic' : 'normal', textDecoration: style.underline ? 'underline' : 'none', color: style.color, textAlign: style.align as any }} dangerouslySetInnerHTML={{ __html: manualPages[idx] || pageHtml }} />
                       <footer className="mt-auto pt-4 flex justify-between text-[9pt] font-bold border-t border-slate-200"><span>পাতা: {toBengaliNumber(idx + 1)} / {toBengaliNumber(paginatedPages.length)}</span><span>{softwareConfig?.appName || 'টপ গ্রেড টিউটোরিয়ালস'}</span></footer>
                     </div>
                  </div>
