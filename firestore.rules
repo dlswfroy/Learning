@@ -3,12 +3,16 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Admin check function
     function isAdmin() {
-      return request.auth != null && request.auth.token.email == 'dlswf.roy@gmail.com';
+      return request.auth != null && (request.auth.token.email.lower() == 'dlswf.roy@gmail.com');
     }
 
     // Check if user account is active
     function isActive() {
-      return request.auth != null && (isAdmin() || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'active');
+      return request.auth != null && (
+        isAdmin() || 
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'active')
+      );
     }
 
     match /users/{userId} {

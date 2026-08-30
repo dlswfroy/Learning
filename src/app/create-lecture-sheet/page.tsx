@@ -241,13 +241,11 @@ function CreateLectureSheetContent() {
           span.appendChild(range.extractContents()); 
           range.insertNode(span);
           
-          // Reselect the newly formatted content to allow repeated shortcut hits
           const newRange = document.createRange();
           newRange.selectNodeContents(span);
           selection.removeAllRanges();
           selection.addRange(newRange);
         } catch (e) {
-          // Fallback if re-selection fails
           document.execCommand('fontSize', false, '3');
         }
       }
@@ -282,7 +280,6 @@ function CreateLectureSheetContent() {
     const docId = editId || doc(collection(db, 'lecture-sheets')).id;
     const ref = doc(db, 'lecture-sheets', docId);
     
-    // As per requirement: removal of strict ID checks, just use user.uid as the modifier
     const payload: any = { ...data, content: updatedFullContent, printSettings, pageStyles, manualPages: updatedManualPages, userId: user.uid, updatedAt: serverTimestamp() };
     if (!editId) payload.createdAt = serverTimestamp();
     
@@ -304,8 +301,8 @@ function CreateLectureSheetContent() {
     const handleKeyDown = (e: KeyboardEvent) => { 
       if ((e.ctrlKey || e.metaKey)) { 
         const key = e.key.toLowerCase();
-        if (['s', 'n', 'd', 'l', 'e', 'r', '[', ']', 'y', 'u', 'b', 'i', 'z', 'x', 'c', 'v', 'a'].includes(key)) {
-          if (['s', 'n', 'd', 'l', 'e', 'r', '[', ']', 'y', 'u', 'b', 'i'].includes(key)) e.preventDefault();
+        if (['s', 'n', 'd', 'l', 'e', 'r', '[', ']'].includes(key)) {
+          e.preventDefault();
           if (key === 's') handleSave();
           else if (key === 'n') setPaginatedPages(prev => [...prev, ""]);
           else if (key === 'b') handleFormatting('bold');
@@ -314,9 +311,6 @@ function CreateLectureSheetContent() {
           else if (key === 'l') handleFormatting('justifyLeft');
           else if (key === 'e') handleFormatting('justifyCenter');
           else if (key === 'r') handleFormatting('justifyRight');
-          else if (key === 'z') { if(!e.shiftKey) document.execCommand('undo', false); else document.execCommand('redo', false); }
-          else if (key === 'y') document.execCommand('redo', false);
-          else if (key === 'x') document.execCommand('cut', false);
           else if (key === '[') { 
             const selection = window.getSelection();
             if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
@@ -324,8 +318,7 @@ function CreateLectureSheetContent() {
               let currentSize = 10.5;
               if (parent) {
                 const style = window.getComputedStyle(parent);
-                // Pt = Px * 0.75
-                currentSize = (parseFloat(style.fontSize) * 0.75) || 10.5;
+                currentSize = (parseFloat(style.fontSize) / 1.33333) || 10.5;
               }
               handleFormatting('fontSize', Math.max(1, currentSize - 0.5).toString());
             } else if (activeEditIdx !== null) {
@@ -342,7 +335,7 @@ function CreateLectureSheetContent() {
               let currentSize = 10.5;
               if (parent) {
                 const style = window.getComputedStyle(parent);
-                currentSize = (parseFloat(style.fontSize) * 0.75) || 10.5;
+                currentSize = (parseFloat(style.fontSize) / 1.33333) || 10.5;
               }
               handleFormatting('fontSize', Math.min(100, currentSize + 0.5).toString());
             } else if (activeEditIdx !== null) {
