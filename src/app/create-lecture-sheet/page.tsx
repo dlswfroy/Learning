@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, Save, FileText, ArrowLeft, Loader2, BookOpen, ScanText, Eye, Settings2, SlidersHorizontal, Image as ImageIcon, X, Type, Bold, Underline, Rows3, AlignLeft, AlignCenter, AlignRight, AlignJustify, Edit3, FileDown, Trash2, PlusCircle } from 'lucide-react';
+import { Printer, Save, FileText, ArrowLeft, Loader2, BookOpen, ScanText, Eye, Settings2, SlidersHorizontal, Image as ImageIcon, X, Type, Bold, Underline, Rows3, AlignLeft, AlignCenter, AlignRight, AlignJustify, Edit3, FileDown, Trash2, PlusCircle, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useDoc } from '@/firebase';
 import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
@@ -28,14 +28,9 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 
 function formatMath(text: string) {
   if (!text) return '';
-  
-  // Clean markdown artifacts and excessive spaces from Gemini
   let formatted = text.replace(/#+\s*\**|\*\*/g, '');
   formatted = formatted.replace(/\$|\\\(|\\\)|\\\[|\\\]/g, '');
-  
-  // Reduce excessive gaps
   formatted = formatted.replace(/\n\s*\n\s*\n+/g, '\n\n');
-  
   formatted = formatted.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
   formatted = formatted.replace(/\\text\{([^}]+)\}/g, '<span class="math-text">$1</span>');
   const fracRegex = /\\frac\{((?:[^{}]|\{[^{}]*\})*)\}\s*\{((?:[^{}]|\{[^{}]*\})*)\}/g;
@@ -46,7 +41,6 @@ function formatMath(text: string) {
   formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
   formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
-
   const symbolMap: Record<string, string> = {
     '\\\\log': 'log', '\\\\triangle': '△', '\\\\angle': '∠', '\\\\circ': '°',
     '\\\\theta': 'θ', '\\\\pi': 'π', '\\\\pm': '±', '\\\\times': '×',
@@ -64,11 +58,7 @@ function formatMath(text: string) {
     '\\\\left': '', '\\\\right': '', '\\\\\%': '%', '\\\\setminus': '\\', '\\\\backslash': '\\',
     '\\\\propto': '∝', '\\\\parallel': '∥', '\\\\perp': '⊥'
   };
-  
-  Object.entries(symbolMap).forEach(([key, val]) => { 
-    formatted = formatted.replace(new RegExp(key, 'g'), val); 
-  });
-
+  Object.entries(symbolMap).forEach(([key, val]) => { formatted = formatted.replace(new RegExp(key, 'g'), val); });
   formatted = formatted.replace(/\\dot\{([^}]+)\}/g, '<span class="math-dot">$1</span>');
   formatted = formatted.replace(/\\/g, '');
   return formatted;
@@ -98,39 +88,24 @@ function CreateLectureSheetContent() {
     subject: '',
     topic: '',
     content: '',
-    type: 'written'
+    type: 'lecture_sheet'
   });
 
-  // Handle URL Parameters for Auto-fill
   useEffect(() => {
     if (!editId) {
       const classIdParam = searchParams.get('classId');
       const subjectParam = searchParams.get('subject');
       const topicParam = searchParams.get('topic');
-      
       if (classIdParam || subjectParam || topicParam) {
-        setData(prev => ({
-          ...prev,
-          classId: classIdParam || prev.classId,
-          subject: subjectParam || prev.subject,
-          topic: topicParam || prev.topic,
-        }));
+        setData(prev => ({ ...prev, classId: classIdParam || prev.classId, subject: subjectParam || prev.subject, topic: topicParam || prev.topic }));
       }
     }
   }, [searchParams, editId]);
 
   const [printSettings, setPrintSettings] = useState<any>({
-    marginTop: 0.5,
-    marginBottom: 0.5,
-    marginLeft: 0.5,
-    marginRight: 0.5,
-    watermarkOpacity: 10,
-    watermarkText: '',
-    watermarkFontSize: 80,
-    watermarkRotation: -45,
-    watermarkImageUrl: '',
-    watermarkImageSize: 70,
-    watermarkType: 'text'
+    marginTop: 0.5, marginBottom: 0.5, marginLeft: 0.5, marginRight: 0.5,
+    watermarkOpacity: 10, watermarkText: '', watermarkFontSize: 80, watermarkRotation: -45,
+    watermarkImageUrl: '', watermarkImageSize: 70, watermarkType: 'text'
   });
 
   const [paginatedPages, setPaginatedPages] = useState<string[]>([]);
@@ -139,7 +114,6 @@ function CreateLectureSheetContent() {
   const [manualPages, setManualPages] = useState<Record<number, string>>({});
   const [globalFontSize, setGlobalFontSize] = useState(10.5);
   const [globalLineHeight, setGlobalLineHeight] = useState(1.2);
-
   const [fontSizeDraft, setFontSizeDraft] = useState("");
   const [lineHeightDraft, setLineHeightDraft] = useState("");
 
@@ -160,7 +134,7 @@ function CreateLectureSheetContent() {
             subject: docData.subject || '',
             topic: docData.topic || '',
             content: docData.content || '',
-            type: docData.type || 'written'
+            type: docData.type || 'lecture_sheet'
           });
           if (docData.printSettings) setPrintSettings(prev => ({ ...prev, ...docData.printSettings }));
           if (docData.pageStyles) {
@@ -179,27 +153,16 @@ function CreateLectureSheetContent() {
     if (activeEditIdx !== null && pageStyles[activeEditIdx]) {
       setFontSizeDraft(String(pageStyles[activeEditIdx].fontSize));
       setLineHeightDraft(String(pageStyles[activeEditIdx].lineHeight));
-    } else {
-      setFontSizeDraft(String(globalFontSize));
-      setLineHeightDraft(String(globalLineHeight));
-    }
+    } else { setFontSizeDraft(String(globalFontSize)); setLineHeightDraft(String(globalLineHeight)); }
   }, [activeEditIdx, globalFontSize, globalLineHeight, pageStyles]);
 
   useEffect(() => {
     if (!isPrintMode) return;
-
     if (Object.keys(manualPages).length > 0) {
       const sortedIndices = Object.keys(manualPages).map(Number).sort((a, b) => a - b);
-      const restoredPages = sortedIndices.map(idx => manualPages[idx]);
-      const editorText = data.content.replace(/<[^>]*>/g, '').replace(/\s/g, '');
-      const manualCombinedText = restoredPages.join('').replace(/<[^>]*>/g, '').replace(/\s|&nbsp;/g, '');
-      
-      if (Math.abs(editorText.length - manualCombinedText.length) < 50 || Object.keys(manualPages).length > 0) {
-        setPaginatedPages(restoredPages);
-        return;
-      }
+      setPaginatedPages(sortedIndices.map(idx => manualPages[idx]));
+      return;
     }
-
     if (data.content && measurementRef.current) {
       const container = measurementRef.current;
       const contentHtml = formatMath(data.content);
@@ -207,95 +170,43 @@ function CreateLectureSheetContent() {
       const mB = parseFloat(String(printSettings.marginBottom)) || 0.5;
       const mL = parseFloat(String(printSettings.marginLeft)) || 0.5;
       const mR = parseFloat(String(printSettings.marginRight)) || 0.5;
-
       container.style.width = (8.27 - mL - mR) + 'in';
-      container.style.fontFamily = 'Kalpurush, sans-serif';
       container.style.fontSize = globalFontSize + 'pt';
       container.style.lineHeight = String(globalLineHeight);
-      
       const tempLines = contentHtml.split('\n');
-      const lineHtml = tempLines.map(line => `<div class="measure-line" style="min-height: 1.2em;">${line.trim() || '&nbsp;'}</div>`).join('');
-      container.innerHTML = lineHtml;
-      
-      const headerSpace = 135; 
-      const footerSpace = 65;  
-      const topicSpacePx = 65; 
-      const totalPageHeightPx = 11.69 * 96; 
+      container.innerHTML = tempLines.map(line => `<div class="measure-line" style="min-height: 1.2em;">${line.trim() || '&nbsp;'}</div>`).join('');
+      const headerSpace = 135, footerSpace = 65, topicSpacePx = 65, totalPageHeightPx = 11.69 * 96;
       const availableHeightPx = totalPageHeightPx - (mT * 96) - (mB * 96) - headerSpace - footerSpace;
-      
       const newPages: string[] = [];
-      let currentChunk = "";
-      let currentHeight = 0;
-
+      let currentChunk = "", currentHeight = 0;
       const lines = container.querySelectorAll('.measure-line');
       lines.forEach((line) => {
-        const h = (line as HTMLElement).offsetHeight || 18; 
+        const h = (line as HTMLElement).offsetHeight || 18;
         const effectiveLimit = (newPages.length === 0) ? (availableHeightPx - topicSpacePx) : availableHeightPx;
-
-        if (currentHeight > 0 && currentHeight + h > effectiveLimit) {
-          if (currentChunk.trim() !== "") newPages.push(currentChunk);
-          currentChunk = line.innerHTML + "<br/>";
-          currentHeight = h;
-        } else {
-          currentChunk += line.innerHTML + "<br/>";
-          currentHeight += h;
-        }
+        if (currentHeight > 0 && currentHeight + h > effectiveLimit) { if (currentChunk.trim() !== "") newPages.push(currentChunk); currentChunk = line.innerHTML + "<br/>"; currentHeight = h; }
+        else { currentChunk += line.innerHTML + "<br/>"; currentHeight += h; }
       });
-      
       if (currentChunk.trim() !== "") newPages.push(currentChunk);
-      
       const pagesToRender = newPages.length > 0 ? newPages : [""];
       setPaginatedPages(pagesToRender);
-      
-      const initialStyles: Record<number, any> = {};
-      const initialManual: Record<number, string> = {};
-      pagesToRender.forEach((p, i) => {
-         initialStyles[i] = pageStyles[i] || { fontSize: globalFontSize, lineHeight: globalLineHeight, bold: false, underline: false, color: '#000000', align: 'justify', mT, mB, mL, mR };
-         initialManual[i] = p;
-      });
-      
-      setPageStyles(initialStyles);
-      setManualPages(initialManual);
+      const initialStyles: Record<number, any> = {}, initialManual: Record<number, string> = {};
+      pagesToRender.forEach((p, i) => { initialStyles[i] = pageStyles[i] || { fontSize: globalFontSize, lineHeight: globalLineHeight, bold: false, underline: false, color: '#000000', align: 'justify', mT, mB, mL, mR }; initialManual[i] = p; });
+      setPageStyles(initialStyles); setManualPages(initialManual);
     }
   }, [isPrintMode, data.content, printSettings, globalFontSize, globalLineHeight, manualPages, pageStyles]);
 
   const subjects = useMemo(() => data.classId ? getSubjectsForClass(data.classId) : [], [data.classId]);
 
-  const updatePageStyle = (idx: number, key: string, val: any) => {
-    setPageStyles(prev => ({ ...prev, [idx]: { ...prev[idx], [key]: val } }));
-  };
+  const updatePageStyle = (idx: number, key: string, val: any) => { setPageStyles(prev => ({ ...prev, [idx]: { ...prev[idx], [key]: val } })); };
 
   const handleFormatting = (command: string, value: string | null = null) => {
     const selection = window.getSelection();
     const hasSelection = selection && selection.rangeCount > 0 && !selection.isCollapsed;
-
     if (hasSelection) {
       document.execCommand('styleWithCSS', false, 'true');
-      if (command === 'fontSize') {
-        const span = document.createElement('span');
-        span.style.fontSize = value + 'pt';
-        const range = selection.getRangeAt(0);
-        span.appendChild(range.extractContents());
-        range.insertNode(span);
-        const newRange = document.createRange();
-        newRange.selectNodeContents(span);
-        selection.removeAllRanges();
-        selection.addRange(newRange);
-      } else if (command === 'lineHeight') {
-        const range = selection.getRangeAt(0);
-        if (range) {
-          const span = document.createElement('span');
-          span.style.lineHeight = value + '';
-          span.appendChild(range.extractContents());
-          range.insertNode(span);
-          const newRange = document.createRange();
-          newRange.selectNodeContents(span);
-          selection.removeAllRanges();
-          selection.addRange(newRange);
-        }
-      } else {
-        document.execCommand(command, false, value || '');
-      }
+      if (command === 'fontSize') { const span = document.createElement('span'); span.style.fontSize = value + 'pt'; const range = selection.getRangeAt(0); span.appendChild(range.extractContents()); range.insertNode(span); const newRange = document.createRange(); newRange.selectNodeContents(span); selection.removeAllRanges(); selection.addRange(newRange); }
+      else if (command === 'lineHeight') { const range = selection.getRangeAt(0); if (range) { const span = document.createElement('span'); span.style.lineHeight = value + ''; span.appendChild(range.extractContents()); range.insertNode(span); const newRange = document.createRange(); newRange.selectNodeContents(span); selection.removeAllRanges(); selection.addRange(newRange); } }
+      else document.execCommand(command, false, value || '');
     } else if (activeEditIdx !== null) {
       const numVal = parseFloat(value || '0');
       if (command === 'fontSize' && !isNaN(numVal)) updatePageStyle(activeEditIdx, 'fontSize', numVal);
@@ -303,174 +214,44 @@ function CreateLectureSheetContent() {
       if (command === 'bold') updatePageStyle(activeEditIdx, 'bold', !pageStyles[activeEditIdx].bold);
       if (command === 'underline') updatePageStyle(activeEditIdx, 'underline', !pageStyles[activeEditIdx].underline);
       if (command === 'foreColor') updatePageStyle(activeEditIdx, 'color', value);
-      if (command.startsWith('justify')) {
-        const alignMap: any = { justifyLeft: 'left', justifyCenter: 'center', justifyRight: 'right', justifyFull: 'justify' };
-        updatePageStyle(activeEditIdx, 'align', alignMap[command]);
-      }
-    }
-  };
-
-  const adjustFontSize = (delta: number) => {
-    const selection = window.getSelection();
-    const hasSelection = selection && selection.rangeCount > 0 && !selection.isCollapsed;
-    let currentSize = 12;
-    if (hasSelection) {
-      const range = selection.getRangeAt(0);
-      const parent = range.commonAncestorContainer.parentElement;
-      if (parent) {
-        const styleSize = window.getComputedStyle(parent).fontSize;
-        const match = styleSize.match(/(\d+)/);
-        if (match) currentSize = Math.round(parseInt(match[0]) * 0.75);
-      }
-      const newSize = Math.max(1, currentSize + delta);
-      handleFormatting('fontSize', newSize.toString());
-    } else if (activeEditIdx !== null) {
-      currentSize = pageStyles[activeEditIdx]?.fontSize || globalFontSize;
-      const newSize = Math.max(1, currentSize + delta);
-      handleFormatting('fontSize', newSize.toString());
+      if (command.startsWith('justify')) { const alignMap: any = { justifyLeft: 'left', justifyCenter: 'center', justifyRight: 'right', justifyFull: 'justify' }; updatePageStyle(activeEditIdx, 'align', alignMap[command]); }
     }
   };
 
   const handleSave = useCallback(() => {
     if (!user || !db) return;
     setSaving(true);
-    let updatedFullContent = data.content;
-    let updatedManualPages = { ...manualPages };
-
+    let updatedFullContent = data.content, updatedManualPages = { ...manualPages };
     if (isPrintMode) {
       const papers = document.querySelectorAll('.paper');
       const tempManual: Record<number, string> = {};
-      papers.forEach(paper => {
-        const match = paper.className.match(/paper-idx-(\d+)/);
-        if (match) {
-          const idx = parseInt(match[1]);
-          const contentArea = paper.querySelector('.content-area');
-          if (contentArea) tempManual[idx] = contentArea.innerHTML || "";
-        }
-      });
+      papers.forEach(paper => { const match = paper.className.match(/paper-idx-(\d+)/); if (match) { const idx = parseInt(match[1]); const contentArea = paper.querySelector('.content-area'); if (contentArea) tempManual[idx] = contentArea.innerHTML || ""; } });
       updatedManualPages = tempManual;
       const sortedIndices = Object.keys(tempManual).map(Number).sort((a, b) => a - b);
       updatedFullContent = sortedIndices.map(idx => tempManual[idx]).join('\n\n');
     }
-
     const docId = editId || doc(collection(db, 'lecture-sheets')).id;
     const ref = doc(db, 'lecture-sheets', docId);
-    
-    const payload: any = { 
-      ...data, 
-      content: updatedFullContent,
-      printSettings, 
-      pageStyles, 
-      manualPages: updatedManualPages, 
-      userId: user.uid, 
-      updatedAt: serverTimestamp() 
-    };
+    const payload: any = { ...data, content: updatedFullContent, printSettings, pageStyles, manualPages: updatedManualPages, userId: user.uid, updatedAt: serverTimestamp() };
     if (!editId) payload.createdAt = serverTimestamp();
-
-    setDoc(ref, payload, { merge: true })
-      .then(() => { 
-        setSaving(false); 
-        setManualPages(updatedManualPages);
-        setData(prev => ({ ...prev, content: updatedFullContent }));
-        setPaginatedPages(Object.keys(updatedManualPages).map(Number).sort((a, b) => a - b).map(i => updatedManualPages[i]));
-        toast({ title: "সফল!", description: "লেকচার শিট সরাসরি সেভ হয়েছে।" }); 
-        if (!editId) router.replace(`/create-lecture-sheet?id=${docId}`); 
-      })
-      .catch(async (error) => { 
-        setSaving(false); 
-        errorEmitter.emit('permission-error', new FirestorePermissionError({ 
-          path: ref.path, 
-          operation: 'write', 
-          requestResourceData: payload 
-        })); 
-      });
+    setDoc(ref, payload, { merge: true }).then(() => { setSaving(false); setManualPages(updatedManualPages); setData(prev => ({ ...prev, content: updatedFullContent })); setPaginatedPages(Object.keys(updatedManualPages).map(Number).sort((a, b) => a - b).map(i => updatedManualPages[i])); toast({ title: "সফল!", description: "শিটটি সেভ হয়েছে।" }); if (!editId) router.replace(`/create-lecture-sheet?id=${docId}`); })
+    .catch(async (error) => { setSaving(false); errorEmitter.emit('permission-error', new FirestorePermissionError({ path: ref.path, operation: 'write', requestResourceData: payload })); });
   }, [user, db, editId, data, printSettings, pageStyles, manualPages, router, toast, isPrintMode]);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey)) {
-        if (e.key.toLowerCase() === 's') { e.preventDefault(); handleSave(); }
-        else if (e.key === ']') { e.preventDefault(); adjustFontSize(1); }
-        else if (e.key === '[') { e.preventDefault(); adjustFontSize(-1); }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleSave, adjustFontSize]);
+    const handleKeyDown = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey)) { if (e.key.toLowerCase() === 's') { e.preventDefault(); handleSave(); } } };
+    window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleSave]);
 
   const handleOCR = async ( Eisen: React.ChangeEvent<HTMLInputElement>) => {
-    const file = Eisen.target.files?.[0];
-    if (!file) return;
-    setIsScanning(true);
-    try {
-      const result = await Tesseract.recognize(file, 'ben+eng');
-      if (result?.data?.text) {
-        setData(prev => ({ ...prev, content: prev.content ? prev.content + '\n\n' + result.data.text : result.data.text }));
-        toast({ title: "সফল!", description: "টেক্সট এক্সট্রাক্ট করা হয়েছে।" });
-      }
-    } catch (error) { toast({ variant: "destructive", title: "স্ক্যান ব্যর্থ হয়েছে" }); }
+    const file = Eisen.target.files?.[0]; if (!file) return; setIsScanning(true);
+    try { const result = await Tesseract.recognize(file, 'ben+eng'); if (result?.data?.text) { setData(prev => ({ ...prev, content: prev.content ? prev.content + '\n\n' + result.data.text : result.data.text })); toast({ title: "সফল!", description: "টেক্সট এক্সট্রাক্ট করা হয়েছে।" }); } }
+    catch (error) { toast({ variant: "destructive", title: "স্ক্যান ব্যর্থ হয়েছে" }); }
     finally { setIsScanning(false); if (ocrInputRef.current) ocrInputRef.current.value = ''; }
   };
 
-  const handleGlobalFontSizeChange = (size: string) => {
-    const val = parseFloat(size);
-    if (!isNaN(val)) {
-      setGlobalFontSize(val);
-      setPageStyles(prev => {
-        const updated = { ...prev };
-        Object.keys(updated).forEach(idx => { updated[parseInt(idx)] = { ...updated[parseInt(idx)], fontSize: val }; });
-        return updated;
-      });
-    }
-  };
-
-  const handleGlobalLineHeightChange = (val: string) => {
-    const num = parseFloat(val);
-    if (!isNaN(num)) {
-      setGlobalLineHeight(num);
-      setPageStyles(prev => {
-        const updated = { ...prev };
-        Object.keys(updated).forEach(idx => { updated[parseInt(idx)] = { ...updated[parseInt(idx)], lineHeight: num }; });
-        return updated;
-      });
-    }
-  };
-
-  const handleDeletePage = (idx: number) => {
-    if (!confirm("আপনি কি নিশ্চিতভাবে এই পাতাটি মুছে ফেলতে চান?")) return;
-    const newPaginated = paginatedPages.filter((_, i) => i !== idx);
-    const nextManual: Record<number, string> = {};
-    const nextStyles: Record<number, any> = {};
-    newPaginated.forEach((content, i) => {
-      const oldIdx = i < idx ? i : i + 1;
-      nextManual[i] = manualPages[oldIdx] || content;
-      if (pageStyles[oldIdx]) nextStyles[i] = pageStyles[oldIdx];
-    });
-    setPaginatedPages(newPaginated);
-    setManualPages(nextManual);
-    setPageStyles(nextStyles);
-    if (activeEditIdx === idx) setActiveEditIdx(null);
-    else if (activeEditIdx !== null && activeEditIdx > idx) setActiveEditIdx(activeEditIdx - 1);
-    const sortedIndices = Object.keys(nextManual).map(Number).sort((a, b) => a - b);
-    const updatedFullContent = sortedIndices.map(i => nextManual[i]).join('\n\n');
-    setData(prev => ({ ...prev, content: updatedFullContent }));
-    toast({ title: "সফল", description: "পাতাটি মুছে ফেলা হয়েছে।" });
-  };
-
-  const handleAddNewPage = () => {
-    const nextIdx = paginatedPages.length;
-    const mT = parseFloat(String(printSettings.marginTop)) || 0.5;
-    const mB = parseFloat(String(printSettings.marginBottom)) || 0.5;
-    const mL = parseFloat(String(printSettings.marginLeft)) || 0.5;
-    const mR = parseFloat(String(printSettings.marginRight)) || 0.5;
-    setPaginatedPages(prev => [...prev, ""]);
-    setManualPages(prev => ({ ...prev, [nextIdx]: "" }));
-    setPageStyles(prev => ({ 
-      ...prev, 
-      [nextIdx]: { fontSize: globalFontSize, lineHeight: globalLineHeight, bold: false, underline: false, color: '#000000', align: 'justify', mT, mB, mL, mR } 
-    }));
-    toast({ title: "সফল", description: "নতুন পাতা যোগ করা হয়েছে।" });
-  };
+  const handleGlobalFontSizeChange = (size: string) => { const val = parseFloat(size); if (!isNaN(val)) { setGlobalFontSize(val); setPageStyles(prev => { const updated = { ...prev }; Object.keys(updated).forEach(idx => { updated[parseInt(idx)] = { ...updated[parseInt(idx)], fontSize: val }; }); return updated; }); } };
+  const handleGlobalLineHeightChange = (val: string) => { const num = parseFloat(val); if (!isNaN(num)) { setGlobalLineHeight(num); setPageStyles(prev => { const updated = { ...prev }; Object.keys(updated).forEach(idx => { updated[parseInt(idx)] = { ...updated[parseInt(idx)], lineHeight: num }; }); return updated; }); } };
 
   if (loading || userLoading) return <div className="flex flex-col items-center justify-center p-20 min-h-[50vh]"><Loader2 className="w-12 h-12 animate-spin text-primary mb-4" /><p className="font-bold">অ্যাক্সেস চেক করা হচ্ছে...</p></div>;
 
@@ -484,7 +265,7 @@ function CreateLectureSheetContent() {
             <h2 className="text-2xl font-bold text-primary">লেকচার শিট নির্মাতা</h2>
           </div>
           <div className="flex gap-2">
-            <Button variant="ghost" onClick={() => router.back()} className="gap-2 font-bold"><ArrowLeft className="w-4 h-4" /> ফিরে যান</Button>
+            <Button variant="ghost" onClick={() => router.push('/my-questions')} className="gap-2 font-bold"><ArrowLeft className="w-4 h-4" /> ফিরে যান</Button>
             <Button variant="secondary" onClick={() => window.print()} className="gap-2 font-bold"><Printer className="w-4 h-4" /> প্রিন্ট</Button>
           </div>
         </header>
@@ -495,6 +276,17 @@ function CreateLectureSheetContent() {
                 <CardTitle className="text-base flex items-center gap-2 font-bold text-primary"><FileText className="w-4 h-4" /> শিট সংক্রান্ত তথ্য</CardTitle>
               </CardHeader>
               <CardContent className="pt-6 space-y-5">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold">শিটের ধরণ</label>
+                  <Select onValueChange={v => setData(prev => ({...prev, type: v}))} value={data.type || 'lecture_sheet'}>
+                    <SelectTrigger className="font-bold"><SelectValue placeholder="ধরণ নির্বাচন করুন" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="lecture_sheet">লেকচার শিট</SelectItem>
+                      <SelectItem value="creative">সৃজনশীল প্রশ্ন শিট</SelectItem>
+                      <SelectItem value="mcq">বহুনির্বাচনী প্রশ্ন শিট</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">প্রতিষ্ঠানের নাম</label>
                   <Input value={data.institution || ''} onChange={e => setData(prev => ({...prev, institution: e.target.value}))} />
@@ -540,170 +332,41 @@ function CreateLectureSheetContent() {
           </div>
         </div>
       </div>
-
       {isPrintMode && (
         <div className="print-view-container flex flex-col h-screen fixed inset-0 top-0 left-0 bg-slate-100 z-[9999] font-kalpurush overflow-hidden">
           <header className="no-print h-14 bg-white border-b flex items-center justify-between px-6 shrink-0 shadow-sm z-50">
-             <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center"><Eye className="w-5 h-5" /></div>
-                <h3 className="font-bold text-lg">প্রিন্ট প্রিভিউ ও লেআউট (মোট {toBengaliNumber(paginatedPages.length)} পাতা)</h3>
-             </div>
-             <div className="flex gap-3">
-               <Button variant="outline" size="sm" onMouseDown={e => e.preventDefault()} onClick={() => router.back()} className="gap-2 font-bold border-primary text-primary bg-white"><ArrowLeft className="w-4 h-4" /> এডিটরে ফিরুন</Button>
-               <Button variant="outline" size="sm" onMouseDown={e => e.preventDefault()} onClick={() => window.print()} className="gap-2 font-bold text-red-600 bg-white border-red-200"><FileDown className="w-4 h-4" /> পিডিএফ সেভ করুন</Button>
-               <Button size="sm" onMouseDown={e => e.preventDefault()} onClick={handleSave} disabled={saving} className="gap-2 font-bold bg-green-600 hover:bg-green-700 px-4"><Save className="w-4 h-4" /> সেভ (Ctrl+S)</Button>
-               <Button size="sm" onMouseDown={e => e.preventDefault()} onClick={() => window.print()} className="gap-2 font-bold bg-primary px-6"><Printer className="w-4 h-4" /> প্রিন্ট করুন</Button>
-             </div>
+             <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center"><Eye className="w-5 h-5" /></div><h3 className="font-bold text-lg">প্রিন্ট প্রিভিউ ও লেআউট (মোট {toBengaliNumber(paginatedPages.length)} পাতা)</h3></div>
+             <div className="flex gap-3"><Button variant="outline" size="sm" onClick={() => router.back()} className="gap-2 font-bold border-primary text-primary bg-white"><ArrowLeft className="w-4 h-4" /> এডিটরে ফিরুন</Button><Button variant="outline" size="sm" onClick={() => window.print()} className="gap-2 font-bold text-red-600 bg-white border-red-200"><FileDown className="w-4 h-4" /> পিডিএফ সেভ করুন</Button><Button size="sm" onClick={handleSave} disabled={saving} className="gap-2 font-bold bg-green-600 hover:bg-green-700 px-4"><Save className="w-4 h-4" /> সেভ (Ctrl+S)</Button><Button size="sm" onClick={() => window.print()} className="gap-2 font-bold bg-primary px-6"><Printer className="w-4 h-4" /> প্রিন্ট করুন</Button></div>
           </header>
           <div className="flex-1 flex overflow-hidden">
             <aside className="no-print w-80 bg-white border-r overflow-y-auto p-6 space-y-8 shrink-0 pb-32 custom-scrollbar">
                {activeEditIdx !== null && pageStyles[activeEditIdx] ? (
                  <div className="space-y-6 animate-in slide-in-from-left-4 duration-300">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-xs font-black text-blue-600 uppercase flex items-center gap-2"><Edit3 className="w-3.5 h-3.5" /> পাতা {toBengaliNumber(activeEditIdx + 1)} টুলস</h4>
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onMouseDown={e => e.preventDefault()} onClick={() => setActiveEditIdx(null)}><X className="w-3 h-3" /></Button>
-                    </div>
+                    <div className="flex items-center justify-between"><h4 className="text-xs font-black text-blue-600 uppercase flex items-center gap-2"><Edit3 className="w-3.5 h-3.5" /> পাতা {toBengaliNumber(activeEditIdx + 1)} টুলস</h4><Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setActiveEditIdx(null)}><X className="w-3 h-3" /></Button></div>
                     <div className="p-4 rounded-xl border-2 border-blue-100 bg-blue-50/30 space-y-6">
-                      <div className="space-y-4">
-                        <label className="text-[10px] font-black text-slate-500 uppercase">পেজ মার্জিন (ইঞ্চি)</label>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1">
-                            <label className="text-[9px] font-bold">উপরে</label>
-                            <Input type="text" value={pageStyles[activeEditIdx].mT} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) updatePageStyle(activeEditIdx!, 'mT', v); }} className="h-7 text-xs font-bold no-arrows" />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-[9px] font-bold">নিচে</label>
-                            <Input type="text" value={pageStyles[activeEditIdx].mB} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) updatePageStyle(activeEditIdx!, 'mB', v); }} className="h-7 text-xs font-bold no-arrows" />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-[9px] font-bold">বামে</label>
-                            <Input type="text" value={pageStyles[activeEditIdx].mL} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) updatePageStyle(activeEditIdx!, 'mL', v); }} className="h-7 text-xs font-bold no-arrows" />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-[9px] font-bold">ডানে</label>
-                            <Input type="text" value={pageStyles[activeEditIdx].mR} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) updatePageStyle(activeEditIdx!, 'mR', v); }} className="h-7 text-xs font-bold no-arrows" />
-                          </div>
-                        </div>
-                      </div>
+                      <div className="space-y-4"><label className="text-[10px] font-black text-slate-500 uppercase">পেজ মার্জিন (ইঞ্চি)</label><div className="grid grid-cols-2 gap-3"><div className="space-y-1"><label className="text-[9px] font-bold">উপরে</label><Input type="text" value={pageStyles[activeEditIdx].mT} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) updatePageStyle(activeEditIdx!, 'mT', v); }} className="h-7 text-xs font-bold no-arrows" /></div><div className="space-y-1"><label className="text-[9px] font-bold">নিচে</label><Input type="text" value={pageStyles[activeEditIdx].mB} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) updatePageStyle(activeEditIdx!, 'mB', v); }} className="h-7 text-xs font-bold no-arrows" /></div><div className="space-y-1"><label className="text-[9px] font-bold">বামে</label><Input type="text" value={pageStyles[activeEditIdx].mL} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) updatePageStyle(activeEditIdx!, 'mL', v); }} className="h-7 text-xs font-bold no-arrows" /></div><div className="space-y-1"><label className="text-[9px] font-bold">ডানে</label><Input type="text" value={pageStyles[activeEditIdx].mR} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) updatePageStyle(activeEditIdx!, 'mR', v); }} className="h-7 text-xs font-bold no-arrows" /></div></div></div>
                       <Separator className="bg-blue-100" />
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-slate-500 flex justify-between">ফন্ট সাইজ (pt) <span>{toBengaliNumber(pageStyles[activeEditIdx].fontSize)}pt</span></label>
-                        <Input type="text" value={fontSizeDraft} onChange={e => { const val = e.target.value; if (val === '' || /^\d*\.?\d*$/.test(val)) { setFontSizeDraft(val); handleFormatting('fontSize', val); } }} className="h-8 text-xs font-bold no-arrows mb-2" placeholder="সাইজ লিখুন" />
-                        <Slider value={[pageStyles[activeEditIdx].fontSize]} min={1} max={100} step={0.5} onMouseDown={(e) => e.preventDefault()} onValueChange={([v]) => { handleFormatting('fontSize', v.toString()); setFontSizeDraft(v.toString()); }} />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-slate-500 flex justify-between">লাইন স্পেসিং <span>{toBengaliNumber(pageStyles[activeEditIdx].lineHeight)}</span></label>
-                        <Input type="text" value={lineHeightDraft} onChange={e => { const val = e.target.value; if (val === '' || /^\d*\.?\d*$/.test(val)) { setLineHeightDraft(val); handleFormatting('lineHeight', val); } }} className="h-8 text-xs font-bold no-arrows mb-2" placeholder="স্পেসিং লিখুন" />
-                        <Slider value={[pageStyles[activeEditIdx].lineHeight]} min={0.5} max={5.0} step={0.1} onMouseDown={(e) => e.preventDefault()} onValueChange={([v]) => { handleFormatting('lineHeight', v.toString()); setLineHeightDraft(v.toString()); }} />
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase">টেক্সট স্টাইল</label>
-                        <div className="flex gap-2">
-                          <Button variant={pageStyles[activeEditIdx].bold ? 'default' : 'outline'} size="icon" className="h-8 w-8" onMouseDown={(e) => e.preventDefault()} onClick={() => handleFormatting('bold')}><Bold className="w-4 h-4" /></Button>
-                          <Button variant={pageStyles[activeEditIdx].underline ? 'default' : 'outline'} size="icon" className="h-8 w-8" onMouseDown={(e) => e.preventDefault()} onClick={() => handleFormatting('underline')}><Underline className="w-4 h-4" /></Button>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase">রং (Color)</label>
-                        <div className="flex items-center gap-3">
-                          <input type="color" value={pageStyles[activeEditIdx].color} onMouseDown={(e) => e.preventDefault()} onChange={(e) => handleFormatting('foreColor', e.target.value)} className="w-10 h-8 rounded border-0 cursor-pointer p-0" />
-                          <span className="text-[10px] font-mono font-bold uppercase">{pageStyles[activeEditIdx].color}</span>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase">বিন্যাস (Alignment)</label>
-                        <div className="grid grid-cols-4 gap-1">
-                          {['left', 'center', 'right', 'justify'].map(a => {
-                             const command = a === 'justify' ? 'justifyFull' : `justify${a.charAt(0).toUpperCase() + a.slice(1)}`;
-                             return (
-                            <Button key={a} variant={pageStyles[activeEditIdx!].align === a ? 'secondary' : 'ghost'} size="icon" className="h-8 w-full" onMouseDown={e => e.preventDefault()} onClick={() => handleFormatting(command)}>
-                              {a === 'left' && <AlignLeft className="w-4 h-4" />}
-                              {a === 'center' && <AlignCenter className="w-4 h-4" />}
-                              {a === 'right' && <AlignRight className="w-4 h-4" />}
-                              {a === 'justify' && <AlignJustify className="w-4 h-4" />}
-                            </Button>
-                          )})}
-                        </div>
-                      </div>
+                      <div className="space-y-2"><label className="text-[10px] font-bold text-slate-500 flex justify-between">ফন্ট সাইজ (pt) <span>{toBengaliNumber(pageStyles[activeEditIdx].fontSize)}pt</span></label><Input type="text" value={fontSizeDraft} onChange={e => { const val = e.target.value; if (val === '' || /^\d*\.?\d*$/.test(val)) { setFontSizeDraft(val); handleFormatting('fontSize', val); } }} className="h-8 text-xs font-bold no-arrows mb-2" /><Slider value={[pageStyles[activeEditIdx].fontSize]} min={1} max={100} step={0.5} onValueChange={([v]) => { handleFormatting('fontSize', v.toString()); setFontSizeDraft(v.toString()); }} /></div>
+                      <div className="space-y-2"><label className="text-[10px] font-bold text-slate-500 flex justify-between">লাইন স্পেসিং <span>{toBengaliNumber(pageStyles[activeEditIdx].lineHeight)}</span></label><Input type="text" value={lineHeightDraft} onChange={e => { const val = e.target.value; if (val === '' || /^\d*\.?\d*$/.test(val)) { setLineHeightDraft(val); handleFormatting('lineHeight', val); } }} className="h-8 text-xs font-bold no-arrows mb-2" /><Slider value={[pageStyles[activeEditIdx].lineHeight]} min={0.5} max={5.0} step={0.1} onValueChange={([v]) => { handleFormatting('lineHeight', v.toString()); setLineHeightDraft(v.toString()); }} /></div>
+                      <div className="flex items-center justify-between"><label className="text-[10px] font-bold text-slate-500 uppercase">টেক্সট স্টাইল</label><div className="flex gap-2"><Button variant={pageStyles[activeEditIdx].bold ? 'default' : 'outline'} size="icon" className="h-8 w-8" onClick={() => handleFormatting('bold')}><Bold className="w-4 h-4" /></Button><Button variant={pageStyles[activeEditIdx].underline ? 'default' : 'outline'} size="icon" className="h-8 w-8" onClick={() => handleFormatting('underline')}><Underline className="w-4 h-4" /></Button></div></div>
+                      <div className="space-y-2"><label className="text-[10px] font-bold text-slate-500 uppercase">রং (Color)</label><div className="flex items-center gap-3"><input type="color" value={pageStyles[activeEditIdx].color} onChange={(e) => handleFormatting('foreColor', e.target.value)} className="w-10 h-8 rounded border-0 cursor-pointer p-0" /><span className="text-[10px] font-mono font-bold uppercase">{pageStyles[activeEditIdx].color}</span></div></div>
                     </div>
                  </div>
                ) : (
                  <div className="space-y-8 animate-in fade-in duration-500">
-                   <div className="space-y-4">
-                      <h4 className="text-xs font-black text-slate-500 uppercase flex items-center gap-2"><Type className="w-3.5 h-3.5" /> গ্লোবাল ফন্ট সাইজ</h4>
-                      <div className="p-4 rounded-xl border-2 border-slate-100 bg-slate-50/30 space-y-3">
-                        <div className="flex justify-between items-center"><label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">ফন্ট সাইজ (pt)</label><span className="text-xs font-black text-primary">{toBengaliNumber(globalFontSize)}pt</span></div>
-                        <Input type="text" value={fontSizeDraft} onChange={e => { const val = e.target.value; if (val === '' || /^\d*\.?\d*$/.test(val)) { setFontSizeDraft(val); handleGlobalFontSizeChange(val); } }} className="h-8 text-xs font-bold no-arrows mb-2" placeholder="সাইজ লিখুন" />
-                        <Slider value={[globalFontSize]} min={1} max={100} step={0.5} onMouseDown={(e) => e.preventDefault()} onValueChange={([v]) => { handleGlobalFontSizeChange(v.toString()); setFontSizeDraft(v.toString()); }} />
-                      </div>
-                   </div>
-                   <div className="space-y-4">
-                      <h4 className="text-xs font-black text-slate-500 uppercase flex items-center gap-2"><Rows3 className="w-3.5 h-3.5" /> গ্লোবাল লাইন স্পেসিং</h4>
-                      <div className="p-4 rounded-xl border-2 border-slate-100 bg-slate-50/30 space-y-3">
-                        <div className="flex justify-between items-center"><label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">লাইন স্পেসিং</label><span className="text-xs font-black text-primary">{toBengaliNumber(globalLineHeight)}</span></div>
-                        <Input type="text" value={lineHeightDraft} onChange={e => { const val = e.target.value; if (val === '' || /^\d*\.?\d*$/.test(val)) { setLineHeightDraft(val); handleGlobalLineHeightChange(val); } }} className="h-8 text-xs font-bold no-arrows mb-2" placeholder="স্পেসিং লিখুন" />
-                        <Slider value={[globalLineHeight]} min={0.5} max={5.0} step={0.1} onMouseDown={(e) => e.preventDefault()} onValueChange={([v]) => { handleGlobalLineHeightChange(v.toString()); setLineHeightDraft(v.toString()); }} />
-                      </div>
-                   </div>
-                   <Separator />
-                   <div className="space-y-4">
-                      <h4 className="text-xs font-black text-slate-500 uppercase flex items-center gap-2"><Settings2 className="w-3.5 h-3.5" /> গ্লোবাল মার্জিন</h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1"><label className="text-[10px] font-bold">উপরে</label><Input type="text" value={printSettings.marginTop} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) setPrintSettings(p => ({...p, marginTop: v})); }} className="h-8 font-bold no-arrows" /></div>
-                        <div className="space-y-1"><label className="text-[10px] font-bold">নিচে</label><Input type="text" value={printSettings.marginBottom} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) setPrintSettings(p => ({...p, marginBottom: v})); }} className="h-8 font-bold no-arrows" /></div>
-                        <div className="space-y-1"><label className="text-[10px] font-bold">বামে</label><Input type="text" value={printSettings.marginLeft} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) setPrintSettings(p => ({...p, marginLeft: v})); }} className="h-8 font-bold no-arrows" /></div>
-                        <div className="space-y-1"><label className="text-[10px] font-bold">ডানে</label><Input type="text" value={printSettings.marginRight} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) setPrintSettings(p => ({...p, marginRight: v})); }} className="h-8 font-bold no-arrows" /></div>
-                      </div>
-                   </div>
-                   <Separator />
-                   <div className="space-y-5">
-                      <h4 className="text-xs font-black text-slate-500 uppercase flex items-center gap-2"><SlidersHorizontal className="w-3.5 h-3.5" /> জলছাপ সেটিংস</h4>
-                      <div className="space-y-4">
-                        <div className="flex gap-2">
-                          {['text', 'image'].map(t => (
-                            <Button key={t} variant={printSettings.watermarkType === t ? 'default' : 'outline'} className="flex-1 h-10 gap-2 font-bold text-[10px]" onMouseDown={e => e.preventDefault()} onClick={() => setPrintSettings(p => ({...p, watermarkType: t}))}>
-                              {t === 'text' ? <Type className="w-3.5 h-3.5" /> : <ImageIcon className="w-3.5 h-3.5" />}
-                              {t === 'text' ? 'টেক্সট' : 'লোগো'}
-                            </Button>
-                          ))}
-                        </div>
-                        {printSettings.watermarkType === 'text' ? (
-                          <div className="p-4 rounded-xl border-2 bg-slate-50/50 space-y-2">
-                            <label className="text-[10px] font-bold text-slate-500 uppercase">জলছাপ টেক্সট</label>
-                            <Input value={printSettings.watermarkText} onChange={e => setPrintSettings(p => ({...p, watermarkText: e.target.value}))} className="h-8 text-xs font-bold" placeholder="প্রতিষ্ঠানের নাম" />
-                          </div>
-                        ) : (
-                          <div className="p-4 rounded-xl border-2 bg-slate-50/50 space-y-4">
-                            <div className="flex items-center gap-2">
-                              <input type="file" ref={watermarkImageRef} className="hidden" accept="image/*" onChange={e => { const f = e.target.files?.[0]; if(f) { const r = new FileReader(); r.onload = (ev) => setPrintSettings(p => ({ ...p, watermarkImageUrl: ev.target?.result as string, watermarkType: 'image' })); r.readAsDataURL(f); } }} />
-                              <Button onClick={() => watermarkImageRef.current?.click()} onMouseDown={e => e.preventDefault()} variant="outline" className="flex-1 h-9 gap-2 font-bold text-xs border-dashed border-2"><ImageIcon className="w-3.5 h-3.5" /> লোগো আপলোড</Button>
-                              {printSettings.watermarkImageUrl && (<Button onClick={() => setPrintSettings(p => ({...p, watermarkImageUrl: ''}))} onMouseDown={e => e.preventDefault()} variant="ghost" size="icon" className="h-9 w-9 text-destructive"><X className="w-4 h-4" /></Button>)}
-                            </div>
-                          </div>
-                        )}
-                        <div className="space-y-4 pt-2">
-                          <div className="space-y-1"><label className="text-[10px] font-bold text-slate-500 uppercase">জলছাপ এঙ্গেল</label><Input type="text" value={printSettings.watermarkRotation} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) setPrintSettings(p => ({...p, watermarkRotation: v})); }} className="h-8 font-bold no-arrows" /></div>
-                          <div className="space-y-2"><div className="flex justify-between items-center"><label className="text-[10px] font-bold text-slate-500 uppercase">জলছাপ সাইজ (%)</label><span className="text-[10px] font-bold">{toBengaliNumber(printSettings.watermarkImageSize)}%</span></div><Slider value={[printSettings.watermarkImageSize]} min={10} max={200} step={1} onMouseDown={e => e.preventDefault()} onValueChange={([v]) => setPrintSettings(p => ({...p, watermarkImageSize: v}))} /></div>
-                          <div className="space-y-2"><div className="flex justify-between items-center"><label className="text-[10px] font-bold text-slate-500 uppercase">জলছাপ ব্রাইটনেস</label><span className="text-[10px] font-bold">{toBengaliNumber(printSettings.watermarkOpacity)}%</span></div><Slider value={[printSettings.watermarkOpacity]} min={0} max={100} step={1} onMouseDown={e => e.preventDefault()} onValueChange={([v]) => setPrintSettings(p => ({...p, watermarkOpacity: v}))} /></div>
-                        </div>
-                      </div>
-                   </div>
+                   <div className="space-y-4"><h4 className="text-xs font-black text-slate-500 uppercase flex items-center gap-2"><Type className="w-3.5 h-3.5" /> গ্লোবাল ফন্ট সাইজ</h4><div className="p-4 rounded-xl border-2 border-slate-100 bg-slate-50/30 space-y-3"><div className="flex justify-between items-center"><label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">ফন্ট সাইজ (pt)</label><span className="text-xs font-black text-primary">{toBengaliNumber(globalFontSize)}pt</span></div><Input type="text" value={fontSizeDraft} onChange={e => { const val = e.target.value; if (val === '' || /^\d*\.?\d*$/.test(val)) { setFontSizeDraft(val); handleGlobalFontSizeChange(val); } }} className="h-8 text-xs font-bold no-arrows mb-2" /><Slider value={[globalFontSize]} min={1} max={100} step={0.5} onValueChange={([v]) => { handleGlobalFontSizeChange(v.toString()); setFontSizeDraft(v.toString()); }} /></div></div>
+                   <div className="space-y-4"><h4 className="text-xs font-black text-slate-500 uppercase flex items-center gap-2"><Rows3 className="w-3.5 h-3.5" /> গ্লোবাল লাইন স্পেসিং</h4><div className="p-4 rounded-xl border-2 border-slate-100 bg-slate-50/30 space-y-3"><div className="flex justify-between items-center"><label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">লাইন স্পেসিং</label><span className="text-xs font-black text-primary">{toBengaliNumber(globalLineHeight)}</span></div><Input type="text" value={lineHeightDraft} onChange={e => { const val = e.target.value; if (val === '' || /^\d*\.?\d*$/.test(val)) { setLineHeightDraft(val); handleGlobalLineHeightChange(val); } }} className="h-8 text-xs font-bold no-arrows mb-2" /><Slider value={[globalLineHeight]} min={0.5} max={5.0} step={0.1} onValueChange={([v]) => { handleGlobalLineHeightChange(v.toString()); setLineHeightDraft(v.toString()); }} /></div></div>
+                   <Separator /><div className="space-y-4"><h4 className="text-xs font-black text-slate-500 uppercase flex items-center gap-2"><Settings2 className="w-3.5 h-3.5" /> গ্লোবাল মার্জিন</h4><div className="grid grid-cols-2 gap-4"><div className="space-y-1"><label className="text-[10px] font-bold">উপরে</label><Input type="text" value={printSettings.marginTop} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) setPrintSettings(p => ({...p, marginTop: v})); }} className="h-8 font-bold no-arrows" /></div><div className="space-y-1"><label className="text-[10px] font-bold">নিচে</label><Input type="text" value={printSettings.marginBottom} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) setPrintSettings(p => ({...p, marginBottom: v})); }} className="h-8 font-bold no-arrows" /></div><div className="space-y-1"><label className="text-[10px] font-bold">বামে</label><Input type="text" value={printSettings.marginLeft} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) setPrintSettings(p => ({...p, marginLeft: v})); }} className="h-8 font-bold no-arrows" /></div><div className="space-y-1"><label className="text-[10px] font-bold">ডানে</label><Input type="text" value={printSettings.marginRight} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) setPrintSettings(p => ({...p, marginRight: v})); }} className="h-8 font-bold no-arrows" /></div></div></div>
                  </div>
                )}
             </aside>
             <main className="print-main-area flex-1 overflow-y-auto bg-slate-200 pt-16 pb-24 flex flex-col items-center gap-10 relative">
                {paginatedPages.map((pageHtml, idx) => {
                  const style = pageStyles[idx] || { fontSize: globalFontSize, lineHeight: globalLineHeight, bold: false, underline: false, color: '#000000', align: 'justify', mT: 0.5, mB: 0.5, mL: 0.5, mR: 0.5 };
-                 const mT = parseFloat(String(style.mT)) || 0.5;
-                 const mB = parseFloat(String(style.mB)) || 0.5;
-                 const mL = parseFloat(String(style.mL)) || 0.5;
-                 const mR = parseFloat(String(style.mR)) || 0.5;
+                 const mT = parseFloat(String(style.mT)) || 0.5, mB = parseFloat(String(style.mB)) || 0.5, mL = parseFloat(String(style.mL)) || 0.5, mR = parseFloat(String(style.mR)) || 0.5;
                  return (
                  <div key={idx} className={cn(`paper paper-idx-${idx} shadow-2xl bg-white relative overflow-hidden shrink-0 group transition-all`, activeEditIdx === idx && "ring-4 ring-blue-500 shadow-blue-200")} style={{ width: '8.27in', height: '11.69in', padding: `${mT}in ${mR}in ${mB}in ${mL}in`, lineHeight: '1.2', boxSizing: 'border-box' }}>
-                    <div className="no-print absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-50 flex gap-2">
-                      <Button size="sm" variant={activeEditIdx === idx ? 'default' : 'secondary'} className="gap-2 font-bold shadow-lg" onClick={() => setActiveEditIdx(idx)}><Edit3 className="w-3.5 h-3.5" /> এডিট করুন</Button>
-                      <Button size="sm" variant="destructive" className="gap-2 font-bold shadow-lg" onClick={() => handleDeletePage(idx)}><Trash2 className="w-3.5 h-3.5" /> মুছে ফেলুন</Button>
-                    </div>
+                    <div className="no-print absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-50 flex gap-2"><Button size="sm" variant={activeEditIdx === idx ? 'default' : 'secondary'} className="gap-2 font-bold shadow-lg" onClick={() => setActiveEditIdx(idx)}><Edit3 className="w-3.5 h-3.5" /> এডিট করুন</Button><Button size="sm" variant="destructive" className="gap-2 font-bold shadow-lg" onClick={() => { if(!confirm("মুছে ফেলবেন?")) return; const newP = paginatedPages.filter((_, i) => i !== idx); setPaginatedPages(newP); }}><Trash2 className="w-3.5 h-3.5" /> মুছে ফেলুন</Button></div>
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden" style={{ opacity: (printSettings.watermarkOpacity || 0) / 100, transform: `rotate(${printSettings.watermarkRotation || 0}deg)`, whiteSpace: 'nowrap' }}>
                       {printSettings.watermarkType === 'image' && printSettings.watermarkImageUrl ? (<img src={printSettings.watermarkImageUrl} alt="Watermark" style={{ width: `${printSettings.watermarkImageSize || 70}%`, height: 'auto', objectFit: 'contain' }} />) : (<span className="font-black text-black" style={{ fontSize: `${(printSettings.watermarkImageSize || 80) * 1.2}pt` }}>{printSettings.watermarkText || data.institution || softwareConfig?.appName || 'টপ গ্রেড'}</span>)}
                     </div>
@@ -718,9 +381,7 @@ function CreateLectureSheetContent() {
                     </div>
                  </div>
                )})}
-               <div className="no-print pt-4 pb-20">
-                 <Button onClick={handleAddNewPage} variant="outline" className="gap-2 border-2 border-dashed border-primary/50 text-primary font-black h-16 w-[8.27in] bg-white/50 hover:bg-white transition-all shadow-lg rounded-2xl"><PlusCircle className="w-6 h-6" /> নতুন পাতা যোগ করুন</Button>
-               </div>
+               <div className="no-print pt-4 pb-20"><Button onClick={() => setPaginatedPages(prev => [...prev, ""])} variant="outline" className="gap-2 border-2 border-dashed border-primary/50 text-primary font-black h-16 w-[8.27in] bg-white/50 hover:bg-white transition-all shadow-lg rounded-2xl"><PlusCircle className="w-6 h-6" /> নতুন পাতা যোগ করুন</Button></div>
             </main>
           </div>
         </div>
