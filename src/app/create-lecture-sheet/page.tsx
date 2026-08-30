@@ -241,6 +241,12 @@ function CreateLectureSheetContent() {
         try {
           span.appendChild(range.extractContents()); 
           range.insertNode(span);
+          
+          // Reselect the content to allow multiple hits
+          const newRange = document.createRange();
+          newRange.selectNodeContents(span);
+          selection.removeAllRanges();
+          selection.addRange(newRange);
         } catch (e) {
           document.execCommand('fontSize', false, '3');
         }
@@ -310,9 +316,12 @@ function CreateLectureSheetContent() {
           else if (key === '[') { 
             const selection = window.getSelection();
             if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
-              const style = window.getSelection()?.anchorNode?.parentElement?.style.fontSize;
               let currentSize = 10.5;
-              if (style) currentSize = parseFloat(style);
+              const parent = selection.anchorNode?.parentElement;
+              if (parent) {
+                const computedSize = window.getComputedStyle(parent).fontSize;
+                currentSize = parseFloat(computedSize) || 10.5;
+              }
               handleFormatting('fontSize', Math.max(1, currentSize - 0.5).toString());
             } else if (activeEditIdx !== null) {
               const currentSize = pageStyles[activeEditIdx]?.fontSize || globalFontSize || 10.5;
@@ -324,9 +333,12 @@ function CreateLectureSheetContent() {
           else if (key === ']') { 
             const selection = window.getSelection();
             if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
-              const style = window.getSelection()?.anchorNode?.parentElement?.style.fontSize;
               let currentSize = 10.5;
-              if (style) currentSize = parseFloat(style);
+              const parent = selection.anchorNode?.parentElement;
+              if (parent) {
+                const computedSize = window.getComputedStyle(parent).fontSize;
+                currentSize = parseFloat(computedSize) || 10.5;
+              }
               handleFormatting('fontSize', Math.min(100, currentSize + 0.5).toString());
             } else if (activeEditIdx !== null) {
               const currentSize = pageStyles[activeEditIdx]?.fontSize || globalFontSize || 10.5;
