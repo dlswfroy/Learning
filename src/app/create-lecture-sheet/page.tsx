@@ -28,19 +28,13 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 
 function formatMath(text: string) {
   if (!text) return '';
-  // Remove markdown artifacts like ### and ** from Gemini output
   let formatted = text.replace(/\$|\\\(|\\\)|\\\[|\\\]|###|\*\*/g, '');
-  
   formatted = formatted.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
-  
   formatted = formatted.replace(/\\text\{([^}]+)\}/g, '<span class="math-text">$1</span>');
-
   const fracRegex = /\\frac\{((?:[^{}]|\{[^{}]*\})*)\}\s*\{((?:[^{}]|\{[^{}]*\})*)\}/g;
   formatted = formatted.replace(fracRegex, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
-
   formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
   formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>');
-
   formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
@@ -56,8 +50,8 @@ function formatMath(text: string) {
     '\\\\eta': 'η', '\\\\rho': 'ρ', '\\\\lambda': 'λ', '\\\\mu': 'μ',
     '\\\\div': '÷', '\\\\rightarrow': '→', '\\\\to': '→', '\\\\arrow': '→',
     '\\\\in': '∈', '\\\\mathbb\\{N\\}': 'ℕ', '\\\\mathbb\\{R\\}': 'ℝ', '\\\\mathbb\\{Z\\}': 'ℤ',
-    '\\\\mathbb\\{Q\\}': 'ℚ', '\\\\subset': '⊂', '\\\\subseteq': '⊆', '\\\\cup': 'cup',
-    '\\\\cap': 'cap', '\\\\emptyset': '∅', '\\\\forall': '∀', '\\\\exists': '∃', 
+    '\\\\mathbb\\{Q\\}': 'ℚ', '\\\\subset': '⊂', '\\\\subseteq': '⊆', '\\\\cup': '∪',
+    '\\\\cap': '∩', '\\\\emptyset': '∅', '\\\\forall': '∀', '\\\\exists': '∃', 
     '\\\\Rightarrow': '⇒', '\\\\leftarrow': '←', '\\\\Leftarrow': '⇐', 
     '\\\\leftrightarrow': '↔', '\\\\Leftrightarrow': '⇔',
     '\\\\left': '', '\\\\right': '', '\\\\\%': '%', '\\\\setminus': '\\', '\\\\backslash': '\\',
@@ -121,6 +115,10 @@ function CreateLectureSheetContent() {
   const [globalFontSize, setGlobalFontSize] = useState(10.5);
   const [globalLineHeight, setGlobalLineHeight] = useState(1.2);
 
+  // Draft inputs to allow dot typing
+  const [fontSizeDraft, setFontSizeDraft] = useState("");
+  const [lineHeightDraft, setLineHeightDraft] = useState("");
+
   useEffect(() => { if (!userLoading && !user) router.push('/auth'); }, [user, userLoading, router]);
   
   useEffect(() => {
@@ -154,6 +152,16 @@ function CreateLectureSheetContent() {
   }, [editId, db, user, router]);
 
   useEffect(() => {
+    if (activeEditIdx !== null && pageStyles[activeEditIdx]) {
+      setFontSizeDraft(String(pageStyles[activeEditIdx].fontSize));
+      setLineHeightDraft(String(pageStyles[activeEditIdx].lineHeight));
+    } else {
+      setFontSizeDraft(String(globalFontSize));
+      setLineHeightDraft(String(globalLineHeight));
+    }
+  }, [activeEditIdx, pageStyles, globalFontSize, globalLineHeight]);
+
+  useEffect(() => {
     if (!isPrintMode) return;
 
     if (Object.keys(manualPages).length > 0) {
@@ -163,7 +171,8 @@ function CreateLectureSheetContent() {
       const editorText = data.content.replace(/<[^>]*>/g, '').replace(/\s/g, '');
       const manualCombinedText = restoredPages.join('').replace(/<[^>]*>/g, '').replace(/\s|&nbsp;/g, '');
       
-      if (Math.abs(editorText.length - manualCombinedText.length) < 25) {
+      // Allow manual mode to persist if we have valid pages
+      if (Math.abs(editorText.length - manualCombinedText.length) < 50 || Object.keys(manualPages).length > 0) {
         setPaginatedPages(restoredPages);
         return;
       }
@@ -257,7 +266,6 @@ function CreateLectureSheetContent() {
         if (range) {
           const span = document.createElement('span');
           span.style.lineHeight = value + '';
-          span.style.display = 'inline-block';
           span.appendChild(range.extractContents());
           range.insertNode(span);
           
@@ -270,8 +278,9 @@ function CreateLectureSheetContent() {
         document.execCommand(command, false, value || '');
       }
     } else if (activeEditIdx !== null) {
-      if (command === 'fontSize') updatePageStyle(activeEditIdx, 'fontSize', parseFloat(value || '10.5'));
-      if (command === 'lineHeight') updatePageStyle(activeEditIdx, 'lineHeight', parseFloat(value || '1.2'));
+      const numVal = parseFloat(value || '0');
+      if (command === 'fontSize' && !isNaN(numVal)) updatePageStyle(activeEditIdx, 'fontSize', numVal);
+      if (command === 'lineHeight' && !isNaN(numVal)) updatePageStyle(activeEditIdx, 'lineHeight', numVal);
       if (command === 'bold') updatePageStyle(activeEditIdx, 'bold', !pageStyles[activeEditIdx].bold);
       if (command === 'underline') updatePageStyle(activeEditIdx, 'underline', !pageStyles[activeEditIdx].underline);
       if (command === 'foreColor') updatePageStyle(activeEditIdx, 'color', value);
@@ -286,8 +295,8 @@ function CreateLectureSheetContent() {
     const selection = window.getSelection();
     const hasSelection = selection && selection.rangeCount > 0 && !selection.isCollapsed;
     
+    let currentSize = 12;
     if (hasSelection) {
-      let currentSize = 12;
       const range = selection.getRangeAt(0);
       const parent = range.commonAncestorContainer.parentElement;
       if (parent) {
@@ -298,7 +307,7 @@ function CreateLectureSheetContent() {
       const newSize = Math.max(1, currentSize + delta);
       handleFormatting('fontSize', newSize.toString());
     } else if (activeEditIdx !== null) {
-      const currentSize = pageStyles[activeEditIdx]?.fontSize || globalFontSize;
+      currentSize = pageStyles[activeEditIdx]?.fontSize || globalFontSize;
       const newSize = Math.max(1, currentSize + delta);
       handleFormatting('fontSize', newSize.toString());
     }
@@ -347,8 +356,7 @@ function CreateLectureSheetContent() {
         setManualPages(updatedManualPages);
         setData(prev => ({ ...prev, content: updatedFullContent }));
         setPaginatedPages(Object.keys(updatedManualPages).map(Number).sort((a, b) => a - b).map(i => updatedManualPages[i]));
-        
-        toast({ title: "সফল!", description: "লেকচার শিট সরাসরি সেভ হয়েছে এবং এডিটর সিঙ্ক হয়েছে।" }); 
+        toast({ title: "সফল!", description: "লেকচার শিট সরাসরি সেভ হয়েছে।" }); 
         if (!editId) router.replace(`/create-lecture-sheet?id=${docId}`); 
       })
       .catch(async (error) => { 
@@ -394,36 +402,38 @@ function CreateLectureSheetContent() {
     finally { setIsScanning(false); if (ocrInputRef.current) ocrInputRef.current.value = ''; }
   };
 
-  const handleGlobalFontSizeChange = (size: number) => {
-    const safeSize = isNaN(size) ? 10.5 : size;
-    setGlobalFontSize(safeSize);
-    setPageStyles(prev => {
-      const updated = { ...prev };
-      Object.keys(updated).forEach(idx => {
-        updated[parseInt(idx)] = { ...updated[parseInt(idx)], fontSize: safeSize };
+  const handleGlobalFontSizeChange = (size: string) => {
+    const val = parseFloat(size);
+    if (!isNaN(val)) {
+      setGlobalFontSize(val);
+      setPageStyles(prev => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach(idx => {
+          updated[parseInt(idx)] = { ...updated[parseInt(idx)], fontSize: val };
+        });
+        return updated;
       });
-      return updated;
-    });
+    }
   };
 
-  const handleGlobalLineHeightChange = (val: number) => {
-    const safeVal = isNaN(val) ? 1.2 : val;
-    setGlobalLineHeight(safeVal);
-    setPageStyles(prev => {
-      const updated = { ...prev };
-      Object.keys(updated).forEach(idx => {
-        updated[parseInt(idx)] = { ...updated[parseInt(idx)], lineHeight: safeVal };
+  const handleGlobalLineHeightChange = (val: string) => {
+    const num = parseFloat(val);
+    if (!isNaN(num)) {
+      setGlobalLineHeight(num);
+      setPageStyles(prev => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach(idx => {
+          updated[parseInt(idx)] = { ...updated[parseInt(idx)], lineHeight: num };
+        });
+        return updated;
       });
-      return updated;
-    });
+    }
   };
 
   const handleDeletePage = (idx: number) => {
     if (!confirm("আপনি কি নিশ্চিতভাবে এই পাতাটি মুছে ফেলতে চান?")) return;
     
     const newPaginated = paginatedPages.filter((_, i) => i !== idx);
-    setPaginatedPages(newPaginated);
-    
     const nextManual: Record<number, string> = {};
     const nextStyles: Record<number, any> = {};
 
@@ -435,12 +445,14 @@ function CreateLectureSheetContent() {
       }
     });
 
+    setPaginatedPages(newPaginated);
     setManualPages(nextManual);
     setPageStyles(nextStyles);
 
     if (activeEditIdx === idx) setActiveEditIdx(null);
     else if (activeEditIdx !== null && activeEditIdx > idx) setActiveEditIdx(activeEditIdx - 1);
     
+    // Sync to main editor as well to ensure total consistency
     const sortedIndices = Object.keys(nextManual).map(Number).sort((a, b) => a - b);
     const updatedFullContent = sortedIndices.map(i => nextManual[i]).join('\n\n');
     setData(prev => ({ ...prev, content: updatedFullContent }));
@@ -529,7 +541,7 @@ function CreateLectureSheetContent() {
             </Card>
             <div className="space-y-3">
               <Button onClick={handleSave} disabled={saving} className="w-full gap-2 font-bold h-11"><Save className="w-4 h-4" /> সেভ করুন (Ctrl+S)</Button>
-              <Button onClick={() => { if(!data.content) return; const p = new URLSearchParams(window.location.search); p.set('print', 'true'); if(editId) p.set('id', editId); router.push(`${window.location.pathname}?${p.toString()}`); }} variant="outline" className="w-full gap-2 border-primary text-primary font-bold h-11"><Eye className="w-4 h-4" /> প্রিন্ট ভভিউ</Button>
+              <Button onClick={() => { if(!data.content) return; const p = new URLSearchParams(window.location.search); p.set('print', 'true'); if(editId) p.set('id', editId); router.push(`${window.location.pathname}?${p.toString()}`); }} variant="outline" className="w-full gap-2 border-primary text-primary font-bold h-11"><Eye className="w-4 h-4" /> প্রিন্ট ভিউ</Button>
             </div>
           </aside>
           <div className="flex-1 w-full">
@@ -573,19 +585,19 @@ function CreateLectureSheetContent() {
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-1">
                             <label className="text-[9px] font-bold">উপরে</label>
-                            <Input type="text" value={pageStyles[activeEditIdx].mT} onChange={e => { const v = e.target.value; if(v==='' || !isNaN(Number(v))) updatePageStyle(activeEditIdx!, 'mT', v); }} onMouseDown={e => e.stopPropagation()} className="h-7 text-xs font-bold no-arrows" />
+                            <Input type="text" value={pageStyles[activeEditIdx].mT} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) updatePageStyle(activeEditIdx!, 'mT', v); }} className="h-7 text-xs font-bold no-arrows" />
                           </div>
                           <div className="space-y-1">
                             <label className="text-[9px] font-bold">নিচে</label>
-                            <Input type="text" value={pageStyles[activeEditIdx].mB} onChange={e => { const v = e.target.value; if(v==='' || !isNaN(Number(v))) updatePageStyle(activeEditIdx!, 'mB', v); }} onMouseDown={e => e.stopPropagation()} className="h-7 text-xs font-bold no-arrows" />
+                            <Input type="text" value={pageStyles[activeEditIdx].mB} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) updatePageStyle(activeEditIdx!, 'mB', v); }} className="h-7 text-xs font-bold no-arrows" />
                           </div>
                           <div className="space-y-1">
                             <label className="text-[9px] font-bold">বামে</label>
-                            <Input type="text" value={pageStyles[activeEditIdx].mL} onChange={e => { const v = e.target.value; if(v==='' || !isNaN(Number(v))) updatePageStyle(activeEditIdx!, 'mL', v); }} onMouseDown={e => e.stopPropagation()} className="h-7 text-xs font-bold no-arrows" />
+                            <Input type="text" value={pageStyles[activeEditIdx].mL} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) updatePageStyle(activeEditIdx!, 'mL', v); }} className="h-7 text-xs font-bold no-arrows" />
                           </div>
                           <div className="space-y-1">
                             <label className="text-[9px] font-bold">ডানে</label>
-                            <Input type="text" value={pageStyles[activeEditIdx].mR} onChange={e => { const v = e.target.value; if(v==='' || !isNaN(Number(v))) updatePageStyle(activeEditIdx!, 'mR', v); }} onMouseDown={e => e.stopPropagation()} className="h-7 text-xs font-bold no-arrows" />
+                            <Input type="text" value={pageStyles[activeEditIdx].mR} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) updatePageStyle(activeEditIdx!, 'mR', v); }} className="h-7 text-xs font-bold no-arrows" />
                           </div>
                         </div>
                       </div>
@@ -596,14 +608,14 @@ function CreateLectureSheetContent() {
                         <label className="text-[10px] font-bold text-slate-500 flex justify-between">ফন্ট সাইজ (pt) <span>{toBengaliNumber(pageStyles[activeEditIdx].fontSize)}pt</span></label>
                         <Input 
                           type="text" 
-                          value={pageStyles[activeEditIdx].fontSize} 
+                          value={fontSizeDraft}
                           onChange={e => {
                             const val = e.target.value;
-                            if (val === '' || !isNaN(Number(val))) {
+                            if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                              setFontSizeDraft(val);
                               handleFormatting('fontSize', val);
                             }
                           }} 
-                          onMouseDown={e => e.stopPropagation()} 
                           className="h-8 text-xs font-bold no-arrows mb-2" 
                           placeholder="সাইজ লিখুন"
                         />
@@ -611,7 +623,7 @@ function CreateLectureSheetContent() {
                           value={[pageStyles[activeEditIdx].fontSize]} 
                           min={1} max={100} step={0.5} 
                           onMouseDown={(e) => e.preventDefault()}
-                          onValueChange={([v]) => handleFormatting('fontSize', v.toString())} 
+                          onValueChange={([v]) => { handleFormatting('fontSize', v.toString()); setFontSizeDraft(v.toString()); }} 
                         />
                       </div>
 
@@ -619,14 +631,14 @@ function CreateLectureSheetContent() {
                         <label className="text-[10px] font-bold text-slate-500 flex justify-between">লাইন স্পেসিং <span>{toBengaliNumber(pageStyles[activeEditIdx].lineHeight)}</span></label>
                         <Input 
                           type="text" 
-                          value={pageStyles[activeEditIdx].lineHeight} 
+                          value={lineHeightDraft} 
                           onChange={e => {
                             const val = e.target.value;
-                            if (val === '' || !isNaN(Number(val))) {
+                            if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                              setLineHeightDraft(val);
                               handleFormatting('lineHeight', val);
                             }
                           }} 
-                          onMouseDown={e => e.stopPropagation()} 
                           className="h-8 text-xs font-bold no-arrows mb-2" 
                           placeholder="স্পেসিং লিখুন"
                         />
@@ -634,7 +646,7 @@ function CreateLectureSheetContent() {
                           value={[pageStyles[activeEditIdx].lineHeight]} 
                           min={0.5} max={5.0} step={0.1} 
                           onMouseDown={(e) => e.preventDefault()}
-                          onValueChange={([v]) => handleFormatting('lineHeight', v.toString())} 
+                          onValueChange={([v]) => { handleFormatting('lineHeight', v.toString()); setLineHeightDraft(v.toString()); }} 
                         />
                       </div>
 
@@ -706,14 +718,14 @@ function CreateLectureSheetContent() {
                         </div>
                         <Input 
                           type="text" 
-                          value={globalFontSize} 
+                          value={fontSizeDraft} 
                           onChange={e => {
                             const val = e.target.value;
-                            if (val === '' || !isNaN(Number(val))) {
-                              handleGlobalFontSizeChange(parseFloat(val || '0'));
+                            if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                              setFontSizeDraft(val);
+                              handleGlobalFontSizeChange(val);
                             }
                           }} 
-                          onMouseDown={e => e.stopPropagation()} 
                           className="h-8 text-xs font-bold no-arrows mb-2" 
                           placeholder="সাইজ লিখুন"
                         />
@@ -721,7 +733,7 @@ function CreateLectureSheetContent() {
                           value={[globalFontSize]} 
                           min={1} max={100} step={0.5} 
                           onMouseDown={(e) => e.preventDefault()}
-                          onValueChange={([v]) => handleGlobalFontSizeChange(v)} 
+                          onValueChange={([v]) => { handleGlobalFontSizeChange(v.toString()); setFontSizeDraft(v.toString()); }} 
                         />
                       </div>
                    </div>
@@ -735,14 +747,14 @@ function CreateLectureSheetContent() {
                         </div>
                         <Input 
                           type="text" 
-                          value={globalLineHeight} 
+                          value={lineHeightDraft} 
                           onChange={e => {
                             const val = e.target.value;
-                            if (val === '' || !isNaN(Number(val))) {
-                              handleGlobalLineHeightChange(parseFloat(val || '0'));
+                            if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                              setLineHeightDraft(val);
+                              handleGlobalLineHeightChange(val);
                             }
                           }} 
-                          onMouseDown={e => e.stopPropagation()} 
                           className="h-8 text-xs font-bold no-arrows mb-2" 
                           placeholder="স্পেসিং লিখুন"
                         />
@@ -750,7 +762,7 @@ function CreateLectureSheetContent() {
                           value={[globalLineHeight]} 
                           min={0.5} max={5.0} step={0.1} 
                           onMouseDown={(e) => e.preventDefault()}
-                          onValueChange={([v]) => handleGlobalLineHeightChange(v)} 
+                          onValueChange={([v]) => { handleGlobalLineHeightChange(v.toString()); setLineHeightDraft(v.toString()); }} 
                         />
                       </div>
                    </div>
@@ -762,19 +774,19 @@ function CreateLectureSheetContent() {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1">
                           <label className="text-[10px] font-bold">উপরে</label>
-                          <Input type="text" value={printSettings.marginTop} onChange={e => { const v = e.target.value; if(v==='' || !isNaN(Number(v))) setPrintSettings(p => ({...p, marginTop: v})); }} onMouseDown={e => e.stopPropagation()} className="h-8 font-bold no-arrows" />
+                          <Input type="text" value={printSettings.marginTop} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) setPrintSettings(p => ({...p, marginTop: v})); }} className="h-8 font-bold no-arrows" />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[10px] font-bold">নিছে</label>
-                          <Input type="text" value={printSettings.marginBottom} onChange={e => { const v = e.target.value; if(v==='' || !isNaN(Number(v))) setPrintSettings(p => ({...p, marginBottom: v})); }} onMouseDown={e => e.stopPropagation()} className="h-8 font-bold no-arrows" />
+                          <label className="text-[10px] font-bold">নিচে</label>
+                          <Input type="text" value={printSettings.marginBottom} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) setPrintSettings(p => ({...p, marginBottom: v})); }} className="h-8 font-bold no-arrows" />
                         </div>
                         <div className="space-y-1">
                           <label className="text-[10px] font-bold">বামে</label>
-                          <Input type="text" value={printSettings.marginLeft} onChange={e => { const v = e.target.value; if(v==='' || !isNaN(Number(v))) setPrintSettings(p => ({...p, marginLeft: v})); }} onMouseDown={e => e.stopPropagation()} className="h-8 font-bold no-arrows" />
+                          <Input type="text" value={printSettings.marginLeft} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) setPrintSettings(p => ({...p, marginLeft: v})); }} className="h-8 font-bold no-arrows" />
                         </div>
                         <div className="space-y-1">
                           <label className="text-[10px] font-bold">ডানে</label>
-                          <Input type="text" value={printSettings.marginRight} onChange={e => { const v = e.target.value; if(v==='' || !isNaN(Number(v))) setPrintSettings(p => ({...p, marginRight: v})); }} onMouseDown={e => e.stopPropagation()} className="h-8 font-bold no-arrows" />
+                          <Input type="text" value={printSettings.marginRight} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) setPrintSettings(p => ({...p, marginRight: v})); }} className="h-8 font-bold no-arrows" />
                         </div>
                       </div>
                    </div>
@@ -802,7 +814,7 @@ function CreateLectureSheetContent() {
                         {printSettings.watermarkType === 'text' ? (
                           <div className="p-4 rounded-xl border-2 bg-slate-50/50 space-y-2">
                             <label className="text-[10px] font-bold text-slate-500 uppercase">জলছাপ টেক্সট</label>
-                            <Input value={printSettings.watermarkText} onChange={e => setPrintSettings(p => ({...p, watermarkText: e.target.value}))} onMouseDown={e => e.stopPropagation()} className="h-8 text-xs font-bold" placeholder="প্রতিষ্ঠানের নাম" />
+                            <Input value={printSettings.watermarkText} onChange={e => setPrintSettings(p => ({...p, watermarkText: e.target.value}))} className="h-8 text-xs font-bold" placeholder="প্রতিষ্ঠানের নাম" />
                           </div>
                         ) : (
                           <div className="p-4 rounded-xl border-2 bg-slate-50/50 space-y-4">
@@ -823,7 +835,7 @@ function CreateLectureSheetContent() {
                         <div className="space-y-4 pt-2">
                           <div className="space-y-1">
                             <label className="text-[10px] font-bold text-slate-500 uppercase">জলছাপ এঙ্গেল</label>
-                            <Input type="text" value={printSettings.watermarkRotation} onChange={e => { const v = e.target.value; if(v==='' || !isNaN(Number(v))) setPrintSettings(p => ({...p, watermarkRotation: v})); }} onMouseDown={e => e.stopPropagation()} className="h-8 font-bold no-arrows" />
+                            <Input type="text" value={printSettings.watermarkRotation} onChange={e => { const v = e.target.value; if(v==='' || /^\d*\.?\d*$/.test(v)) setPrintSettings(p => ({...p, watermarkRotation: v})); }} className="h-8 font-bold no-arrows" />
                           </div>
                           
                           <div className="space-y-2">
@@ -915,63 +927,17 @@ function CreateLectureSheetContent() {
           .paper { color: black !important; overflow: hidden; }
           .no-arrows::-webkit-inner-spin-button, .no-arrows::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
           .no-arrows { -moz-appearance: textfield; }
-          .print-view-container { top: 0 !important; }
           .custom-scrollbar::-webkit-scrollbar { width: 6px; }
           .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
           .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         }
         @media print {
-          html, body { 
-            background: white !important; 
-            margin: 0 !important; 
-            padding: 0 !important; 
-            height: auto !important; 
-            overflow: visible !important; 
-            width: 100% !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
+          html, body { background: white !important; margin: 0 !important; padding: 0 !important; height: auto !important; overflow: visible !important; width: 100% !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           .no-print { display: none !important; }
-          .print-view-container { 
-            position: absolute !important; 
-            top: 0 !important; 
-            left: 0 !important; 
-            margin: 0 !important; 
-            padding: 0 !important; 
-            height: auto !important; 
-            overflow: visible !important; 
-            display: block !important; 
-            background: white !important; 
-            width: 100% !important;
-          }
-          .print-main-area { 
-            background: white !important; 
-            padding: 0 !important; 
-            margin: 0 !important; 
-            overflow: visible !important; 
-            display: block !important; 
-            height: auto !important; 
-            position: static !important; 
-            width: 100% !important;
-          }
-          .paper { 
-            position: relative !important; 
-            margin: 0 !important; 
-            box-shadow: none !important; 
-            width: 8.27in !important; 
-            height: 11.69in !important; 
-            page-break-after: always !important;
-            break-after: page !important;
-            break-inside: avoid !important;
-            display: block !important; 
-            box-sizing: border-box !important; 
-            border: none !important; 
-            overflow: hidden !important;
-          }
-          @page { 
-            size: A4; 
-            margin: 0 !important; 
-          }
+          .print-view-container { position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; padding: 0 !important; height: auto !important; overflow: visible !important; display: block !important; background: white !important; width: 100% !important; }
+          .print-main-area { background: white !important; padding: 0 !important; margin: 0 !important; overflow: visible !important; display: block !important; height: auto !important; position: static !important; width: 100% !important; }
+          .paper { position: relative !important; margin: 0 !important; box-shadow: none !important; width: 8.27in !important; height: 11.69in !important; page-break-after: always !important; break-after: page !important; break-inside: avoid !important; display: block !important; box-sizing: border-box !important; border: none !important; overflow: hidden !important; }
+          @page { size: A4; margin: 0 !important; }
         }
       `}} />
     </div>
