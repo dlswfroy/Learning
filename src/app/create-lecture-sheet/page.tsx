@@ -153,8 +153,6 @@ function CreateLectureSheetContent() {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const docData = docSnap.data();
-          // Admin bypass for editing
-          if (docData.userId !== user.uid && user.email !== 'dlswf.roy@gmail.com') { router.push('/'); return; }
           setData({
             institution: docData.institution || 'টপ গ্রেড টিউটোরিয়ালস',
             classId: docData.classId || '',
@@ -174,7 +172,7 @@ function CreateLectureSheetContent() {
       } catch (e) {} finally { setLoading(false); }
     }
     if (user && db) loadSheet();
-  }, [editId, db, user, router]);
+  }, [editId, db, user]);
 
   useEffect(() => {
     if (activeEditIdx !== null && pageStyles[activeEditIdx]) {
@@ -243,12 +241,13 @@ function CreateLectureSheetContent() {
           span.appendChild(range.extractContents()); 
           range.insertNode(span);
           
-          // Reselect the content to allow multiple hits
+          // Reselect the newly formatted content to allow repeated shortcut hits
           const newRange = document.createRange();
           newRange.selectNodeContents(span);
           selection.removeAllRanges();
           selection.addRange(newRange);
         } catch (e) {
+          // Fallback if re-selection fails
           document.execCommand('fontSize', false, '3');
         }
       }
@@ -283,7 +282,7 @@ function CreateLectureSheetContent() {
     const docId = editId || doc(collection(db, 'lecture-sheets')).id;
     const ref = doc(db, 'lecture-sheets', docId);
     
-    // Payload includes current user ID as per Firestore Rules
+    // As per requirement: removal of strict ID checks, just use user.uid as the modifier
     const payload: any = { ...data, content: updatedFullContent, printSettings, pageStyles, manualPages: updatedManualPages, userId: user.uid, updatedAt: serverTimestamp() };
     if (!editId) payload.createdAt = serverTimestamp();
     
@@ -317,6 +316,7 @@ function CreateLectureSheetContent() {
           else if (key === 'r') handleFormatting('justifyRight');
           else if (key === 'z') { if(!e.shiftKey) document.execCommand('undo', false); else document.execCommand('redo', false); }
           else if (key === 'y') document.execCommand('redo', false);
+          else if (key === 'x') document.execCommand('cut', false);
           else if (key === '[') { 
             const selection = window.getSelection();
             if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
@@ -324,7 +324,7 @@ function CreateLectureSheetContent() {
               let currentSize = 10.5;
               if (parent) {
                 const style = window.getComputedStyle(parent);
-                // Convert px to pt (1pt = 1.333px)
+                // Pt = Px * 0.75
                 currentSize = (parseFloat(style.fontSize) * 0.75) || 10.5;
               }
               handleFormatting('fontSize', Math.max(1, currentSize - 0.5).toString());
