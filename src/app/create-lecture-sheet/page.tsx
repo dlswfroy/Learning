@@ -64,7 +64,6 @@ function formatMath(text: string) {
   return formatted;
 }
 
-// Image processing for local watermark upload
 async function processWatermarkImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -239,8 +238,12 @@ function CreateLectureSheetContent() {
         const span = document.createElement('span'); 
         span.style.fontSize = val; 
         const range = selection.getRangeAt(0); 
-        span.appendChild(range.extractContents()); 
-        range.insertNode(span); 
+        try {
+          span.appendChild(range.extractContents()); 
+          range.insertNode(span);
+        } catch (e) {
+          document.execCommand('fontSize', false, '3');
+        }
       }
       else document.execCommand(command, false, value || '');
     } else if (activeEditIdx !== null) {
@@ -292,8 +295,8 @@ function CreateLectureSheetContent() {
     const handleKeyDown = (e: KeyboardEvent) => { 
       if ((e.ctrlKey || e.metaKey)) { 
         const key = e.key.toLowerCase();
-        if (['s', 'n', 'd', 'l', 'e', 'r', '[', ']', 'y', 'u', 'b', 'i', 'a', 'x', 'c', 'v', 'z'].includes(key)) {
-          if (['s', 'n', 'd', 'l', 'e', 'r', '[', ']', 'y'].includes(key)) e.preventDefault();
+        if (['s', 'n', 'd', 'l', 'e', 'r', '[', ']', 'y', 'u', 'b', 'i', 'z', 'x', 'c', 'v', 'a'].includes(key)) {
+          if (['s', 'n', 'd', 'l', 'e', 'r', '[', ']', 'y', 'u', 'b', 'i'].includes(key)) e.preventDefault();
           if (key === 's') handleSave();
           else if (key === 'n') setPaginatedPages(prev => [...prev, ""]);
           else if (key === 'b') handleFormatting('bold');
@@ -302,24 +305,41 @@ function CreateLectureSheetContent() {
           else if (key === 'l') handleFormatting('justifyLeft');
           else if (key === 'e') handleFormatting('justifyCenter');
           else if (key === 'r') handleFormatting('justifyRight');
+          else if (key === 'z') { if(!e.shiftKey) document.execCommand('undo', false); else document.execCommand('redo', false); }
           else if (key === 'y') document.execCommand('redo', false);
           else if (key === '[') { 
-            const currentSize = (activeEditIdx !== null ? pageStyles[activeEditIdx]?.fontSize : globalFontSize) || 10.5;
-            const nextVal = Math.max(1, currentSize - 0.5);
-            handleFormatting('fontSize', nextVal.toString());
-            if (activeEditIdx !== null) setFontSizeDraft(nextVal.toString());
+            const selection = window.getSelection();
+            if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
+              const style = window.getSelection()?.anchorNode?.parentElement?.style.fontSize;
+              let currentSize = 10.5;
+              if (style) currentSize = parseFloat(style);
+              handleFormatting('fontSize', Math.max(1, currentSize - 0.5).toString());
+            } else if (activeEditIdx !== null) {
+              const currentSize = pageStyles[activeEditIdx]?.fontSize || globalFontSize || 10.5;
+              const nextVal = Math.max(1, currentSize - 0.5);
+              updatePageStyle(activeEditIdx, 'fontSize', nextVal);
+              setFontSizeDraft(nextVal.toString());
+            }
           }
           else if (key === ']') { 
-            const currentSize = (activeEditIdx !== null ? pageStyles[activeEditIdx]?.fontSize : globalFontSize) || 10.5;
-            const nextVal = Math.min(100, currentSize + 0.5);
-            handleFormatting('fontSize', nextVal.toString());
-            if (activeEditIdx !== null) setFontSizeDraft(nextVal.toString());
+            const selection = window.getSelection();
+            if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
+              const style = window.getSelection()?.anchorNode?.parentElement?.style.fontSize;
+              let currentSize = 10.5;
+              if (style) currentSize = parseFloat(style);
+              handleFormatting('fontSize', Math.min(100, currentSize + 0.5).toString());
+            } else if (activeEditIdx !== null) {
+              const currentSize = pageStyles[activeEditIdx]?.fontSize || globalFontSize || 10.5;
+              const nextVal = Math.min(100, currentSize + 0.5);
+              updatePageStyle(activeEditIdx, 'fontSize', nextVal);
+              setFontSizeDraft(nextVal.toString());
+            }
           }
         }
       } 
     };
     window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleSave, handleFormatting, activeEditIdx, pageStyles, globalFontSize]);
+  }, [handleSave, handleFormatting, activeEditIdx, pageStyles, globalFontSize, updatePageStyle]);
 
   const handleOCR = async (Eisen: React.ChangeEvent<HTMLInputElement>) => {
     const file = Eisen.target.files?.[0]; if (!file) return; setIsScanning(true);
@@ -469,8 +489,8 @@ function CreateLectureSheetContent() {
                    ) : (
                      <div className="space-y-2">
                        <label className="text-[10px] font-bold">লোগো আপলোড</label>
-                       <input type="file" ref={watermarkInputRef} className="hidden" accept="image/*" onChange={handleWatermarkUpload} />
-                       <Button variant="outline" size="sm" className="w-full h-8 gap-2 border-primary text-primary font-bold text-[10px]" onClick={() => watermarkInputRef.current?.click()}>
+                       <input type="file" watermarkInputRef={watermarkInputRef} className="hidden" accept="image/*" onChange={handleWatermarkUpload} />
+                       <Button variant="outline" size="sm" className="w-full h-8 gap-2 border-primary text-primary font-bold text-[10px]" onClick={() => (document.querySelector('input[watermarkInputRef]') as HTMLInputElement)?.click()}>
                          <Camera className="w-3 h-3" /> ছবি নির্বাচন করুন
                        </Button>
                        {printSettings.watermarkImageUrl && <div className="mt-2 h-10 w-full bg-white rounded border flex items-center justify-center p-1"><img src={printSettings.watermarkImageUrl} className="max-h-full object-contain" /></div>}
