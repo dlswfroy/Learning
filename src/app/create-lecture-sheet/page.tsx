@@ -231,6 +231,73 @@ function CreateLectureSheetContent() {
 
   const subjects = useMemo(() => data.classId ? getSubjectsForClass(data.classId) : [], [data.classId]);
 
+  const updatePageStyle = (idx: number, key: string, val: any) => {
+    setPageStyles(prev => ({ ...prev, [idx]: { ...prev[idx], [key]: val } }));
+  };
+
+  const handleFormatting = (command: string, value: string | null = null) => {
+    const selection = window.getSelection();
+    const hasSelection = selection && selection.rangeCount > 0 && !selection.isCollapsed;
+
+    if (hasSelection) {
+      document.execCommand('styleWithCSS', false, 'true');
+      if (command === 'fontSize') {
+        const span = document.createElement('span');
+        span.style.fontSize = value + 'pt';
+        const range = selection.getRangeAt(0);
+        span.appendChild(range.extractContents());
+        range.insertNode(span);
+      } else if (command === 'lineHeight') {
+        const range = selection.getRangeAt(0);
+        if (range) {
+          const span = document.createElement('span');
+          span.style.lineHeight = value + '';
+          span.style.display = 'inline-block';
+          span.appendChild(range.extractContents());
+          range.insertNode(span);
+        }
+      } else {
+        document.execCommand(command, false, value || '');
+      }
+    } else if (activeEditIdx !== null) {
+      if (command === 'fontSize') updatePageStyle(activeEditIdx, 'fontSize', parseFloat(value || '10.5'));
+      if (command === 'lineHeight') updatePageStyle(activeEditIdx, 'lineHeight', parseFloat(value || '1.2'));
+      if (command === 'bold') updatePageStyle(activeEditIdx, 'bold', !pageStyles[activeEditIdx].bold);
+      if (command === 'underline') updatePageStyle(activeEditIdx, 'underline', !pageStyles[activeEditIdx].underline);
+      if (command === 'foreColor') updatePageStyle(activeEditIdx, 'color', value);
+      if (command.startsWith('justify')) {
+        const alignMap: any = { justifyLeft: 'left', justifyCenter: 'center', justifyRight: 'right', justifyFull: 'justify' };
+        updatePageStyle(activeEditIdx, 'align', alignMap[command]);
+      }
+    }
+  };
+
+  const adjustFontSize = (delta: number) => {
+    const selection = window.getSelection();
+    const hasSelection = selection && selection.rangeCount > 0 && !selection.isCollapsed;
+    
+    if (hasSelection) {
+      // Try to estimate current size from selection parent
+      let currentSize = 12;
+      const parent = selection.getRangeAt(0).commonAncestorContainer;
+      const element = parent.nodeType === 1 ? (parent as HTMLElement) : parent.parentElement;
+      if (element) {
+        const styleSize = window.getComputedStyle(element).fontSize;
+        const match = styleSize.match(/(\d+(\.\d+)?)/);
+        if (match) {
+          // Computed size in px, converting to pt (approx 1pt = 1.33px)
+          currentSize = Math.round(parseFloat(match[0]) * 0.75);
+        }
+      }
+      const newSize = Math.max(6, currentSize + delta);
+      handleFormatting('fontSize', newSize.toString());
+    } else if (activeEditIdx !== null) {
+      const currentSize = pageStyles[activeEditIdx]?.fontSize || globalFontSize;
+      const newSize = Math.max(6, currentSize + delta);
+      handleFormatting('fontSize', newSize.toString());
+    }
+  };
+
   const handleSave = useCallback(() => {
     if (!user || !db) return;
     
@@ -290,17 +357,25 @@ function CreateLectureSheetContent() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
-        e.preventDefault();
-        handleSave();
+      if ((e.ctrlKey || e.metaKey)) {
+        if (e.key.toLowerCase() === 's') {
+          e.preventDefault();
+          handleSave();
+        } else if (e.key === ']') {
+          e.preventDefault();
+          adjustFontSize(1);
+        } else if (e.key === '[') {
+          e.preventDefault();
+          adjustFontSize(-1);
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleSave]);
+  }, [handleSave, adjustFontSize]);
 
-  const handleOCR = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleOCR = async ( Eisen: React.ChangeEvent<HTMLInputElement>) => {
+    const file = Eisen.target.files?.[0];
     if (!file) return;
     setIsScanning(true);
     try {
@@ -311,10 +386,6 @@ function CreateLectureSheetContent() {
       }
     } catch (error) { toast({ variant: "destructive", title: "স্ক্যান ব্যর্থ হয়েছে" }); }
     finally { setIsScanning(false); if (ocrInputRef.current) ocrInputRef.current.value = ''; }
-  };
-
-  const updatePageStyle = (idx: number, key: string, val: any) => {
-    setPageStyles(prev => ({ ...prev, [idx]: { ...prev[idx], [key]: val } }));
   };
 
   const handleGlobalFontSizeChange = (size: number) => {
@@ -337,43 +408,6 @@ function CreateLectureSheetContent() {
       });
       return updated;
     });
-  };
-
-  const handleFormatting = (command: string, value: string | null = null) => {
-    const selection = window.getSelection();
-    const hasSelection = selection && selection.rangeCount > 0 && !selection.isCollapsed;
-
-    if (hasSelection) {
-      document.execCommand('styleWithCSS', false, 'true');
-      if (command === 'fontSize') {
-        const span = document.createElement('span');
-        span.style.fontSize = value + 'pt';
-        const range = selection.getRangeAt(0);
-        span.appendChild(range.extractContents());
-        range.insertNode(span);
-      } else if (command === 'lineHeight') {
-        const range = selection.getRangeAt(0);
-        if (range) {
-          const span = document.createElement('span');
-          span.style.lineHeight = value + '';
-          span.style.display = 'inline-block';
-          span.appendChild(range.extractContents());
-          range.insertNode(span);
-        }
-      } else {
-        document.execCommand(command, false, value || '');
-      }
-    } else if (activeEditIdx !== null) {
-      if (command === 'fontSize') updatePageStyle(activeEditIdx, 'fontSize', parseFloat(value || '10.5'));
-      if (command === 'lineHeight') updatePageStyle(activeEditIdx, 'lineHeight', parseFloat(value || '1.2'));
-      if (command === 'bold') updatePageStyle(activeEditIdx, 'bold', !pageStyles[activeEditIdx].bold);
-      if (command === 'underline') updatePageStyle(activeEditIdx, 'underline', !pageStyles[activeEditIdx].underline);
-      if (command === 'foreColor') updatePageStyle(activeEditIdx, 'color', value);
-      if (command.startsWith('justify')) {
-        const alignMap: any = { justifyLeft: 'left', justifyCenter: 'center', justifyRight: 'right', justifyFull: 'justify' };
-        updatePageStyle(activeEditIdx, 'align', alignMap[command]);
-      }
-    }
   };
 
   const handleDeletePage = (idx: number) => {
