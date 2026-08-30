@@ -163,7 +163,6 @@ export default function MyLibraryPage() {
       ss = ss.filter(s => isGeneral ? (!s.topic) : (normalizeChapter(s.topic) === selectedKey));
     }
 
-    // Apply active category filtering
     if (activeCategory === 'sheet') {
       qs = [];
       ss = ss.filter(s => s.type === 'lecture_sheet' || !s.type);
@@ -223,6 +222,7 @@ export default function MyLibraryPage() {
     if (viewMode === 'content') { setViewMode('chapters'); setSelectedChapter(null); setActiveCategory('all'); return; }
     if (viewMode === 'chapters') { setViewMode('subjects'); setSelectedSubject(null); return; }
     if (viewMode === 'subjects') { setViewMode('classes'); setSelectedClass(null); return; }
+    router.back();
   };
 
   const renderClasses = () => (
@@ -434,7 +434,7 @@ export default function MyLibraryPage() {
             {selectedSubject && (<><ChevronRight className="w-3 h-3 shrink-0" /><span className={cn("cursor-pointer hover:text-primary transition-colors px-1", viewMode === 'chapters' && "text-primary")} onClick={() => { setViewMode('chapters'); setSelectedChapter(null); setActiveCategory('all'); }}>{selectedSubject}</span></>)}
             {selectedChapter && (<><ChevronRight className="w-3 h-3 shrink-0" /><span className={cn("cursor-pointer hover:text-primary transition-colors px-1", viewMode === 'content' && "text-primary")} onClick={() => { setViewMode('content'); }}>{selectedChapter}</span></>)}
           </div>
-          {viewMode !== 'classes' && (<Button variant="outline" size="sm" onClick={handleBack} className="gap-2 font-bold border-primary text-primary h-8 self-end sm:self-center bg-white shadow-sm hover:bg-primary hover:text-white transition-all"><ArrowLeft className="w-3.5 h-3.5" /> ফিরে যান</Button>)}
+          <Button variant="outline" size="sm" onClick={handleBack} className="gap-2 font-bold border-primary text-primary h-8 self-end sm:self-center bg-white shadow-sm hover:bg-primary hover:text-white transition-all"><ArrowLeft className="w-3.5 h-3.5" /> ফিরে যান</Button>
         </div>
       </header>
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">{viewMode === 'classes' && renderClasses()}{viewMode === 'subjects' && renderSubjects()}{viewMode === 'chapters' && renderChapters()}{viewMode === 'content' && renderSubjectContent()}</div>

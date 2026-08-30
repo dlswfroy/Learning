@@ -247,7 +247,7 @@ function CreateQuestionContent() {
       <div className={cn("no-print space-y-8", isPrintMode && "hidden")}>
         <header className="flex items-center justify-between border-b pb-4">
           <div className="flex items-center gap-4"><div className="w-12 h-12 rounded-xl bg-primary text-white flex items-center justify-center shadow-sm"><FileText className="w-7 h-7" /></div><h2 className="text-2xl font-bold text-primary">প্রশ্নপত্র নির্মাতা</h2></div>
-          <div className="flex gap-2"><Button variant="ghost" onClick={() => router.push('/my-questions')} className="gap-2 font-bold"><ArrowLeft className="w-4 h-4" /> লাইব্রেরি</Button><Button variant="secondary" onClick={() => window.print()} className="gap-2 font-bold"><Printer className="w-4 h-4" /> প্রিন্ট</Button></div>
+          <div className="flex gap-2"><Button variant="ghost" onClick={() => router.back()} className="gap-2 font-bold"><ArrowLeft className="w-4 h-4" /> ফিরে যান</Button><Button variant="secondary" onClick={() => window.print()} className="gap-2 font-bold"><Printer className="w-4 h-4" /> প্রিন্ট</Button></div>
         </header>
         <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-8 bg-secondary/50 p-1 h-12"><TabsTrigger value="sample" className="gap-2 font-bold h-10"><FileText className="w-4 h-4" /> নমুনা প্রশ্ন</TabsTrigger><TabsTrigger value="exam" className="gap-2 font-bold h-10"><BrainCircuit className="w-4 h-4" /> ব্যাংক থেকে প্রশ্ন</TabsTrigger></TabsList>

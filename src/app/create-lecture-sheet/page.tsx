@@ -265,7 +265,7 @@ function CreateLectureSheetContent() {
             <h2 className="text-2xl font-bold text-primary">লেকচার শিট নির্মাতা</h2>
           </div>
           <div className="flex gap-2">
-            <Button variant="ghost" onClick={() => router.push('/my-questions')} className="gap-2 font-bold"><ArrowLeft className="w-4 h-4" /> ফিরে যান</Button>
+            <Button variant="ghost" onClick={() => router.back()} className="gap-2 font-bold"><ArrowLeft className="w-4 h-4" /> ফিরে যান</Button>
             <Button variant="secondary" onClick={() => window.print()} className="gap-2 font-bold"><Printer className="w-4 h-4" /> প্রিন্ট</Button>
           </div>
         </header>
@@ -336,7 +336,7 @@ function CreateLectureSheetContent() {
         <div className="print-view-container flex flex-col h-screen fixed inset-0 top-0 left-0 bg-slate-100 z-[9999] font-kalpurush overflow-hidden">
           <header className="no-print h-14 bg-white border-b flex items-center justify-between px-6 shrink-0 shadow-sm z-50">
              <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center"><Eye className="w-5 h-5" /></div><h3 className="font-bold text-lg">প্রিন্ট প্রিভিউ ও লেআউট (মোট {toBengaliNumber(paginatedPages.length)} পাতা)</h3></div>
-             <div className="flex gap-3"><Button variant="outline" size="sm" onClick={() => router.back()} className="gap-2 font-bold border-primary text-primary bg-white"><ArrowLeft className="w-4 h-4" /> এডিটরে ফিরুন</Button><Button variant="outline" size="sm" onClick={() => window.print()} className="gap-2 font-bold text-red-600 bg-white border-red-200"><FileDown className="w-4 h-4" /> পিডিএফ সেভ করুন</Button><Button size="sm" onClick={handleSave} disabled={saving} className="gap-2 font-bold bg-green-600 hover:bg-green-700 px-4"><Save className="w-4 h-4" /> সেভ (Ctrl+S)</Button><Button size="sm" onClick={() => window.print()} className="gap-2 font-bold bg-primary px-6"><Printer className="w-4 h-4" /> প্রিন্ট করুন</Button></div>
+             <div className="flex gap-3"><Button variant="outline" size="sm" onClick={() => router.back()} className="gap-2 font-bold border-primary text-primary bg-white"><ArrowLeft className="w-4 h-4" /> ফিরে যান</Button><Button variant="outline" size="sm" onClick={() => window.print()} className="gap-2 font-bold text-red-600 bg-white border-red-200"><FileDown className="w-4 h-4" /> পিডিএফ সেভ করুন</Button><Button size="sm" onClick={handleSave} disabled={saving} className="gap-2 font-bold bg-green-600 hover:bg-green-700 px-4"><Save className="w-4 h-4" /> সেভ (Ctrl+S)</Button><Button size="sm" onClick={() => window.print()} className="gap-2 font-bold bg-primary px-6"><Printer className="w-4 h-4" /> প্রিন্ট করুন</Button></div>
           </header>
           <div className="flex-1 flex overflow-hidden">
             <aside className="no-print w-80 bg-white border-r overflow-y-auto p-6 space-y-8 shrink-0 pb-32 custom-scrollbar">
