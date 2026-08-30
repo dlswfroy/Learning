@@ -61,6 +61,41 @@ function toBengaliNumber(n: number | string | undefined | null): string {
   return n.toString().replace(/\d/g, (digit) => bengaliDigits[parseInt(digit)]);
 }
 
+// Helper to normalize chapter names for merging duplicates
+function normalizeChapter(name: string): string {
+  if (!name) return 'general';
+  let n = name.toString().toLowerCase().trim();
+  
+  // Convert Bengali digits to English for uniform comparison
+  const bnToEn: Record<string, string> = { '০':'0', '১':'1', '২':'2', '৩':'3', '৪':'4', '৫':'5', '৬':'6', '৭':'7', '৮':'8', '৯':'9' };
+  n = n.replace(/[০-৯]/g, m => bnToEn[m]);
+
+  // Handle words like "প্রথম", "১ম", "১", "1st" -> map all to "1"
+  const wordMap: Record<string, string> = {
+    'প্রথম': '1', '১ম': '1', '1st': '1',
+    'দ্বিতীয়': '2', '২য়': '2', '2nd': '2',
+    'তৃতীয়': '3', '৩য়': '3', '3rd': '3',
+    'চতুর্থ': '4', '৪র্থ': '4', '4th': '4',
+    'পঞ্চম': '5', '৫ম': '5', '5th': '5',
+    'ষষ্ঠ': '6', '৬ষ্ঠ': '6', '6th': '6',
+    'সপ্তম': '7', '৭ম': '7', '7th': '7',
+    'অষ্টম': '8', '৮ম': '8', '8th': '8',
+    'নবম': '9', '৯ম': '9', '9th': '9',
+    'দশম': '10', '১০ম': '10', '10th': '10'
+  };
+
+  // Check if starts with a number or word
+  for (const [word, digit] of Object.entries(wordMap)) {
+    if (n.startsWith(word)) return digit;
+  }
+
+  // Extract digits if available
+  const match = n.match(/\d+/);
+  if (match) return match[0];
+
+  return n;
+}
+
 type ViewMode = 'classes' | 'subjects' | 'chapters' | 'content';
 
 export default function MyLibraryPage() {
@@ -88,7 +123,6 @@ export default function MyLibraryPage() {
 
   const libraryData = useMemo(() => ({ questions: rawQuestions || [], sheets: rawSheets || [] }), [rawQuestions, rawSheets]);
 
-  // Dynamically calculate subjects for the selected class (predefined + custom from DB)
   const currentSubjects = useMemo(() => {
     if (!selectedClass) return [];
     const predefined = getSubjectsForClass(selectedClass);
@@ -100,26 +134,42 @@ export default function MyLibraryPage() {
     return Array.from(new Set([...predefined, ...fromDb])).sort((a, b) => a.localeCompare(b, 'bn'));
   }, [selectedClass, libraryData]);
 
-  // Dynamically calculate chapters for the selected subject
   const currentChapters = useMemo(() => {
     if (!selectedClass || !selectedSubject) return [];
-    const predefined = getChaptersForSubject(selectedClass, selectedSubject);
     
+    const predefinedList = getChaptersForSubject(selectedClass, selectedSubject);
     const itemsInSubj = [
        ...libraryData.questions.filter(q => q.classId === selectedClass && q.subject === selectedSubject),
        ...libraryData.sheets.filter(s => s.classId === selectedClass && s.subject === selectedSubject)
     ];
 
-    const fromDb = itemsInSubj.map(i => (i as any).chapter || (i as any).topic).filter(Boolean) as string[];
-    const combined = Array.from(new Set([...predefined, ...fromDb])).sort((a, b) => a.localeCompare(b, 'bn'));
-    
-    // Always check if there are items without a chapter name
-    const hasUncategorized = itemsInSubj.some(i => !(i as any).chapter && !(i as any).topic);
-    if (hasUncategorized && !combined.includes('সাধারণ অধ্যায়')) {
-      combined.push('সাধারণ অধ্যায়');
-    }
+    const dbChapters = itemsInSubj.map(i => (i as any).chapter || (i as any).topic).filter(Boolean) as string[];
+    const allNames = Array.from(new Set([...predefinedList, ...dbChapters]));
 
-    return combined.length > 0 ? combined : ['সাধারণ অধ্যায়'];
+    // Grouping by normalized keys to merge duplicates (e.g. "১ম" and "প্রথম")
+    const groups: Record<string, string> = {};
+    allNames.forEach(name => {
+      const key = normalizeChapter(name);
+      // Prefer predefined name if it matches the key, otherwise keep the first one found
+      const isPredefined = predefinedList.includes(name);
+      if (!groups[key] || isPredefined) {
+        groups[key] = name;
+      }
+    });
+
+    const sortedChapters = Object.values(groups).sort((a, b) => {
+      const keyA = normalizeChapter(a);
+      const keyB = normalizeChapter(b);
+      const numA = parseInt(keyA);
+      const numB = parseInt(keyB);
+      if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+      return a.localeCompare(b, 'bn', { numeric: true });
+    });
+
+    const hasUncategorized = itemsInSubj.some(i => !(i as any).chapter && !(i as any).topic);
+    if (hasUncategorized) sortedChapters.push('সাধারণ অধ্যায়');
+
+    return sortedChapters.length > 0 ? sortedChapters : ['সাধারণ অধ্যায়'];
   }, [selectedClass, selectedSubject, libraryData]);
 
   const currentItems = useMemo(() => {
@@ -129,26 +179,28 @@ export default function MyLibraryPage() {
     if (selectedSubject) { qs = qs.filter(q => q.subject === selectedSubject); ss = ss.filter(s => s.subject === selectedSubject); }
     if (selectedChapter) { 
       const isGeneral = selectedChapter === 'সাধারণ অধ্যায়';
-      qs = qs.filter(q => isGeneral ? (!q.chapter) : (q.chapter === selectedChapter));
-      ss = ss.filter(s => isGeneral ? (!s.topic) : (s.topic === selectedChapter));
+      const selectedKey = normalizeChapter(selectedChapter);
+      
+      qs = qs.filter(q => isGeneral ? (!q.chapter) : (normalizeChapter(q.chapter) === selectedKey));
+      ss = ss.filter(s => isGeneral ? (!s.topic) : (normalizeChapter(s.topic) === selectedKey));
     }
     return { questions: qs, sheets: ss };
   }, [libraryData, selectedClass, selectedSubject, selectedChapter]);
 
-  // Calculate stats for a folder
   const getChapterStats = (chapterName: string) => {
     const isGeneral = chapterName === 'সাধারণ অধ্যায়';
+    const key = normalizeChapter(chapterName);
     
     const chapterSheets = libraryData.sheets.filter(s => 
       s.classId === selectedClass && 
       s.subject === selectedSubject && 
-      (isGeneral ? !s.topic : s.topic === chapterName)
+      (isGeneral ? !s.topic : normalizeChapter(s.topic) === key)
     );
     
     const chapterQuestionSets = libraryData.questions.filter(q => 
       q.classId === selectedClass && 
       q.subject === selectedSubject && 
-      (isGeneral ? !q.chapter : q.chapter === chapterName)
+      (isGeneral ? !q.chapter : normalizeChapter(q.chapter) === key)
     );
 
     let totalQuestions = 0;
