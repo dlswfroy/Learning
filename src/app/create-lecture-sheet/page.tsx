@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, Save, FileText, ArrowLeft, Loader2, BookOpen, ScanText, Eye, Settings2, SlidersHorizontal, Image as ImageIcon, X, Type, Bold, Underline, Italic, Rows3, AlignLeft, AlignCenter, AlignRight, AlignJustify, Edit3, FileDown, Trash2, PlusCircle, CheckCircle2 } from 'lucide-react';
+import { Printer, Save, FileText, ArrowLeft, Loader2, BookOpen, ScanText, Eye, Settings2, SlidersHorizontal, Image as ImageIcon, X, Type, Bold, Underline, Italic, Rows3, AlignLeft, AlignCenter, AlignRight, AlignJustify, Edit3, FileDown, Trash2, PlusCircle, CheckCircle2, Camera } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useDoc } from '@/firebase';
 import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
@@ -64,6 +64,33 @@ function formatMath(text: string) {
   return formatted;
 }
 
+// Image processing for local watermark upload
+async function processWatermarkImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxSide = 800;
+        let width = img.width;
+        let height = img.height;
+        if (width > height) { if (width > maxSide) { height *= maxSide / width; width = maxSide; } }
+        else { if (height > maxSide) { width *= maxSide / height; height = maxSide; } }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/png', 0.7));
+      };
+      img.onerror = reject;
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 function CreateLectureSheetContent() {
   const db = useFirestore();
   const { user, loading: userLoading } = useUser();
@@ -76,6 +103,7 @@ function CreateLectureSheetContent() {
   const [saving, setSaving] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const ocrInputRef = useRef<HTMLInputElement>(null);
+  const watermarkInputRef = useRef<HTMLInputElement>(null);
   const measurementRef = useRef<HTMLDivElement>(null);
   
   const softwareDocRef = useMemo(() => doc(db, 'config', 'software'), [db]);
@@ -138,14 +166,8 @@ function CreateLectureSheetContent() {
           if (docData.printSettings) setPrintSettings(prev => ({ ...prev, ...docData.printSettings }));
           if (docData.pageStyles) {
             setPageStyles(docData.pageStyles);
-            if (docData.pageStyles[0]?.fontSize) {
-              setGlobalFontSize(docData.pageStyles[0].fontSize);
-              setFontSizeDraft(String(docData.pageStyles[0].fontSize));
-            }
-            if (docData.pageStyles[0]?.lineHeight) {
-              setGlobalLineHeight(docData.pageStyles[0].lineHeight);
-              setLineHeightDraft(String(docData.pageStyles[0].lineHeight));
-            }
+            if (docData.pageStyles[0]?.fontSize) { setGlobalFontSize(docData.pageStyles[0].fontSize); setFontSizeDraft(String(docData.pageStyles[0].fontSize)); }
+            if (docData.pageStyles[0]?.lineHeight) { setGlobalLineHeight(docData.pageStyles[0].lineHeight); setLineHeightDraft(String(docData.pageStyles[0].lineHeight)); }
           }
           if (docData.manualPages) setManualPages(docData.manualPages);
         }
@@ -158,10 +180,7 @@ function CreateLectureSheetContent() {
     if (activeEditIdx !== null && pageStyles[activeEditIdx]) {
       setFontSizeDraft(String(pageStyles[activeEditIdx].fontSize));
       setLineHeightDraft(String(pageStyles[activeEditIdx].lineHeight));
-    } else { 
-      setFontSizeDraft(String(globalFontSize)); 
-      setLineHeightDraft(String(globalLineHeight)); 
-    }
+    } else { setFontSizeDraft(String(globalFontSize)); setLineHeightDraft(String(globalLineHeight)); }
   }, [activeEditIdx, globalFontSize, globalLineHeight, pageStyles]);
 
   useEffect(() => {
@@ -174,10 +193,7 @@ function CreateLectureSheetContent() {
     if (data.content && measurementRef.current) {
       const container = measurementRef.current;
       const contentHtml = formatMath(data.content);
-      const mT = parseFloat(String(printSettings.marginTop)) || 0.5;
-      const mB = parseFloat(String(printSettings.marginBottom)) || 0.5;
-      const mL = parseFloat(String(printSettings.marginLeft)) || 0.5;
-      const mR = parseFloat(String(printSettings.marginRight)) || 0.5;
+      const mT = parseFloat(String(printSettings.marginTop)) || 0.5, mB = parseFloat(String(printSettings.marginBottom)) || 0.5, mL = parseFloat(String(printSettings.marginLeft)) || 0.5, mR = parseFloat(String(printSettings.marginRight)) || 0.5;
       container.style.width = (8.27 - mL - mR) + 'in';
       container.style.fontSize = globalFontSize + 'pt';
       container.style.lineHeight = String(globalLineHeight);
@@ -225,10 +241,6 @@ function CreateLectureSheetContent() {
         const range = selection.getRangeAt(0); 
         span.appendChild(range.extractContents()); 
         range.insertNode(span); 
-        const newRange = document.createRange(); 
-        newRange.selectNodeContents(span); 
-        selection.removeAllRanges(); 
-        selection.addRange(newRange); 
       }
       else document.execCommand(command, false, value || '');
     } else if (activeEditIdx !== null) {
@@ -280,44 +292,46 @@ function CreateLectureSheetContent() {
     const handleKeyDown = (e: KeyboardEvent) => { 
       if ((e.ctrlKey || e.metaKey)) { 
         const key = e.key.toLowerCase();
-        
-        // Prevent browser defaults for specific shortcuts
-        if (['s', 'n', 'd', 'l', 'e', 'r', '[', ']', 'y', 'u'].includes(key)) {
-          e.preventDefault();
-        }
-
-        if (key === 's') handleSave();
-        else if (key === 'n') setPaginatedPages(prev => [...prev, ""]);
-        else if (key === 'b') handleFormatting('bold');
-        else if (key === 'i') handleFormatting('italic');
-        else if (key === 'u' || key === 'd') handleFormatting('underline');
-        else if (key === 'l') handleFormatting('justifyLeft');
-        else if (key === 'e') handleFormatting('justifyCenter');
-        else if (key === 'r') handleFormatting('justifyRight');
-        else if (key === 'y') document.execCommand('redo', false);
-        else if (key === 'z') { /* Let browser handle undo or document.execCommand('undo') */ }
-        else if (key === '[') { 
-          const currentSize = (activeEditIdx !== null ? pageStyles[activeEditIdx]?.fontSize : globalFontSize) || 10.5;
-          const nextVal = Math.max(1, currentSize - 1);
-          handleFormatting('fontSize', nextVal.toString());
-          if (activeEditIdx !== null) setFontSizeDraft(nextVal.toString());
-        }
-        else if (key === ']') { 
-          const currentSize = (activeEditIdx !== null ? pageStyles[activeEditIdx]?.fontSize : globalFontSize) || 10.5;
-          const nextVal = Math.min(100, currentSize + 1);
-          handleFormatting('fontSize', nextVal.toString());
-          if (activeEditIdx !== null) setFontSizeDraft(nextVal.toString());
+        if (['s', 'n', 'd', 'l', 'e', 'r', '[', ']', 'y', 'u', 'b', 'i', 'a', 'x', 'c', 'v', 'z'].includes(key)) {
+          if (['s', 'n', 'd', 'l', 'e', 'r', '[', ']', 'y'].includes(key)) e.preventDefault();
+          if (key === 's') handleSave();
+          else if (key === 'n') setPaginatedPages(prev => [...prev, ""]);
+          else if (key === 'b') handleFormatting('bold');
+          else if (key === 'i') handleFormatting('italic');
+          else if (key === 'u' || key === 'd') handleFormatting('underline');
+          else if (key === 'l') handleFormatting('justifyLeft');
+          else if (key === 'e') handleFormatting('justifyCenter');
+          else if (key === 'r') handleFormatting('justifyRight');
+          else if (key === 'y') document.execCommand('redo', false);
+          else if (key === '[') { 
+            const currentSize = (activeEditIdx !== null ? pageStyles[activeEditIdx]?.fontSize : globalFontSize) || 10.5;
+            const nextVal = Math.max(1, currentSize - 0.5);
+            handleFormatting('fontSize', nextVal.toString());
+            if (activeEditIdx !== null) setFontSizeDraft(nextVal.toString());
+          }
+          else if (key === ']') { 
+            const currentSize = (activeEditIdx !== null ? pageStyles[activeEditIdx]?.fontSize : globalFontSize) || 10.5;
+            const nextVal = Math.min(100, currentSize + 0.5);
+            handleFormatting('fontSize', nextVal.toString());
+            if (activeEditIdx !== null) setFontSizeDraft(nextVal.toString());
+          }
         }
       } 
     };
     window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleSave, handleFormatting, activeEditIdx, pageStyles, globalFontSize]);
 
-  const handleOCR = async ( Eisen: React.ChangeEvent<HTMLInputElement>) => {
+  const handleOCR = async (Eisen: React.ChangeEvent<HTMLInputElement>) => {
     const file = Eisen.target.files?.[0]; if (!file) return; setIsScanning(true);
     try { const result = await Tesseract.recognize(file, 'ben+eng'); if (result?.data?.text) { setData(prev => ({ ...prev, content: prev.content ? prev.content + '\n\n' + result.data.text : result.data.text })); toast({ title: "সফল!", description: "টেক্সট এক্সট্রাক্ট করা হয়েছে।" }); } }
     catch (error) { toast({ variant: "destructive", title: "স্ক্যান ব্যর্থ হয়েছে" }); }
     finally { setIsScanning(false); if (ocrInputRef.current) ocrInputRef.current.value = ''; }
+  };
+
+  const handleWatermarkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    try { const base64 = await processWatermarkImage(file); setPrintSettings(prev => ({...prev, watermarkImageUrl: base64})); toast({title: "সফল", description: "লোগো আপলোড হয়েছে।"}); }
+    catch (err) { toast({variant: "destructive", title: "ত্রুটি", description: "লোগো প্রসেস করা সম্ভব হয়নি।"}); }
   };
 
   const handleGlobalFontSizeChange = (size: string) => { const val = parseFloat(size); if (!isNaN(val)) { setGlobalFontSize(val); setPageStyles(prev => { const updated = { ...prev }; Object.keys(updated).forEach(idx => { updated[parseInt(idx)] = { ...updated[parseInt(idx)], fontSize: val }; }); return updated; }); } };
@@ -453,9 +467,13 @@ function CreateLectureSheetContent() {
                        <Input value={printSettings.watermarkText || ''} onChange={e => setPrintSettings(p => ({...p, watermarkText: e.target.value}))} placeholder="প্রতিষ্ঠানের নাম" className="h-8 text-xs font-bold" />
                      </div>
                    ) : (
-                     <div className="space-y-1">
-                       <label className="text-[10px] font-bold">লোগো ইউআরএল</label>
-                       <Input value={printSettings.watermarkImageUrl || ''} onChange={e => setPrintSettings(p => ({...p, watermarkImageUrl: e.target.value}))} placeholder="https://..." className="h-8 text-xs font-bold" />
+                     <div className="space-y-2">
+                       <label className="text-[10px] font-bold">লোগো আপলোড</label>
+                       <input type="file" ref={watermarkInputRef} className="hidden" accept="image/*" onChange={handleWatermarkUpload} />
+                       <Button variant="outline" size="sm" className="w-full h-8 gap-2 border-primary text-primary font-bold text-[10px]" onClick={() => watermarkInputRef.current?.click()}>
+                         <Camera className="w-3 h-3" /> ছবি নির্বাচন করুন
+                       </Button>
+                       {printSettings.watermarkImageUrl && <div className="mt-2 h-10 w-full bg-white rounded border flex items-center justify-center p-1"><img src={printSettings.watermarkImageUrl} className="max-h-full object-contain" /></div>}
                      </div>
                    )}
 
