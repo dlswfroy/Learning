@@ -489,8 +489,8 @@ function CreateLectureSheetContent() {
                    ) : (
                      <div className="space-y-2">
                        <label className="text-[10px] font-bold">লোগো আপলোড</label>
-                       <input type="file" watermarkInputRef={watermarkInputRef} className="hidden" accept="image/*" onChange={handleWatermarkUpload} />
-                       <Button variant="outline" size="sm" className="w-full h-8 gap-2 border-primary text-primary font-bold text-[10px]" onClick={() => (document.querySelector('input[watermarkInputRef]') as HTMLInputElement)?.click()}>
+                       <input type="file" ref={watermarkInputRef} className="hidden" accept="image/*" onChange={handleWatermarkUpload} />
+                       <Button variant="outline" size="sm" className="w-full h-8 gap-2 border-primary text-primary font-bold text-[10px]" onClick={() => watermarkInputRef.current?.click()}>
                          <Camera className="w-3 h-3" /> ছবি নির্বাচন করুন
                        </Button>
                        {printSettings.watermarkImageUrl && <div className="mt-2 h-10 w-full bg-white rounded border flex items-center justify-center p-1"><img src={printSettings.watermarkImageUrl} className="max-h-full object-contain" /></div>}
