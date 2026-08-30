@@ -139,8 +139,14 @@ function CreateLectureSheetContent() {
           if (docData.printSettings) setPrintSettings(prev => ({ ...prev, ...docData.printSettings }));
           if (docData.pageStyles) {
             setPageStyles(docData.pageStyles);
-            if (docData.pageStyles[0]?.fontSize) setGlobalFontSize(docData.pageStyles[0].fontSize);
-            if (docData.pageStyles[0]?.lineHeight) setGlobalLineHeight(docData.pageStyles[0].lineHeight);
+            if (docData.pageStyles[0]?.fontSize) {
+              setGlobalFontSize(docData.pageStyles[0].fontSize);
+              setFontSizeDraft(String(docData.pageStyles[0].fontSize));
+            }
+            if (docData.pageStyles[0]?.lineHeight) {
+              setGlobalLineHeight(docData.pageStyles[0].lineHeight);
+              setLineHeightDraft(String(docData.pageStyles[0].lineHeight));
+            }
           }
           if (docData.manualPages) setManualPages(docData.manualPages);
         }
@@ -153,7 +159,10 @@ function CreateLectureSheetContent() {
     if (activeEditIdx !== null && pageStyles[activeEditIdx]) {
       setFontSizeDraft(String(pageStyles[activeEditIdx].fontSize));
       setLineHeightDraft(String(pageStyles[activeEditIdx].lineHeight));
-    } else { setFontSizeDraft(String(globalFontSize)); setLineHeightDraft(String(globalLineHeight)); }
+    } else { 
+      setFontSizeDraft(String(globalFontSize)); 
+      setLineHeightDraft(String(globalLineHeight)); 
+    }
   }, [activeEditIdx, globalFontSize, globalLineHeight, pageStyles]);
 
   useEffect(() => {
@@ -234,8 +243,18 @@ function CreateLectureSheetContent() {
     const ref = doc(db, 'lecture-sheets', docId);
     const payload: any = { ...data, content: updatedFullContent, printSettings, pageStyles, manualPages: updatedManualPages, userId: user.uid, updatedAt: serverTimestamp() };
     if (!editId) payload.createdAt = serverTimestamp();
-    setDoc(ref, payload, { merge: true }).then(() => { setSaving(false); setManualPages(updatedManualPages); setData(prev => ({ ...prev, content: updatedFullContent })); setPaginatedPages(Object.keys(updatedManualPages).map(Number).sort((a, b) => a - b).map(i => updatedManualPages[i])); toast({ title: "সফল!", description: "শিটটি সেভ হয়েছে।" }); if (!editId) router.replace(`/create-lecture-sheet?id=${docId}`); })
-    .catch(async (error) => { setSaving(false); errorEmitter.emit('permission-error', new FirestorePermissionError({ path: ref.path, operation: 'write', requestResourceData: payload })); });
+    setDoc(ref, payload, { merge: true }).then(() => { 
+      setSaving(false); 
+      setManualPages(updatedManualPages); 
+      setData(prev => ({ ...prev, content: updatedFullContent })); 
+      setPaginatedPages(Object.keys(updatedManualPages).map(Number).sort((a, b) => a - b).map(i => updatedManualPages[i])); 
+      toast({ title: "সফল!", description: "শিটটি সেভ হয়েছে।" }); 
+      if (!editId) router.replace(`/create-lecture-sheet?id=${docId}`); 
+    })
+    .catch(async (error) => { 
+      setSaving(false); 
+      errorEmitter.emit('permission-error', new FirestorePermissionError({ path: ref.path, operation: 'write', requestResourceData: payload })); 
+    });
   }, [user, db, editId, data, printSettings, pageStyles, manualPages, router, toast, isPrintMode]);
 
   useEffect(() => {
@@ -249,10 +268,30 @@ function CreateLectureSheetContent() {
         else if (key === 'd' || key === 'u') { e.preventDefault(); handleFormatting('underline'); }
         else if (key === 'n') { e.preventDefault(); setPaginatedPages(prev => [...prev, ""]); }
         else if (key === 'b') { e.preventDefault(); handleFormatting('bold'); }
+        else if (key === 'z') { e.preventDefault(); document.execCommand('undo', false); }
+        else if (key === 'x') { e.preventDefault(); document.execCommand('cut', false); }
+        else if (key === '[') { 
+          e.preventDefault(); 
+          if (activeEditIdx !== null) {
+            const currentSize = pageStyles[activeEditIdx]?.fontSize || globalFontSize;
+            const newSize = Math.max(1, currentSize - 0.5);
+            handleFormatting('fontSize', newSize.toString());
+            setFontSizeDraft(newSize.toString());
+          }
+        }
+        else if (key === ']') { 
+          e.preventDefault(); 
+          if (activeEditIdx !== null) {
+            const currentSize = pageStyles[activeEditIdx]?.fontSize || globalFontSize;
+            const newSize = Math.min(100, currentSize + 0.5);
+            handleFormatting('fontSize', newSize.toString());
+            setFontSizeDraft(newSize.toString());
+          }
+        }
       } 
     };
     window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleSave, handleFormatting]);
+  }, [handleSave, handleFormatting, activeEditIdx, pageStyles, globalFontSize]);
 
   const handleOCR = async ( Eisen: React.ChangeEvent<HTMLInputElement>) => {
     const file = Eisen.target.files?.[0]; if (!file) return; setIsScanning(true);
@@ -344,7 +383,7 @@ function CreateLectureSheetContent() {
         </div>
       </div>
       {isPrintMode && (
-        <div className="print-view-container flex flex-col h-screen fixed inset-0 top-0 left-0 bg-slate-100 z-[9999] font-kalpurush overflow-hidden">
+        <div className="print-view-container flex flex-col h-screen fixed inset-0 top-0 left-0 bg-slate-100 z-[50] font-kalpurush overflow-hidden">
           <header className="no-print h-14 bg-white border-b flex items-center justify-between px-6 shrink-0 shadow-sm z-50">
              <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center"><Eye className="w-5 h-5" /></div><h3 className="font-bold text-lg">প্রিন্ট প্রিভিউ ও লেআউট (মোট {toBengaliNumber(paginatedPages.length)} পাতা)</h3></div>
              <div className="flex gap-3"><Button variant="outline" size="sm" onClick={() => router.back()} className="gap-2 font-bold border-primary text-primary bg-white"><ArrowLeft className="w-4 h-4" /> ফিরে যান</Button><Button variant="outline" size="sm" onClick={() => window.print()} className="gap-2 font-bold text-red-600 bg-white border-red-200"><FileDown className="w-4 h-4" /> পিডিএফ সেভ করুন</Button><Button size="sm" onClick={handleSave} disabled={saving} className="gap-2 font-bold bg-green-600 hover:bg-green-700 px-4"><Save className="w-4 h-4" /> সেভ (Ctrl+S)</Button><Button size="sm" onClick={() => window.print()} className="gap-2 font-bold bg-primary px-6"><Printer className="w-4 h-4" /> প্রিন্ট করুন</Button></div>
