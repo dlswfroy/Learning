@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, Suspense, useMemo, useRef, useCallback } from 'react';
@@ -71,7 +70,7 @@ async function processWatermarkImage(file: File): Promise<string> {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const maxSide = 800;
+        const maxSide = 600; // Reduced for speed and size
         let width = img.width;
         let height = img.height;
         if (width > height) { if (width > maxSide) { height *= maxSide / width; width = maxSide; } }
@@ -80,7 +79,7 @@ async function processWatermarkImage(file: File): Promise<string> {
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.6));
+        resolve(canvas.toDataURL('image/jpeg', 0.5)); // Low quality for fast syncing
       };
       img.onerror = reject;
       img.src = e.target?.result as string;
@@ -269,26 +268,42 @@ function CreateLectureSheetContent() {
     if (!user || !db) return;
     setSaving(true);
     let updatedFullContent = data.content, updatedManualPages = { ...manualPages };
+    
     if (isPrintMode) {
       const papers = document.querySelectorAll('.paper');
       const tempManual: Record<number, string> = {};
-      papers.forEach(paper => { const match = paper.className.match(/paper-idx-(\d+)/); if (match) { const idx = parseInt(match[1]); const contentArea = paper.querySelector('.content-area'); if (contentArea) tempManual[idx] = contentArea.innerHTML || ""; } });
+      papers.forEach(paper => { 
+        const match = paper.className.match(/paper-idx-(\d+)/); 
+        if (match) { 
+           const idx = parseInt(match[1]); 
+           const contentArea = paper.querySelector('.content-area'); 
+           if (contentArea) tempManual[idx] = contentArea.innerHTML || ""; 
+        } 
+      });
       updatedManualPages = tempManual;
       const sortedIndices = Object.keys(tempManual).map(Number).sort((a, b) => a - b);
       updatedFullContent = sortedIndices.map(idx => tempManual[idx]).join('\n\n');
     }
+
     const docId = editId || doc(collection(db, 'lecture-sheets')).id;
     const ref = doc(db, 'lecture-sheets', docId);
     
-    const payload: any = { ...data, content: updatedFullContent, printSettings, pageStyles, manualPages: updatedManualPages, userId: user.uid, updatedAt: serverTimestamp() };
+    const payload: any = { 
+      ...data, 
+      content: updatedFullContent, 
+      printSettings, 
+      pageStyles, 
+      manualPages: updatedManualPages, 
+      userId: user.uid, 
+      updatedAt: serverTimestamp() 
+    };
     if (!editId) payload.createdAt = serverTimestamp();
     
     setDoc(ref, payload, { merge: true }).then(() => { 
       setSaving(false); 
       setManualPages(updatedManualPages); 
       setData(prev => ({ ...prev, content: updatedFullContent })); 
-      setPaginatedPages(Object.keys(updatedManualPages).map(Number).sort((a, b) => a - b).map(i => updatedManualPages[i])); 
-      toast({ title: "সফল!", description: "শিটটি সেভ হয়েছে।" }); 
+      toast({ title: "সফল!", description: "শিটটি দ্রুত সেভ হয়েছে।" }); 
       if (!editId) router.replace(`/create-lecture-sheet?id=${docId}`); 
     })
     .catch(async (error) => { 
@@ -301,6 +316,7 @@ function CreateLectureSheetContent() {
     const handleKeyDown = (e: KeyboardEvent) => { 
       if ((e.ctrlKey || e.metaKey)) { 
         const key = e.key.toLowerCase();
+        // Allowed browser keys like 'x', 'c', 'v', 'a', 'z', 'y' shouldn't always preventDefault
         if (['s', 'n', 'd', 'l', 'e', 'r', '[', ']'].includes(key)) {
           e.preventDefault();
           if (key === 's') handleSave();
@@ -392,14 +408,11 @@ function CreateLectureSheetContent() {
               <CardContent className="pt-6 space-y-5">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">শিটের ধরণ</label>
-                  <Select onValueChange={v => setData(prev => ({...prev, type: v}))} value={data.type || 'lecture_sheet'}>
-                    <SelectTrigger className="font-bold"><SelectValue placeholder="ধরণ নির্বাচন করুন" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="lecture_sheet">লেকচার শিট</SelectItem>
-                      <SelectItem value="creative">সৃজনশীল প্রশ্ন শিট</SelectItem>
-                      <SelectItem value="mcq">বহুনির্বাচনী প্রশ্ন শিট</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <select className="w-full h-10 px-3 border rounded-md font-bold bg-white" onChange={e => setData(prev => ({...prev, type: e.target.value}))} value={data.type || 'lecture_sheet'}>
+                    <option value="lecture_sheet">লেকচার শিট</option>
+                    <option value="creative">সৃজনশীল প্রশ্ন শিট</option>
+                    <option value="mcq">বহুনির্বাচনী প্রশ্ন শিট</option>
+                  </select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">প্রতিষ্ঠানের নাম</label>
@@ -407,17 +420,17 @@ function CreateLectureSheetContent() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">শ্রেণি</label>
-                  <Select onValueChange={v => setData(prev => ({...prev, classId: v}))} value={data.classId || ''}>
-                    <SelectTrigger className="font-bold"><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
-                    <SelectContent>{CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}</SelectContent>
-                  </Select>
+                  <select className="w-full h-10 px-3 border rounded-md font-bold bg-white" onChange={e => setData(prev => ({...prev, classId: e.target.value}))} value={data.classId || ''}>
+                    <option value="">নির্বাচন করুন</option>
+                    {CLASSES.map(c => <option key={c.id} value={c.id}>{c.label} শ্রেণি</option>)}
+                  </select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">বিষয়</label>
-                  <Select onValueChange={v => setData(prev => ({...prev, subject: v}))} value={data.subject || ''} disabled={!data.classId}>
-                    <SelectTrigger className="font-bold"><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
-                    <SelectContent>{subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                  </Select>
+                  <select className="w-full h-10 px-3 border rounded-md font-bold bg-white" onChange={e => setData(prev => ({...prev, subject: e.target.value}))} value={data.subject || ''} disabled={!data.classId}>
+                    <option value="">নির্বাচন করুন</option>
+                    {subjects.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">টপিক / শিরোনাম</label>
@@ -450,7 +463,11 @@ function CreateLectureSheetContent() {
         <div className="print-view-container flex flex-col h-screen fixed inset-0 top-0 left-0 bg-slate-100 z-[40] font-kalpurush overflow-hidden">
           <header className="no-print h-14 bg-white border-b flex items-center justify-between px-6 shrink-0 shadow-sm z-50">
              <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center"><Eye className="w-5 h-5" /></div><h3 className="font-bold text-lg">প্রিন্ট প্রিভিউ ও লেআউট (মোট {toBengaliNumber(paginatedPages.length)} পাতা)</h3></div>
-             <div className="flex gap-3"><Button variant="outline" size="sm" onClick={() => router.back()} className="gap-2 font-bold border-primary text-primary bg-white"><ArrowLeft className="w-4 h-4" /> ফিরে যান</Button><Button variant="outline" size="sm" onClick={() => window.print()} className="gap-2 font-bold text-red-600 bg-white border-red-200"><FileDown className="w-4 h-4" /> পিডিএফ সেভ করুন</Button><Button size="sm" onClick={handleSave} disabled={saving} className="gap-2 font-bold bg-green-600 hover:bg-green-700 px-4"><Save className="w-4 h-4" /> সেভ (Ctrl+S)</Button><Button size="sm" onClick={() => window.print()} className="gap-2 font-bold bg-primary px-6"><Printer className="w-4 h-4" /> প্রিন্ট করুন</Button></div>
+             <div className="flex gap-3">
+               <Button variant="outline" size="sm" onClick={() => router.back()} className="gap-2 font-bold border-primary text-primary bg-white"><ArrowLeft className="w-4 h-4" /> ফিরে যান</Button>
+               <Button size="sm" onClick={handleSave} disabled={saving} className="gap-2 font-bold bg-green-600 hover:bg-green-700 px-4">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} সেভ (Ctrl+S)</Button>
+               <Button size="sm" onClick={() => window.print()} className="gap-2 font-bold bg-primary px-6"><Printer className="w-4 h-4" /> প্রিন্ট করুন</Button>
+             </div>
           </header>
           <div className="flex-1 flex overflow-hidden">
             <aside className="no-print w-80 bg-white border-r overflow-y-auto p-6 space-y-8 shrink-0 pb-32 custom-scrollbar">
