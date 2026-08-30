@@ -199,7 +199,7 @@ function CreateLectureSheetContent() {
 
   const updatePageStyle = (idx: number, key: string, val: any) => { setPageStyles(prev => ({ ...prev, [idx]: { ...prev[idx], [key]: val } })); };
 
-  const handleFormatting = (command: string, value: string | null = null) => {
+  const handleFormatting = useCallback((command: string, value: string | null = null) => {
     const selection = window.getSelection();
     const hasSelection = selection && selection.rangeCount > 0 && !selection.isCollapsed;
     if (hasSelection) {
@@ -216,7 +216,7 @@ function CreateLectureSheetContent() {
       if (command === 'foreColor') updatePageStyle(activeEditIdx, 'color', value);
       if (command.startsWith('justify')) { const alignMap: any = { justifyLeft: 'left', justifyCenter: 'center', justifyRight: 'right', justifyFull: 'justify' }; updatePageStyle(activeEditIdx, 'align', alignMap[command]); }
     }
-  };
+  }, [activeEditIdx, pageStyles]);
 
   const handleSave = useCallback(() => {
     if (!user || !db) return;
@@ -239,9 +239,20 @@ function CreateLectureSheetContent() {
   }, [user, db, editId, data, printSettings, pageStyles, manualPages, router, toast, isPrintMode]);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey)) { if (e.key.toLowerCase() === 's') { e.preventDefault(); handleSave(); } } };
+    const handleKeyDown = (e: KeyboardEvent) => { 
+      if ((e.ctrlKey || e.metaKey)) { 
+        const key = e.key.toLowerCase();
+        if (key === 's') { e.preventDefault(); handleSave(); } 
+        else if (key === 'e') { e.preventDefault(); handleFormatting('justifyCenter'); }
+        else if (key === 'l') { e.preventDefault(); handleFormatting('justifyLeft'); }
+        else if (key === 'r') { e.preventDefault(); handleFormatting('justifyRight'); }
+        else if (key === 'd' || key === 'u') { e.preventDefault(); handleFormatting('underline'); }
+        else if (key === 'n') { e.preventDefault(); setPaginatedPages(prev => [...prev, ""]); }
+        else if (key === 'b') { e.preventDefault(); handleFormatting('bold'); }
+      } 
+    };
     window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleSave]);
+  }, [handleSave, handleFormatting]);
 
   const handleOCR = async ( Eisen: React.ChangeEvent<HTMLInputElement>) => {
     const file = Eisen.target.files?.[0]; if (!file) return; setIsScanning(true);
@@ -319,7 +330,7 @@ function CreateLectureSheetContent() {
             </Card>
             <div className="space-y-3">
               <Button onClick={handleSave} disabled={saving} className="w-full gap-2 font-bold h-11"><Save className="w-4 h-4" /> সেভ করুন (Ctrl+S)</Button>
-              <Button onClick={() => { if(!data.content) return; const p = new URLSearchParams(window.location.search); p.set('print', 'true'); if(editId) p.set('id', editId); router.push(`${window.location.pathname}?${p.toString()}`); }} variant="outline" className="w-full gap-2 border-primary text-primary font-bold h-11"><Eye className="w-4 h-4" /> প্রিন্ট ভিউ</Button>
+              <Button onClick={() => { if(!data.content) return; const p = new URLSearchParams(window.location.search); p.set('print', 'true'); if(editId) p.set('id', editId); router.push(`${window.location.pathname}?${p.toString()}`); }} variant="outline" className="w-full gap-2 border-primary text-primary font-bold h-11"><Eye className="w-4 h-4" /> প্রিন্ট ভভিউ</Button>
             </div>
           </aside>
           <div className="flex-1 w-full">
