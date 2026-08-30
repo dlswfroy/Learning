@@ -28,7 +28,15 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 
 function formatMath(text: string) {
   if (!text) return '';
-  let formatted = text.replace(/\$|\\\(|\\\)|\\\[|\\\]|###|\*\*/g, '');
+  
+  // Clean markdown artifacts and excessive spaces from Gemini
+  // Removes # headers, ** bold markers, and LaTeX delimiters
+  let formatted = text.replace(/#+\s*\**|\*\*/g, '');
+  formatted = formatted.replace(/\$|\\\(|\\\)|\\\[|\\\]/g, '');
+  
+  // Reduce excessive gaps (3 or more newlines into double newlines)
+  formatted = formatted.replace(/\n\s*\n\s*\n+/g, '\n\n');
+  
   formatted = formatted.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
   formatted = formatted.replace(/\\text\{([^}]+)\}/g, '<span class="math-text">$1</span>');
   const fracRegex = /\\frac\{((?:[^{}]|\{[^{}]*\})*)\}\s*\{((?:[^{}]|\{[^{}]*\})*)\}/g;
@@ -152,6 +160,8 @@ function CreateLectureSheetContent() {
   }, [editId, db, user, router]);
 
   useEffect(() => {
+    // Only update draft states when the active page changes or initially loads
+    // This prevents resets while the user is typing (especially for decimal points)
     if (activeEditIdx !== null && pageStyles[activeEditIdx]) {
       setFontSizeDraft(String(pageStyles[activeEditIdx].fontSize));
       setLineHeightDraft(String(pageStyles[activeEditIdx].lineHeight));
@@ -159,7 +169,7 @@ function CreateLectureSheetContent() {
       setFontSizeDraft(String(globalFontSize));
       setLineHeightDraft(String(globalLineHeight));
     }
-  }, [activeEditIdx, pageStyles, globalFontSize, globalLineHeight]);
+  }, [activeEditIdx]);
 
   useEffect(() => {
     if (!isPrintMode) return;
