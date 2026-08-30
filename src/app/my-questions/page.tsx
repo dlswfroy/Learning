@@ -27,7 +27,8 @@ import {
   PlusCircle,
   FilePlus,
   HelpCircle,
-  Layers
+  Layers,
+  FileBarChart
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -56,7 +57,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 function toBengaliNumber(n: number | string | undefined | null): string {
-  if (n === undefined || n === null || n === '') return '';
+  if (n === undefined || n === null || n === '') return '০';
   const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
   return n.toString().replace(/\d/g, (digit) => bengaliDigits[parseInt(digit)]);
 }
@@ -88,7 +89,7 @@ export default function MyLibraryPage() {
 
   const libraryData = useMemo(() => ({ questions: rawQuestions || [], sheets: rawSheets || [] }), [rawQuestions, rawSheets]);
 
-  // Dynamically calculate subjects that have data OR are in constants
+  // Dynamically calculate subjects
   const currentSubjects = useMemo(() => {
     if (!selectedClass) return [];
     const predefined = getSubjectsForClass(selectedClass);
@@ -97,11 +98,10 @@ export default function MyLibraryPage() {
       ...libraryData.sheets.filter(s => s.classId === selectedClass).map(s => s.subject)
     ].filter(Boolean) as string[];
     
-    // Combine unique subjects
     return Array.from(new Set([...predefined, ...fromDb])).sort((a, b) => a.localeCompare(b, 'bn'));
   }, [selectedClass, libraryData]);
 
-  // Dynamically calculate chapters that have data OR are in constants
+  // Dynamically calculate chapters
   const currentChapters = useMemo(() => {
     if (!selectedClass || !selectedSubject) return [];
     const predefined = getChaptersForSubject(selectedClass, selectedSubject);
@@ -124,13 +124,47 @@ export default function MyLibraryPage() {
     if (selectedClass) { qs = qs.filter(q => q.classId === selectedClass); ss = ss.filter(s => s.classId === selectedClass); }
     if (selectedSubject) { qs = qs.filter(q => q.subject === selectedSubject); ss = ss.filter(s => s.subject === selectedSubject); }
     if (selectedChapter) { 
-      // Filter by the specific chapter/topic name
-      // Handle the "General/Default" folder fallback if necessary
       qs = qs.filter(q => (q.chapter === selectedChapter) || (!q.chapter && selectedChapter === 'সাধারণ অধ্যায়'));
       ss = ss.filter(s => (s.topic === selectedChapter) || (!s.topic && selectedChapter === 'সাধারণ অধ্যায়'));
     }
     return { questions: qs, sheets: ss };
   }, [libraryData, selectedClass, selectedSubject, selectedChapter]);
+
+  // Stats calculation per chapter
+  const getChapterStats = (chapterName: string) => {
+    const chapterSheets = libraryData.sheets.filter(s => 
+      s.classId === selectedClass && 
+      s.subject === selectedSubject && 
+      (s.topic === chapterName || (!s.topic && chapterName === 'সাধারণ অধ্যায়'))
+    );
+    
+    const chapterQuestionSets = libraryData.questions.filter(q => 
+      q.classId === selectedClass && 
+      q.subject === selectedSubject && 
+      (q.chapter === chapterName || (!q.chapter && chapterName === 'সাধারণ অধ্যায়'))
+    );
+
+    let totalQuestions = 0;
+    let mcqCount = 0;
+    let creativeCount = 0;
+
+    chapterQuestionSets.forEach(set => {
+      if (set.questions) {
+        totalQuestions += set.questions.length;
+        set.questions.forEach((q: any) => {
+          if (q.type === 'mcq') mcqCount++;
+          else if (q.type === 'creative') creativeCount++;
+        });
+      }
+    });
+
+    return {
+      sheets: chapterSheets.length,
+      total: totalQuestions,
+      mcq: mcqCount,
+      creative: creativeCount
+    };
+  };
 
   const toggleSelection = (id: string) => {
     if (!isSelecting) return;
@@ -213,17 +247,36 @@ export default function MyLibraryPage() {
 
   const renderChapters = () => {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        {currentChapters.map(ch => (
-          <Card key={ch} onClick={() => { setSelectedChapter(ch); setViewMode('content'); }} className="cursor-pointer hover:border-primary hover:shadow-md transition-all group border-2 bg-slate-50/30">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                <Layers className="w-5 h-5" />
-              </div>
-              <p className="font-bold text-xs flex-1 line-clamp-2">{ch}</p>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {currentChapters.map(ch => {
+          const stats = getChapterStats(ch);
+          return (
+            <Card key={ch} onClick={() => { setSelectedChapter(ch); setViewMode('content'); }} className="cursor-pointer hover:border-primary hover:shadow-md transition-all group border-2 bg-slate-50/30 overflow-hidden">
+              <CardContent className="p-4 space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all shrink-0">
+                    <Layers className="w-5 h-5" />
+                  </div>
+                  <p className="font-bold text-xs flex-1 line-clamp-2">{ch}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-indigo-100">
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded">
+                    <FileText className="w-3 h-3" /> শিট: {toBengaliNumber(stats.sheets)}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                    <BrainCircuit className="w-3 h-3" /> প্রশ্ন: {toBengaliNumber(stats.total)}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-primary bg-primary/5 px-2 py-1 rounded">
+                    সৃজনশীল: {toBengaliNumber(stats.creative)}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-orange-700 bg-orange-100/50 px-2 py-1 rounded">
+                    MCQ: {toBengaliNumber(stats.mcq)}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     );
   };
@@ -231,7 +284,6 @@ export default function MyLibraryPage() {
   const renderSubjectContent = () => {
     return (
       <div className="space-y-10">
-        {/* Creation Section */}
         <section className="space-y-4">
           <h3 className="text-sm font-black text-primary flex items-center gap-2 border-b pb-2 uppercase tracking-wider">
             <PlusCircle className="w-4 h-4" /> নতুন তৈরি করুন ({selectedChapter})
@@ -284,7 +336,6 @@ export default function MyLibraryPage() {
           </div>
         </section>
 
-        {/* Existing Items Section */}
         <section className="space-y-6">
           <div className="flex items-center justify-between border-b pb-2">
             <h3 className="text-sm font-black text-foreground flex items-center gap-2 uppercase tracking-wider">
@@ -304,7 +355,6 @@ export default function MyLibraryPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Sheets */}
             {currentItems.sheets.map(s => (
               <Card key={s.id} className="hover:border-orange-400/40 transition-all shadow-sm bg-white border-2">
                 <CardHeader className="pb-3 p-4">
@@ -335,7 +385,6 @@ export default function MyLibraryPage() {
               </Card>
             ))}
 
-            {/* Questions */}
             {currentItems.questions.map(q => {
               const isSelected = selectedDocIds.includes(q.id);
               return (
@@ -433,34 +482,35 @@ export default function MyLibraryPage() {
               <p className="text-xs text-muted-foreground font-bold">আপনার সব সংগ্রহ এখানে সুসংগঠিতভাবে সাজানো আছে</p>
             </div>
           </div>
-          <div className="flex gap-2">
-            {viewMode !== 'classes' && (
-              <Button variant="outline" size="sm" onClick={handleBack} className="gap-2 font-bold border-primary text-primary">
-                <ArrowLeft className="w-4 h-4" /> ফিরে যান
-              </Button>
-            )}
-          </div>
         </div>
 
-        <div className="flex items-center gap-2 text-xs font-bold overflow-x-auto whitespace-nowrap pb-2 text-muted-foreground">
-          <span className={cn("cursor-pointer hover:text-primary", viewMode === 'classes' && "text-primary")} onClick={() => { setViewMode('classes'); setSelectedClass(null); setSelectedSubject(null); setSelectedChapter(null); setIsSelecting(false); }}>লাইব্রেরি</span>
-          {selectedClass && (
-            <>
-              <ChevronRight className="w-3 h-3 shrink-0" />
-              <span className={cn("cursor-pointer hover:text-primary", viewMode === 'subjects' && "text-primary")} onClick={() => { setViewMode('subjects'); setSelectedSubject(null); setSelectedChapter(null); setIsSelecting(false); }}>{CLASSES.find(c => c.id === selectedClass)?.label} শ্রেণি</span>
-            </>
-          )}
-          {selectedSubject && (
-            <>
-              <ChevronRight className="w-3 h-3 shrink-0" />
-              <span className={cn("cursor-pointer hover:text-primary", viewMode === 'chapters' && "text-primary")} onClick={() => { setViewMode('chapters'); setSelectedChapter(null); }}>{selectedSubject}</span>
-            </>
-          )}
-          {selectedChapter && (
-            <>
-              <ChevronRight className="w-3 h-3 shrink-0" />
-              <span className={cn("cursor-pointer hover:text-primary", viewMode === 'content' && "text-primary")} onClick={() => { setViewMode('content'); }}>{selectedChapter}</span>
-            </>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-secondary/20 p-3 rounded-xl border border-primary/5">
+          <div className="flex items-center gap-2 text-xs font-bold overflow-x-auto whitespace-nowrap pb-1 text-muted-foreground scrollbar-hide">
+            <span className={cn("cursor-pointer hover:text-primary transition-colors px-1", viewMode === 'classes' && "text-primary")} onClick={() => { setViewMode('classes'); setSelectedClass(null); setSelectedSubject(null); setSelectedChapter(null); setIsSelecting(false); }}>লাইব্রেরি</span>
+            {selectedClass && (
+              <>
+                <ChevronRight className="w-3 h-3 shrink-0" />
+                <span className={cn("cursor-pointer hover:text-primary transition-colors px-1", viewMode === 'subjects' && "text-primary")} onClick={() => { setViewMode('subjects'); setSelectedSubject(null); setSelectedChapter(null); setIsSelecting(false); }}>{CLASSES.find(c => c.id === selectedClass)?.label} শ্রেণি</span>
+              </>
+            )}
+            {selectedSubject && (
+              <>
+                <ChevronRight className="w-3 h-3 shrink-0" />
+                <span className={cn("cursor-pointer hover:text-primary transition-colors px-1", viewMode === 'chapters' && "text-primary")} onClick={() => { setViewMode('chapters'); setSelectedChapter(null); }}>{selectedSubject}</span>
+              </>
+            )}
+            {selectedChapter && (
+              <>
+                <ChevronRight className="w-3 h-3 shrink-0" />
+                <span className={cn("cursor-pointer hover:text-primary transition-colors px-1", viewMode === 'content' && "text-primary")} onClick={() => { setViewMode('content'); }}>{selectedChapter}</span>
+              </>
+            )}
+          </div>
+          
+          {viewMode !== 'classes' && (
+            <Button variant="outline" size="sm" onClick={handleBack} className="gap-2 font-bold border-primary text-primary h-8 self-end sm:self-center bg-white shadow-sm hover:bg-primary hover:text-white transition-all">
+              <ArrowLeft className="w-3.5 h-3.5" /> ফিরে যান
+            </Button>
           )}
         </div>
       </header>
