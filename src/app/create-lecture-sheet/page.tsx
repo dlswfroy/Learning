@@ -448,6 +448,11 @@ function CreateLectureSheetContent() {
     if (activeEditIdx === idx) setActiveEditIdx(null);
     else if (activeEditIdx !== null && activeEditIdx > idx) setActiveEditIdx(activeEditIdx - 1);
     
+    // Crucially update the global content to prevent auto-repagination from bringing back the deleted content
+    const sortedIndices = Object.keys(nextManual).map(Number).sort((a, b) => a - b);
+    const updatedFullContent = sortedIndices.map(i => nextManual[i]).join('\n\n');
+    setData(prev => ({ ...prev, content: updatedFullContent }));
+    
     toast({ title: "সফল", description: "পাতাটি মুছে ফেলা হয়েছে।" });
   };
 
@@ -532,7 +537,7 @@ function CreateLectureSheetContent() {
             </Card>
             <div className="space-y-3">
               <Button onClick={handleSave} disabled={saving} className="w-full gap-2 font-bold h-11"><Save className="w-4 h-4" /> সেভ করুন (Ctrl+S)</Button>
-              <Button onClick={() => { if(!data.content) return; const p = new URLSearchParams(window.location.search); p.set('print', 'true'); if(editId) p.set('id', editId); router.push(`${window.location.pathname}?${p.toString()}`); }} variant="outline" className="w-full gap-2 border-primary text-primary font-bold h-11"><Eye className="w-4 h-4" /> প্রিন্ট ভিউ</Button>
+              <Button onClick={() => { if(!data.content) return; const p = new URLSearchParams(window.location.search); p.set('print', 'true'); if(editId) p.set('id', editId); router.push(`${window.location.pathname}?${p.toString()}`); }} variant="outline" className="w-full gap-2 border-primary text-primary font-bold h-11"><Eye className="w-4 h-4" /> প্রিন্ট ভভিউ</Button>
             </div>
           </aside>
           <div className="flex-1 w-full">
@@ -585,6 +590,19 @@ function CreateLectureSheetContent() {
 
                       <div className="space-y-2">
                         <label className="text-[10px] font-bold text-slate-500 flex justify-between">ফন্ট সাইজ (pt) <span>{toBengaliNumber(pageStyles[activeEditIdx].fontSize)}pt</span></label>
+                        <Input 
+                          type="text" 
+                          value={pageStyles[activeEditIdx].fontSize} 
+                          onChange={e => {
+                            const val = e.target.value;
+                            if (val === '' || !isNaN(Number(val))) {
+                              handleFormatting('fontSize', val);
+                            }
+                          }} 
+                          onMouseDown={e => e.stopPropagation()} 
+                          className="h-8 text-xs font-bold no-arrows mb-2" 
+                          placeholder="সাইজ লিখুন"
+                        />
                         <Slider 
                           value={[pageStyles[activeEditIdx].fontSize]} 
                           min={1} max={100} step={0.5} 
@@ -595,6 +613,19 @@ function CreateLectureSheetContent() {
 
                       <div className="space-y-2">
                         <label className="text-[10px] font-bold text-slate-500 flex justify-between">লাইন স্পেসিং <span>{toBengaliNumber(pageStyles[activeEditIdx].lineHeight)}</span></label>
+                        <Input 
+                          type="text" 
+                          value={pageStyles[activeEditIdx].lineHeight} 
+                          onChange={e => {
+                            const val = e.target.value;
+                            if (val === '' || !isNaN(Number(val))) {
+                              handleFormatting('lineHeight', val);
+                            }
+                          }} 
+                          onMouseDown={e => e.stopPropagation()} 
+                          className="h-8 text-xs font-bold no-arrows mb-2" 
+                          placeholder="স্পেসিং লিখুন"
+                        />
                         <Slider 
                           value={[pageStyles[activeEditIdx].lineHeight]} 
                           min={0.5} max={5.0} step={0.1} 
@@ -669,6 +700,19 @@ function CreateLectureSheetContent() {
                           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">ফন্ট সাইজ (pt)</label>
                           <span className="text-xs font-black text-primary">{toBengaliNumber(globalFontSize)}pt</span>
                         </div>
+                        <Input 
+                          type="text" 
+                          value={globalFontSize} 
+                          onChange={e => {
+                            const val = e.target.value;
+                            if (val === '' || !isNaN(Number(val))) {
+                              handleGlobalFontSizeChange(parseFloat(val || '0'));
+                            }
+                          }} 
+                          onMouseDown={e => e.stopPropagation()} 
+                          className="h-8 text-xs font-bold no-arrows mb-2" 
+                          placeholder="সাইজ লিখুন"
+                        />
                         <Slider 
                           value={[globalFontSize]} 
                           min={1} max={100} step={0.5} 
@@ -685,6 +729,19 @@ function CreateLectureSheetContent() {
                           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">লাইন স্পেসিং</label>
                           <span className="text-xs font-black text-primary">{toBengaliNumber(globalLineHeight)}</span>
                         </div>
+                        <Input 
+                          type="text" 
+                          value={globalLineHeight} 
+                          onChange={e => {
+                            const val = e.target.value;
+                            if (val === '' || !isNaN(Number(val))) {
+                              handleGlobalLineHeightChange(parseFloat(val || '0'));
+                            }
+                          }} 
+                          onMouseDown={e => e.stopPropagation()} 
+                          className="h-8 text-xs font-bold no-arrows mb-2" 
+                          placeholder="স্পেসিং লিখুন"
+                        />
                         <Slider 
                           value={[globalLineHeight]} 
                           min={0.5} max={5.0} step={0.1} 
