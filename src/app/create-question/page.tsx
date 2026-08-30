@@ -70,25 +70,17 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 
 function formatMath(text: string) {
   if (!text) return '';
-  // Remove all $ signs and LaTeX delimiters from Gemini output to keep formulas clean
-  // Also remove markdown artifacts like ### and **
   let formatted = text.replace(/\$|\\\(|\\\)|\\\[|\\\]|###|\*\*/g, '');
-  
   formatted = formatted.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
-  
   formatted = formatted.replace(/\\text\{([^}]+)\}/g, '<span class="math-text">$1</span>');
-
   const fracRegex = /\\frac\{((?:[^{}]|\{[^{}]*\})*)\}\s*\{((?:[^{}]|\{[^{}]*\})*)\}/g;
   formatted = formatted.replace(fracRegex, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
-
   formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
   formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>');
-
   formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/\^(\d+|[a-z]|[A-Z])/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
   formatted = formatted.replace(/_(\d+|[a-z]|[A-Z])/g, '<sub class="math-sub">$1</sub>');
-
   const symbolMap: Record<string, string> = {
     '\\\\log': 'log', '\\\\triangle': '△', '\\\\angle': '∠', '\\\\circ': '°',
     '\\\\theta': 'θ', '\\\\pi': 'π', '\\\\pm': '±', '\\\\times': '×',
@@ -106,11 +98,7 @@ function formatMath(text: string) {
     '\\\\left': '', '\\\\right': '', '\\\\\%': '%', '\\\\setminus': '\\', '\\\\backslash': '\\',
     '\\\\propto': '∝', '\\\\parallel': '∥', '\\\\perp': '⊥'
   };
-  
-  Object.entries(symbolMap).forEach(([key, val]) => { 
-    formatted = formatted.replace(new RegExp(key, 'g'), val); 
-  });
-
+  Object.entries(symbolMap).forEach(([key, val]) => { formatted = formatted.replace(new RegExp(key, 'g'), val); });
   formatted = formatted.replace(/\\dot\{([^}]+)\}/g, '<span class="math-dot">$1</span>');
   formatted = formatted.replace(/\\/g, '');
   return formatted;
@@ -160,36 +148,45 @@ function CreateQuestionContent() {
   const [isBankDialogOpen, setIsBankDialogOpen] = useState(false);
   const [bankSearch, setBankSearch] = useState('');
 
+  // Handle URL Parameters for Auto-fill
+  useEffect(() => {
+    if (!editId && source !== 'merge') {
+      const classIdParam = searchParams.get('classId');
+      const subjectParam = searchParams.get('subject');
+      const chapterParam = searchParams.get('chapter');
+      const typeParam = searchParams.get('type');
+      
+      if (classIdParam || subjectParam || chapterParam) {
+        setMeta(prev => ({
+          ...prev,
+          classId: classIdParam || prev.classId,
+          subject: subjectParam || prev.subject,
+          chapter: chapterParam || prev.chapter,
+        }));
+      }
+
+      if (typeParam === 'creative' || typeParam === 'mcq' || typeParam === 'short') {
+        setQuestions([{ id: Math.random().toString(36).substr(2, 9), type: typeParam as any, content: '', imageUrl: '', section: '' }]);
+      }
+    }
+  }, [searchParams, editId, source]);
+
   const bankQuery = useMemo(() => {
     if (!db || !user || !selectedBankClass || !selectedBankSubject) return null;
-    return query(
-      collection(db, 'questions'), 
-      where('userId', '==', user.uid),
-      where('classId', '==', selectedBankClass),
-      where('subject', '==', selectedBankSubject)
-    );
+    return query(collection(db, 'questions'), where('userId', '==', user.uid), where('classId', '==', selectedBankClass), where('subject', '==', selectedBankSubject));
   }, [db, user, selectedBankClass, selectedBankSubject]);
 
   const { data: bankResults, loading: bankLoading } = useCollection(bankQuery);
 
   const availableChapters = useMemo(() => {
     if (!bankResults) return [];
-    const chapters = Array.from(new Set(bankResults.map(r => r.chapter).filter(Boolean)));
-    return chapters as string[];
+    return Array.from(new Set(bankResults.map(r => r.chapter).filter(Boolean))) as string[];
   }, [bankResults]);
 
   const questionsFromSelectedChapters = useMemo(() => {
     if (!bankResults || selectedChapters.length === 0) return [];
     const list: any[] = [];
-    bankResults.forEach(res => {
-      if (selectedChapters.includes(res.chapter)) {
-        if (res.questions) {
-          res.questions.forEach((q: any) => {
-            list.push({ ...q, parentDocId: res.id, chapter: res.chapter });
-          });
-        }
-      }
-    });
+    bankResults.forEach(res => { if (selectedChapters.includes(res.chapter)) { if (res.questions) { res.questions.forEach((q: any) => { list.push({ ...q, parentDocId: res.id, chapter: res.chapter }); }); } } });
     return list;
   }, [bankResults, selectedChapters]);
 
@@ -200,7 +197,6 @@ function CreateQuestionContent() {
   useEffect(() => {
     async function loadQuestions() {
       if (!db || !user) return;
-
       if (editId) {
         try {
           const docRef = doc(db, 'questions', editId);
@@ -274,12 +270,8 @@ function CreateQuestionContent() {
       const base64 = await processImage(file);
       setQuestions(prev => prev.map(q => q.id === activeQuestionId ? { ...q, imageUrl: base64 } : q));
       toast({ title: "সফল", description: "ছবি যুক্ত করা হয়েছে।" });
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "ত্রুটি", description: error.message });
-    } finally {
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      setActiveQuestionId(null);
-    }
+    } catch (error: any) { toast({ variant: "destructive", title: "ত্রুটি", description: error.message }); }
+    finally { if (fileInputRef.current) fileInputRef.current.value = ''; setActiveQuestionId(null); }
   };
 
   const handleOCR = async (Eisen: React.ChangeEvent<HTMLInputElement>, questionId: string) => {
@@ -294,12 +286,8 @@ function CreateQuestionContent() {
         setQuestions(prev => prev.map(q => q.id === questionId ? { ...q, content: q.content ? q.content + '\n' + text : text } : q));
         toast({ title: "সফল!", description: "টেক্সট এক্সট্রাক্ট করা হয়েছে।" });
       }
-    } catch (error) {
-      toast({ variant: "destructive", title: "স্ক্যান ব্যর্থ হয়েছে", description: "আবার চেষ্টা করুন।" });
-    } finally {
-      setIsScanning(false);
-      if (ocrInputRef.current) ocrInputRef.current.value = '';
-    }
+    } catch (error) { toast({ variant: "destructive", title: "স্ক্যান ব্যর্থ হয়েছে", description: "আবার চেষ্টা করুন।" }); }
+    finally { setIsScanning(false); if (ocrInputRef.current) ocrInputRef.current.value = ''; }
   };
 
   const parseText = (text: string) => {
@@ -307,40 +295,21 @@ function CreateQuestionContent() {
     if (!text) return parts;
     const cleanText = text.trim();
     const markers = ['ক', 'খ', 'গ', 'ঘ'];
-    
     const findMarkerPos = (m: string, fromIndex: number = 0) => {
-      const patterns = [ 
-        m + '.', m + ')', m + ' .', m + ' )', 
-        '(' + m + ')', '(' + m + ' )',
-        '\n' + m + '.', '\n' + m + ')', '\n' + '(' + m + ')'
-      ];
+      const patterns = [ m + '.', m + ')', m + ' .', m + ' )', '(' + m + ')', '(' + m + ' )', '\n' + m + '.', '\n' + m + ')', '\n' + '(' + m + ')' ];
       let minIdx = -1;
-      for (const p of patterns) {
-        let idx = cleanText.indexOf(p, fromIndex);
-        if (idx !== -1) { if (minIdx === -1 || idx < minIdx) minIdx = idx; }
-      }
+      for (const p of patterns) { let idx = cleanText.indexOf(p, fromIndex); if (idx !== -1) { if (minIdx === -1 || idx < minIdx) minIdx = idx; } }
       return minIdx;
     };
-
     let firstMarkerPos = -1;
-    for (const m of markers) {
-      const pos = findMarkerPos(m);
-      if (pos !== -1 && (firstMarkerPos === -1 || pos < firstMarkerPos)) firstMarkerPos = pos;
-    }
-
+    for (const m of markers) { const pos = findMarkerPos(m); if (pos !== -1 && (firstMarkerPos === -1 || pos < firstMarkerPos)) firstMarkerPos = pos; }
     if (firstMarkerPos !== -1) {
       parts.main = cleanText.substring(0, firstMarkerPos).trim();
       const extract = (m: string) => {
         const startIdx = findMarkerPos(m);
         if (startIdx === -1) return '';
         let markerEnd = startIdx;
-        while (markerEnd < cleanText.length && (
-          cleanText[markerEnd] === ' ' || 
-          cleanText[markerEnd] === '\n' || 
-          cleanText[markerEnd] === '(' || 
-          markers.includes(cleanText[markerEnd]) || 
-          ['.', ')'].includes(cleanText[markerEnd])
-        )) markerEnd++;
+        while (markerEnd < cleanText.length && ( cleanText[markerEnd] === ' ' || cleanText[markerEnd] === '\n' || cleanText[markerEnd] === '(' || markers.includes(cleanText[markerEnd]) || ['.', ')'].includes(cleanText[markerEnd]) )) markerEnd++;
         let end = cleanText.length;
         for (const otherM of markers) { if (otherM === m) continue; const e = findMarkerPos(otherM, markerEnd); if (e !== -1 && e < end) end = e; }
         return cleanText.substring(markerEnd, end).trim();
@@ -361,13 +330,7 @@ function CreateQuestionContent() {
       return { ...common, shortText: q.content || '' };
     });
     const docId = editId || doc(collection(db, 'questions')).id;
-    const data: any = {
-      ...meta, 
-      questions: formattedQuestions, 
-      userId: user.uid, 
-      updatedAt: serverTimestamp(), 
-      isMcq: questions.some(q => q.type === 'mcq')
-    };
+    const data: any = { ...meta, questions: formattedQuestions, userId: user.uid, updatedAt: serverTimestamp(), isMcq: questions.some(q => q.type === 'mcq') };
     if (!editId) data.createdAt = serverTimestamp();
     const ref = doc(db, 'questions', docId);
     setDoc(ref, data, { merge: true })
@@ -413,17 +376,11 @@ function CreateQuestionContent() {
             <Button variant="secondary" onClick={() => window.print()} className="gap-2 font-bold"><Printer className="w-4 h-4" /> প্রিন্ট</Button>
           </div>
         </header>
-
         <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-8 bg-secondary/50 p-1 h-12">
-            <TabsTrigger value="sample" className="gap-2 font-bold h-10">
-              <FileText className="w-4 h-4" /> নমুনা প্রশ্ন (ম্যানুয়াল)
-            </TabsTrigger>
-            <TabsTrigger value="exam" className="gap-2 font-bold h-10">
-              <BrainCircuit className="w-4 h-4" /> পরীক্ষার প্রশ্ন (ব্যাংক থেকে)
-            </TabsTrigger>
+            <TabsTrigger value="sample" className="gap-2 font-bold h-10"><FileText className="w-4 h-4" /> নমুনা প্রশ্ন (ম্যানুয়াল)</TabsTrigger>
+            <TabsTrigger value="exam" className="gap-2 font-bold h-10"><BrainCircuit className="w-4 h-4" /> পরীক্ষার প্রশ্ন (ব্যাংক থেকে)</TabsTrigger>
           </TabsList>
-
           <TabsContent value="sample" className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <Card className="shadow-md">
               <CardHeader className="bg-primary/5 border-b py-3"><CardTitle className="text-base flex items-center gap-2 font-bold"><BookOpen className="w-4 h-4 text-primary" /> পরীক্ষার তথ্য ও মান বণ্টন</CardTitle></CardHeader>
@@ -431,43 +388,20 @@ function CreateQuestionContent() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <div className="space-y-2"><label className="text-sm font-semibold">প্রতিষ্ঠানের নাম</label><Input value={meta.institution || ''} onChange={e => setMeta(prev => ({...prev, institution: e.target.value}))} className="font-bold" /></div>
                   <div className="space-y-2"><label className="text-sm font-semibold">পরীক্ষার নাম</label><Input value={meta.exam || ''} onChange={e => setMeta(prev => ({...prev, exam: e.target.value}))} className="font-bold" /></div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold">অধ্যায় (Chapter)</label>
-                    <Input value={meta.chapter || ''} onChange={e => setMeta(prev => ({...prev, chapter: e.target.value}))} placeholder="যেমন: প্রথম অধ্যায়" className="font-bold" />
-                  </div>
+                  <div className="space-y-2"><label className="text-sm font-semibold">অধ্যায় (Chapter)</label><Input value={meta.chapter || ''} onChange={e => setMeta(prev => ({...prev, chapter: e.target.value}))} placeholder="যেমন: প্রথম অধ্যায়" className="font-bold" /></div>
                   <div className="space-y-2"><label className="text-sm font-semibold">সময়</label><Input value={meta.time || ''} onChange={e => setMeta(prev => ({...prev, time: e.target.value}))} className="font-bold" /></div>
                   <div className="space-y-2"><label className="text-sm font-semibold">পূর্ণমান</label><Input value={meta.totalMarks || ''} onChange={e => setMeta(prev => ({...prev, totalMarks: e.target.value}))} className="font-bold" /></div>
                   <div className="space-y-2"><label className="text-sm font-semibold">শ্রেণি</label><Select onValueChange={v => setMeta(prev => ({...prev, classId: v}))} value={meta.classId}><SelectTrigger className="font-bold"><SelectValue placeholder="শ্রেণি" /></SelectTrigger><SelectContent>{CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}</SelectContent></Select></div>
                   <div className="space-y-2"><label className="text-sm font-semibold">বিষয়</label><Select onValueChange={v => setMeta(prev => ({...prev, subject: v}))} value={meta.subject} disabled={!meta.classId}><SelectTrigger className="font-bold"><SelectValue placeholder="বিষয়" /></SelectTrigger><SelectContent>{subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
                 </div>
-
                 <div className="pt-4 border-t grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold">সৃজনশীল (ক)</label>
-                    <Input type="number" value={isNaN(meta.marksA) ? '' : meta.marksA} onChange={e => handleMarksChange('marksA', e.target.value)} className="h-8 font-bold" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold">সৃজনশীল (খ)</label>
-                    <Input type="number" value={isNaN(meta.marksB) ? '' : meta.marksB} onChange={e => handleMarksChange('marksB', e.target.value)} className="h-8 font-bold" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold">সৃজনশীল (গ)</label>
-                    <Input type="number" value={isNaN(meta.marksC) ? '' : meta.marksC} onChange={e => handleMarksChange('marksC', e.target.value)} className="h-8 font-bold" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold">সৃজনশীল (ঘ)</label>
-                    <Input type="number" value={isNaN(meta.marksD) ? '' : meta.marksD} onChange={e => handleMarksChange('marksD', e.target.value)} className="h-8 font-bold" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold">সংক্ষিপ্ত</label>
-                    <Input type="number" value={isNaN(meta.shortMarks) ? '' : meta.shortMarks} onChange={e => handleMarksChange('shortMarks', e.target.value)} className="h-8 font-bold" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold">এমসিকিউ</label>
-                    <Input type="number" value={isNaN(meta.mcqMarks) ? '' : meta.mcqMarks} onChange={e => handleMarksChange('mcqMarks', e.target.value)} className="h-8 font-bold" />
-                  </div>
+                  <div className="space-y-1"><label className="text-[10px] font-bold">সৃজনশীল (ক)</label><Input type="number" value={isNaN(meta.marksA) ? '' : meta.marksA} onChange={e => handleMarksChange('marksA', e.target.value)} className="h-8 font-bold" /></div>
+                  <div className="space-y-1"><label className="text-[10px] font-bold">সৃজনশীল (খ)</label><Input type="number" value={isNaN(meta.marksB) ? '' : meta.marksB} onChange={e => handleMarksChange('marksB', e.target.value)} className="h-8 font-bold" /></div>
+                  <div className="space-y-1"><label className="text-[10px] font-bold">সৃজনশীল (গ)</label><Input type="number" value={isNaN(meta.marksC) ? '' : meta.marksC} onChange={e => handleMarksChange('marksC', e.target.value)} className="h-8 font-bold" /></div>
+                  <div className="space-y-1"><label className="text-[10px] font-bold">সৃজনশীল (ঘ)</label><Input type="number" value={isNaN(meta.marksD) ? '' : meta.marksD} onChange={e => handleMarksChange('marksD', e.target.value)} className="h-8 font-bold" /></div>
+                  <div className="space-y-1"><label className="text-[10px] font-bold">সংক্ষিপ্ত</label><Input type="number" value={isNaN(meta.shortMarks) ? '' : meta.shortMarks} onChange={e => handleMarksChange('shortMarks', e.target.value)} className="h-8 font-bold" /></div>
+                  <div className="space-y-1"><label className="text-[10px] font-bold">এমসিকিউ</label><Input type="number" value={isNaN(meta.mcqMarks) ? '' : meta.mcqMarks} onChange={e => handleMarksChange('mcqMarks', e.target.value)} className="h-8 font-bold" /></div>
                 </div>
-
                 <div className="pt-4 border-t grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2"><label className="text-xs font-semibold">সৃজনশীল নির্দেশিকা</label><Input value={meta.creativeInstruction} onChange={e => setMeta(p => ({...p, creativeInstruction: e.target.value}))} className="font-bold h-8" /></div>
                   <div className="space-y-2"><label className="text-xs font-semibold">সংক্ষিপ্ত প্রশ্ন নির্দেশিকা</label><Input value={meta.shortInstruction} onChange={e => setMeta(p => ({...p, shortInstruction: e.target.value}))} className="font-bold h-8" /></div>
@@ -476,120 +410,47 @@ function CreateQuestionContent() {
               </CardContent>
             </Card>
           </TabsContent>
-
           <TabsContent value="exam" className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <Card className="shadow-md border-primary/20">
-              <CardHeader className="bg-primary/5 border-b py-3">
-                <CardTitle className="text-base flex items-center gap-2 font-bold text-primary">
-                  <BrainCircuit className="w-4 h-4" /> ব্যাংক থেকে প্রশ্ন বাছাই করুন
-                </CardTitle>
-              </CardHeader>
+              <CardHeader className="bg-primary/5 border-b py-3"><CardTitle className="text-base flex items-center gap-2 font-bold text-primary"><BrainCircuit className="w-4 h-4" /> ব্যাংক থেকে প্রশ্ন বাছাই করুন</CardTitle></CardHeader>
               <CardContent className="pt-6 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <div className="space-y-2"><label className="text-sm font-bold">প্রতিষ্ঠানের নাম</label><Input value={meta.institution || ''} onChange={e => setMeta(prev => ({...prev, institution: e.target.value}))} className="font-bold" /></div>
                   <div className="space-y-2"><label className="text-sm font-bold">সময়</label><Input value={meta.time || ''} onChange={e => setMeta(prev => ({...prev, time: e.target.value}))} className="font-bold" /></div>
                   <div className="space-y-2"><label className="text-sm font-bold">পূর্ণমান</label><Input value={meta.totalMarks || ''} onChange={e => setMeta(prev => ({...prev, totalMarks: e.target.value}))} className="font-bold" /></div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold">শ্রেণি নির্বাচন করুন</label>
-                    <Select onValueChange={setSelectedBankClass} value={selectedBankClass}>
-                      <SelectTrigger className="font-bold"><SelectValue placeholder="শ্রেণি" /></SelectTrigger>
-                      <SelectContent>{CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold">বিষয় নির্বাচন করুন</label>
-                    <Select onValueChange={setSelectedBankSubject} value={selectedBankSubject} disabled={!selectedBankClass}>
-                      <SelectTrigger className="font-bold"><SelectValue placeholder="বিষয়" /></SelectTrigger>
-                      <SelectContent>{bankSubjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold flex items-center gap-2 text-indigo-600"><LayoutGrid className="w-3.5 h-3.5" /> বিভাগ (অপশনাল)</label>
-                    <Input 
-                      placeholder="যেমন: ক - বিভাগ (বীজগণিত)" 
-                      value={meta.currentSection} 
-                      onChange={e => setMeta(prev => ({...prev, currentSection: e.target.value}))} 
-                      className="font-bold border-indigo-200"
-                    />
-                  </div>
+                  <div className="space-y-2"><label className="text-sm font-bold">শ্রেণি নির্বাচন করুন</label><Select onValueChange={setSelectedBankClass} value={selectedBankClass}><SelectTrigger className="font-bold"><SelectValue placeholder="শ্রেণি" /></SelectTrigger><SelectContent>{CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}</SelectContent></Select></div>
+                  <div className="space-y-2"><label className="text-sm font-bold">বিষয় নির্বাচন করুন</label><Select onValueChange={setSelectedBankSubject} value={selectedBankSubject} disabled={!selectedBankClass}><SelectTrigger className="font-bold"><SelectValue placeholder="বিষয়" /></SelectTrigger><SelectContent>{bankSubjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
+                  <div className="space-y-2"><label className="text-sm font-bold flex items-center gap-2 text-indigo-600"><LayoutGrid className="w-3.5 h-3.5" /> বিভাগ (অপশনাল)</label><Input placeholder="যেমন: ক - বিভাগ (বীজগণিত)" value={meta.currentSection} onChange={e => setMeta(prev => ({...prev, currentSection: e.target.value}))} className="font-bold border-indigo-200" /></div>
                 </div>
-
                 <div className="pt-4 border-t grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold">সৃজনশীল (ক)</label>
-                    <Input type="number" value={isNaN(meta.marksA) ? '' : meta.marksA} onChange={e => handleMarksChange('marksA', e.target.value)} className="h-8 font-bold" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold">সৃজনশীল (খ)</label>
-                    <Input type="number" value={isNaN(meta.marksB) ? '' : meta.marksB} onChange={e => handleMarksChange('marksB', e.target.value)} className="h-8 font-bold" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold">সৃজনশীল (গ)</label>
-                    <Input type="number" value={isNaN(meta.marksC) ? '' : meta.marksC} onChange={e => handleMarksChange('marksC', e.target.value)} className="h-8 font-bold" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold">সৃজনশীল (ঘ)</label>
-                    <Input type="number" value={isNaN(meta.marksD) ? '' : meta.marksD} onChange={e => handleMarksChange('marksD', e.target.value)} className="h-8 font-bold" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold">সংক্ষিপ্ত</label>
-                    <Input type="number" value={isNaN(meta.shortMarks) ? '' : meta.shortMarks} onChange={e => handleMarksChange('shortMarks', e.target.value)} className="h-8 font-bold" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold">এমসিকিউ</label>
-                    <Input type="number" value={isNaN(meta.mcqMarks) ? '' : meta.mcqMarks} onChange={e => handleMarksChange('mcqMarks', e.target.value)} className="h-8 font-bold" />
-                  </div>
+                  <div className="space-y-1"><label className="text-[10px] font-bold">সৃজনশীল (ক)</label><Input type="number" value={isNaN(meta.marksA) ? '' : meta.marksA} onChange={e => handleMarksChange('marksA', e.target.value)} className="h-8 font-bold" /></div>
+                  <div className="space-y-1"><label className="text-[10px] font-bold">সৃজনশীল (খ)</label><Input type="number" value={isNaN(meta.marksB) ? '' : meta.marksB} onChange={e => handleMarksChange('marksB', e.target.value)} className="h-8 font-bold" /></div>
+                  <div className="space-y-1"><label className="text-[10px] font-bold">সৃজনশীল (গ)</label><Input type="number" value={isNaN(meta.marksC) ? '' : meta.marksC} onChange={e => handleMarksChange('marksC', e.target.value)} className="h-8 font-bold" /></div>
+                  <div className="space-y-1"><label className="text-[10px] font-bold">সৃজনশীল (ঘ)</label><Input type="number" value={isNaN(meta.marksD) ? '' : meta.marksD} onChange={e => handleMarksChange('marksD', e.target.value)} className="h-8 font-bold" /></div>
+                  <div className="space-y-1"><label className="text-[10px] font-bold">সংক্ষিপ্ত</label><Input type="number" value={isNaN(meta.shortMarks) ? '' : meta.shortMarks} onChange={e => handleMarksChange('shortMarks', e.target.value)} className="h-8 font-bold" /></div>
+                  <div className="space-y-1"><label className="text-[10px] font-bold">এমসিকিউ</label><Input type="number" value={isNaN(meta.mcqMarks) ? '' : meta.mcqMarks} onChange={e => handleMarksChange('mcqMarks', e.target.value)} className="h-8 font-bold" /></div>
                 </div>
-
                 <div className="pt-4 border-t grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2"><label className="text-xs font-semibold">সৃজনশীল নির্দেশিকা</label><Input value={meta.creativeInstruction} onChange={e => setMeta(p => ({...p, creativeInstruction: e.target.value}))} className="font-bold h-8" /></div>
                   <div className="space-y-2"><label className="text-xs font-semibold">সংক্ষিপ্ত প্রশ্ন নির্দেশিকা</label><Input value={meta.shortInstruction} onChange={e => setMeta(p => ({...p, shortInstruction: e.target.value}))} className="font-bold h-8" /></div>
                   <div className="space-y-2 col-span-full"><label className="text-xs font-semibold">এমসিকিউ নির্দেশিকা</label><Input value={meta.mcqInstruction} onChange={e => setMeta(p => ({...p, mcqInstruction: e.target.value}))} className="font-bold h-8" /></div>
                 </div>
-
                 {selectedBankSubject && (
                   <div className="space-y-4 pt-4 border-t animate-in fade-in duration-500">
-                    <label className="text-sm font-black text-primary flex items-center gap-2">
-                      <Layers className="w-4 h-4" /> সংরক্ষিত অধ্যায়সমূহ (নমুনা প্রশ্ন হতে সংগৃহীত)
-                    </label>
-                    {bankLoading ? (
-                      <div className="flex justify-center p-4"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
-                    ) : availableChapters.length === 0 ? (
-                      <div className="p-10 text-center bg-muted/20 rounded-xl border-2 border-dashed">
-                        <p className="text-muted-foreground font-bold">এই বিষয়ের কোনো নমুনা প্রশ্ন পাওয়া যায়নি।</p>
-                      </div>
-                    ) : (
+                    <label className="text-sm font-black text-primary flex items-center gap-2"><Layers className="w-4 h-4" /> সংরক্ষিত অধ্যায়সমূহ (নমুনা প্রশ্ন হতে সংগৃহীত)</label>
+                    {bankLoading ? (<div className="flex justify-center p-4"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>) : availableChapters.length === 0 ? (<div className="p-10 text-center bg-muted/20 rounded-xl border-2 border-dashed"><p className="text-muted-foreground font-bold">এই বিষয়ের কোনো নমুনা প্রশ্ন পাওয়া যায়নি।</p></div>) : (
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        {availableChapters.map(ch => (
-                          <div 
-                            key={ch} 
-                            onClick={() => setSelectedChapters(prev => prev.includes(ch) ? prev.filter(c => c !== ch) : [...prev, ch])}
-                            className={cn(
-                              "p-3 rounded-lg border-2 cursor-pointer transition-all flex items-center justify-between font-bold text-xs",
-                              selectedChapters.includes(ch) ? "border-primary bg-primary/5 text-primary" : "border-border hover:border-primary/40"
-                            )}
-                          >
-                            <span className="truncate pr-2">{ch}</span>
-                            {selectedChapters.includes(ch) && <CheckCircle2 className="w-4 h-4 shrink-0" />}
-                          </div>
-                        ))}
+                        {availableChapters.map(ch => (<div key={ch} onClick={() => setSelectedChapters(prev => prev.includes(ch) ? prev.filter(c => c !== ch) : [...prev, ch])} className={cn("p-3 rounded-lg border-2 cursor-pointer transition-all flex items-center justify-between font-bold text-xs", selectedChapters.includes(ch) ? "border-primary bg-primary/5 text-primary" : "border-border hover:border-primary/40")}>
+                            <span className="truncate pr-2">{ch}</span>{selectedChapters.includes(ch) && <CheckCircle2 className="w-4 h-4 shrink-0" />}</div>))}
                       </div>
                     )}
-                    
-                    {selectedChapters.length > 0 && (
-                      <div className="flex justify-center pt-4">
-                        <Button onClick={() => setIsBankDialogOpen(true)} className="gap-2 font-bold bg-primary shadow-lg shadow-primary/20">
-                          <BrainCircuit className="w-4 h-4" /> প্রশ্ন বাছাই করুন ({toBengaliNumber(selectedChapters.length)} অধ্যায়)
-                        </Button>
-                      </div>
-                    )}
+                    {selectedChapters.length > 0 && (<div className="flex justify-center pt-4"><Button onClick={() => setIsBankDialogOpen(true)} className="gap-2 font-bold bg-primary shadow-lg shadow-primary/20"><BrainCircuit className="w-4 h-4" /> প্রশ্ন বাছাই করুন ({toBengaliNumber(selectedChapters.length)} অধ্যায়)</Button></div>)}
                   </div>
                 )}
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
-
         <div className="space-y-4">
           <div className="flex items-center justify-between border-b pb-2">
             <h3 className="text-lg font-bold">প্রশ্নসমূহ ({toBengaliNumber(questions.length)})</h3>
@@ -599,13 +460,8 @@ function CreateQuestionContent() {
               <Button variant="outline" size="sm" onClick={() => handleAddQuestion('mcq')} className="border-orange-500 text-orange-600 font-bold"><Plus className="w-3 h-3" /> বহুনির্বাচনি</Button>
             </div>
           </div>
-
           {questions.map((q, idx) => (
-            <Card key={q.id} className={cn(
-              "relative border-l-4 animate-in slide-in-from-right-2 duration-300",
-              q.type === 'mcq' ? 'border-l-orange-500' : q.type === 'short' ? 'border-l-accent' : 'border-l-primary',
-              q.isFromBank && "bg-slate-50/50"
-            )}>
+            <Card key={q.id} className={cn("relative border-l-4 animate-in slide-in-from-right-2 duration-300", q.type === 'mcq' ? 'border-l-orange-500' : q.type === 'short' ? 'border-l-accent' : 'border-l-primary', q.isFromBank && "bg-slate-50/50")}>
               <div className="absolute top-2 right-2 no-print flex gap-1">
                 <input type="file" ref={ocrInputRef} className="hidden" accept="image/*" onChange={(e) => handleOCR(e, q.id)} />
                 <Button variant="ghost" size="icon" className="text-indigo-600 h-8 w-8" onClick={() => ocrInputRef.current?.click()} disabled={isScanning} title="স্ক্যান"><ScanText className="w-4 h-4" /></Button>
@@ -619,67 +475,31 @@ function CreateQuestionContent() {
                   <span className="text-sm font-bold">প্রশ্ন নং: {isEnglish ? (idx + 1) : toBengaliNumber(idx + 1)}</span>
                 </div>
                 <Textarea placeholder="উদ্দীপক ও প্রশ্ন ক. খ. গ. ঘ. সহ লিখুন..." value={q.content} onChange={e => setQuestions(prev => prev.map(item => item.id === q.id ? {...item, content: e.target.value} : item))} className="min-h-[120px] text-sm font-bold" style={{ lineHeight: '1.2' }} />
-                {q.imageUrl && <div className="relative w-40 rounded border overflow-hidden"><img src={q.imageUrl} className="w-full h-auto" /><button onClick={() => setQuestions(prev => prev.map(item => item.id === q.id ? {...item, imageUrl: ''} : item))} className="absolute top-0 right-0 bg-red-500 text-white p-0.5"><X className="w-3 h-3" /></button></div>}
+                {q.imageUrl && <div className="relative w-40 rounded border overflow-hidden"><img src={q.imageUrl} className="w-full h-auto" alt="Question" /><button onClick={() => setQuestions(prev => prev.map(item => item.id === q.id ? {...item, imageUrl: ''} : item))} className="absolute top-0 right-0 bg-red-500 text-white p-0.5"><X className="w-3 h-3" /></button></div>}
               </CardContent>
               <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
             </Card>
           ))}
         </div>
-
         <div className="flex gap-4 pt-8">
           <Button onClick={handleSaveToDb} disabled={saving} className="gap-2 px-8 font-bold"><Save className="w-4 h-4" /> সেভ করুন</Button>
           <Button onClick={() => window.print()} variant="secondary" className="gap-2 px-10 shadow-lg font-bold"><Printer className="w-4 h-4" /> প্রিন্ট</Button>
         </div>
       </div>
-
       <Dialog open={isBankDialogOpen} onOpenChange={setIsBankDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col font-kalpurush">
-          <DialogHeader className="border-b pb-4">
-            <DialogTitle className="text-xl font-bold text-primary flex items-center gap-2">
-              <BrainCircuit className="w-6 h-6" /> প্রশ্নপত্র ব্যাংক
-            </DialogTitle>
-          </DialogHeader>
-          
+          <DialogHeader className="border-b pb-4"><DialogTitle className="text-xl font-bold text-primary flex items-center gap-2"><BrainCircuit className="w-6 h-6" /> প্রশ্নপত্র ব্যাংক</DialogTitle></DialogHeader>
           <div className="flex-1 overflow-y-auto py-4 space-y-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input 
-                placeholder="প্রশ্ন খুঁজুন..." 
-                value={bankSearch} 
-                onChange={e => setBankSearch(e.target.value)} 
-                className="pl-9 font-bold"
-              />
-            </div>
-
+            <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><Input placeholder="প্রশ্ন খুঁজুন..." value={bankSearch} onChange={e => setBankSearch(e.target.value)} className="pl-9 font-bold" /></div>
             <div className="space-y-4">
-              {questionsFromSelectedChapters.filter(q => {
-                const search = bankSearch.toLowerCase();
-                return (q.mcqQuestion || q.stimulus || q.shortText || '').toLowerCase().includes(search);
-              }).map((q, idx) => {
+              {questionsFromSelectedChapters.filter(q => { const search = bankSearch.toLowerCase(); return (q.mcqQuestion || q.stimulus || q.shortText || '').toLowerCase().includes(search); }).map((q, idx) => {
                 const isSelected = selectedBankQuestionIds.includes(idx.toString());
                 const previewText = q.type === 'mcq' ? q.mcqQuestion : q.type === 'creative' ? q.stimulus : q.shortText;
-                
                 return (
-                  <div 
-                    key={idx} 
-                    onClick={() => setSelectedBankQuestionIds(prev => prev.includes(idx.toString()) ? prev.filter(id => id !== idx.toString()) : [...prev, idx.toString()])}
-                    className={cn(
-                      "p-4 border-2 rounded-xl cursor-pointer transition-all flex gap-4",
-                      isSelected ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/30"
-                    )}
-                  >
-                    <div className="pt-1">
-                      <Checkbox checked={isSelected} onCheckedChange={() => {}} />
-                    </div>
+                  <div key={idx} onClick={() => setSelectedBankQuestionIds(prev => prev.includes(idx.toString()) ? prev.filter(id => id !== idx.toString()) : [...prev, idx.toString()])} className={cn("p-4 border-2 rounded-xl cursor-pointer transition-all flex gap-4", isSelected ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/30")}>
+                    <div className="pt-1"><Checkbox checked={isSelected} onCheckedChange={() => {}} /></div>
                     <div className="space-y-2 flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2 py-0.5 text-[8px] font-bold rounded uppercase ${q.type === 'mcq' ? 'bg-orange-100 text-orange-600' : q.type === 'short' ? 'bg-accent/10 text-accent' : 'bg-primary/10 text-primary'}`}>
-                          {q.type === 'mcq' ? 'এমসিকিউ' : q.type === 'short' ? 'সংক্ষিপ্ত' : 'সৃজনশীল'}
-                        </span>
-                        <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
-                          {q.chapter}
-                        </span>
-                      </div>
+                      <div className="flex items-center gap-2"><span className={`px-2 py-0.5 text-[8px] font-bold rounded uppercase ${q.type === 'mcq' ? 'bg-orange-100 text-orange-600' : q.type === 'short' ? 'bg-accent/10 text-accent' : 'bg-primary/10 text-primary'}`}>{q.type === 'mcq' ? 'এমসিকিউ' : q.type === 'short' ? 'সংক্ষিপ্ত' : 'সৃজনশীল'}</span><span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">{q.chapter}</span></div>
                       <p className="text-sm font-bold line-clamp-3 leading-[1.2]" style={{ lineHeight: '1.2' }}>{previewText}</p>
                     </div>
                   </div>
@@ -687,16 +507,9 @@ function CreateQuestionContent() {
               })}
             </div>
           </div>
-
-          <DialogFooter className="border-t pt-4">
-            <Button variant="outline" onClick={() => setIsBankDialogOpen(false)} className="font-bold">বাতিল</Button>
-            <Button onClick={handleAddFromBank} disabled={selectedBankQuestionIds.length === 0} className="gap-2 font-bold bg-primary">
-              <Plus className="w-4 h-4" /> বাছাইকৃত প্রশ্ন যুক্ত করুন ({toBengaliNumber(selectedBankQuestionIds.length)})
-            </Button>
-          </DialogFooter>
+          <DialogFooter className="border-t pt-4"><Button variant="outline" onClick={() => setIsBankDialogOpen(false)} className="font-bold">বাতিল</Button><Button onClick={handleAddFromBank} disabled={selectedBankQuestionIds.length === 0} className="gap-2 font-bold bg-primary"><Plus className="w-4 h-4" /> বাছাইকৃত প্রশ্ন যুক্ত করুন ({toBengaliNumber(selectedBankQuestionIds.length)})</Button></DialogFooter>
         </DialogContent>
       </Dialog>
-
       <div className={cn("print-only font-kalpurush", isPrintMode && "block")}>
         <style dangerouslySetInnerHTML={{ __html: `
           @media print, screen {
@@ -718,10 +531,7 @@ function CreateQuestionContent() {
             .math-sub { font-size: 0.7em; vertical-align: sub; display: inline-block; }
             .section-header { text-align: center; font-weight: 900; text-decoration: underline; margin: 10px 0 5px 0; font-size: 12pt; }
           }
-          @media print { 
-            .paper { margin: 0 !important; } 
-            @page { size: auto; margin: 0.5in !important; } 
-          }
+          @media print { .paper { margin: 0 !important; } @page { size: auto; margin: 0.5in !important; } }
         `}} />
         <div className="paper">
           <div className="header">
@@ -734,82 +544,28 @@ function CreateQuestionContent() {
             {(() => {
               const renderedQuestions: any[] = [];
               let lastSection = '';
-              
               const creativeQs = questions.filter(q => q.type === 'creative');
               if (creativeQs.length > 0) {
-                renderedQuestions.push(
-                  <div key="creative-header" className="text-center mb-1">
-                    <div className="section-label">সৃজনশীল প্রশ্ন</div>
-                    <p className="text-[10px] font-bold">[{meta.creativeInstruction}]</p>
-                  </div>
-                );
-                
+                renderedQuestions.push(<div key="creative-header" className="text-center mb-1"><div className="section-label">সৃজনশীল প্রশ্ন</div><p className="text-[10px] font-bold">[{meta.creativeInstruction}]</p></div>);
                 creativeQs.forEach((q, idx) => {
-                  if (q.section && q.section !== lastSection) {
-                    renderedQuestions.push(<div key={`section-${q.section}`} className="section-header">{q.section}</div>);
-                    lastSection = q.section;
-                  }
+                  if (q.section && q.section !== lastSection) { renderedQuestions.push(<div key={`section-${q.section}`} className="section-header">{q.section}</div>); lastSection = q.section; }
                   const p = parseText(q.content);
-                  renderedQuestions.push(
-                    <div key={q.id} className="mb-1 break-inside-avoid" style={{ lineHeight: '1.2' }}>
-                      <div className="flex gap-2 font-bold"><span>{toBengaliNumber(idx + 1)}.</span><div dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} /></div>
-                      {q.imageUrl && <img src={q.imageUrl} className="max-w-[200px] mx-auto my-1 border" />}
-                      <div className="ml-5">
-                        {p.k && <div className="flex gap-2"><span>ক.</span><div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.k) }} /><span>{toBengaliNumber(meta.marksA)}</span></div>}
-                        {p.kh && <div className="flex gap-2"><span>খ.</span><div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.kh) }} /><span>{toBengaliNumber(meta.marksB)}</span></div>}
-                        {p.g && <div className="flex gap-2"><span>গ.</span><div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.g) }} /><span>{toBengaliNumber(meta.marksC)}</span></div>}
-                        {p.gh && <div className="flex gap-2"><span>ঘ.</span><div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.gh) }} /><span>{toBengaliNumber(meta.marksD)}</span></div>}
-                      </div>
-                    </div>
-                  );
+                  renderedQuestions.push(<div key={q.id} className="mb-1 break-inside-avoid" style={{ lineHeight: '1.2' }}><div className="flex gap-2 font-bold"><span>{toBengaliNumber(idx + 1)}.</span><div dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} /></div>{q.imageUrl && <img src={q.imageUrl} className="max-w-[200px] mx-auto my-1 border" alt="Question" />}<div className="ml-5">{p.k && <div className="flex gap-2"><span>ক.</span><div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.k) }} /><span>{toBengaliNumber(meta.marksA)}</span></div>}{p.kh && <div className="flex gap-2"><span>খ.</span><div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.kh) }} /><span>{toBengaliNumber(meta.marksB)}</span></div>}{p.g && <div className="flex gap-2"><span>গ.</span><div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.g) }} /><span>{toBengaliNumber(meta.marksC)}</span></div>}{p.gh && <div className="flex gap-2"><span>ঘ.</span><div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(p.gh) }} /><span>{toBengaliNumber(meta.marksD)}</span></div>}</div></div>);
                 });
               }
-
               const shortQs = questions.filter(q => q.type === 'short');
               if (shortQs.length > 0) {
-                renderedQuestions.push(
-                  <div key="short-header" className="text-center mb-1">
-                    <div className="section-label">সংক্ষিপ্ত প্রশ্ন</div>
-                    <p className="text-[10px] font-bold">[{meta.shortInstruction}]</p>
-                  </div>
-                );
+                renderedQuestions.push(<div key="short-header" className="text-center mb-1"><div className="section-label">সংক্ষিপ্ত প্রশ্ন</div><p className="text-[10px] font-bold">[{meta.shortInstruction}]</p></div>);
                 lastSection = '';
                 shortQs.forEach((q, idx) => {
-                  if (q.section && q.section !== lastSection) {
-                    renderedQuestions.push(<div key={`section-short-${q.section}`} className="section-header">{q.section}</div>);
-                    lastSection = q.section;
-                  }
-                  renderedQuestions.push(
-                    <div key={q.id} className="mb-1 flex gap-2" style={{ lineHeight: '1.2' }}><span className="font-bold">{toBengaliNumber(idx + 1)}.</span><div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(q.content) }} /><span>{toBengaliNumber(meta.shortMarks)}</span></div>
-                  );
+                  if (q.section && q.section !== lastSection) { renderedQuestions.push(<div key={`section-short-${q.section}`} className="section-header">{q.section}</div>); lastSection = q.section; }
+                  renderedQuestions.push(<div key={q.id} className="mb-1 flex gap-2" style={{ lineHeight: '1.2' }}><span className="font-bold">{toBengaliNumber(idx + 1)}.</span><div className="flex-1" dangerouslySetInnerHTML={{ __html: formatMath(q.content) }} /><span>{toBengaliNumber(meta.shortMarks)}</span></div>);
                 });
               }
-
               const mcqQs = questions.filter(q => q.type === 'mcq');
               if (mcqQs.length > 0) {
-                renderedQuestions.push(
-                  <div key="mcq-header" className="mt-1">
-                    <div className="text-center mb-1"><div className="section-label">বহুনির্বাচনি প্রশ্ন</div><p className="text-[10px] font-bold">[{meta.mcqInstruction}]</p></div>
-                    <div className="mcq-container">
-                      {mcqQs.map((q, idx) => {
-                        const p = parseText(q.content);
-                        return (
-                          <div key={q.id} className="mcq-item mb-2 break-inside-avoid" style={{ lineHeight: '1.2' }}>
-                            <div className="flex gap-2 font-bold"><span>{toBengaliNumber(idx + 1)}.</span><div dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} /></div>
-                            <div className="mcq-options">
-                              <div>ক) <span dangerouslySetInnerHTML={{ __html: formatMath(p.k) }} /></div>
-                              <div>খ) <span dangerouslySetInnerHTML={{ __html: formatMath(p.kh) }} /></div>
-                              <div>গ) <span dangerouslySetInnerHTML={{ __html: formatMath(p.g) }} /></div>
-                              <div>ঘ) <span dangerouslySetInnerHTML={{ __html: formatMath(p.gh) }} /></div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
+                renderedQuestions.push(<div key="mcq-header" className="mt-1"><div className="text-center mb-1"><div className="section-label">বহুনির্বাচনি প্রশ্ন</div><p className="text-[10px] font-bold">[{meta.mcqInstruction}]</p></div><div className="mcq-container">{mcqQs.map((q, idx) => { const p = parseText(q.content); return (<div key={q.id} className="mcq-item mb-2 break-inside-avoid" style={{ lineHeight: '1.2' }}><div className="flex gap-2 font-bold"><span>{toBengaliNumber(idx + 1)}.</span><div dangerouslySetInnerHTML={{ __html: formatMath(p.main) }} /></div><div className="mcq-options"><div>ক) <span dangerouslySetInnerHTML={{ __html: formatMath(p.k) }} /></div><div>খ) <span dangerouslySetInnerHTML={{ __html: formatMath(p.kh) }} /></div><div>গ) <span dangerouslySetInnerHTML={{ __html: formatMath(p.g) }} /></div><div>ঘ) <span dangerouslySetInnerHTML={{ __html: formatMath(p.gh) }} /></div></div></div>); })}</div></div>);
               }
-
               return renderedQuestions;
             })()}
           </div>
