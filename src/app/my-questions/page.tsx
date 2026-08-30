@@ -26,7 +26,8 @@ import {
   X,
   PlusCircle,
   FilePlus,
-  HelpCircle
+  HelpCircle,
+  Layers
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -49,7 +50,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
-import { CLASSES, getSubjectsForClass } from '@/lib/constants';
+import { CLASSES, getSubjectsForClass, getChaptersForSubject } from '@/lib/constants';
 import { toast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -60,7 +61,7 @@ function toBengaliNumber(n: number | string | undefined | null): string {
   return n.toString().replace(/\d/g, (digit) => bengaliDigits[parseInt(digit)]);
 }
 
-type ViewMode = 'classes' | 'subjects' | 'content';
+type ViewMode = 'classes' | 'subjects' | 'chapters' | 'content';
 
 export default function MyLibraryPage() {
   const db = useFirestore();
@@ -70,6 +71,7 @@ export default function MyLibraryPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('classes');
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+  const [selectedChapter, setSelectedChapter] = useState<string | null>(null);
 
   // Selection states
   const [isSelecting, setIsSelecting] = useState(false);
@@ -91,10 +93,15 @@ export default function MyLibraryPage() {
     let ss = libraryData.sheets;
     if (selectedClass) { qs = qs.filter(q => q.classId === selectedClass); ss = ss.filter(s => s.classId === selectedClass); }
     if (selectedSubject) { qs = qs.filter(q => q.subject === selectedSubject); ss = ss.filter(s => s.subject === selectedSubject); }
+    if (selectedChapter) { 
+      qs = qs.filter(q => q.chapter === selectedChapter); 
+      ss = ss.filter(s => s.topic === selectedChapter); 
+    }
     return { questions: qs, sheets: ss };
-  }, [libraryData, selectedClass, selectedSubject]);
+  }, [libraryData, selectedClass, selectedSubject, selectedChapter]);
 
   const subjects = useMemo(() => selectedClass ? getSubjectsForClass(selectedClass) : [], [selectedClass]);
+  const chapters = useMemo(() => (selectedClass && selectedSubject) ? getChaptersForSubject(selectedClass, selectedSubject) : [], [selectedClass, selectedSubject]);
 
   const toggleSelection = (id: string) => {
     if (!isSelecting) return;
@@ -162,12 +169,30 @@ export default function MyLibraryPage() {
     return (
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {subjects.map(sub => (
-          <Card key={sub} onClick={() => { setSelectedSubject(sub); setViewMode('content'); }} className="cursor-pointer hover:border-primary hover:shadow-md transition-all group border-2">
+          <Card key={sub} onClick={() => { setSelectedSubject(sub); setViewMode('chapters'); }} className="cursor-pointer hover:border-primary hover:shadow-md transition-all group border-2">
             <CardContent className="p-6 flex flex-col items-center text-center space-y-3">
               <div className="w-12 h-12 rounded-xl bg-orange-50/10 flex items-center justify-center text-orange-600 group-hover:bg-orange-500 group-hover:text-white transition-all">
                 <Book className="w-6 h-6" />
               </div>
               <p className="font-bold text-sm">{sub}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  };
+
+  const renderChapters = () => {
+    const displayChapters = chapters.length > 0 ? chapters : ['সাধারণ অধ্যায়'];
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        {displayChapters.map(ch => (
+          <Card key={ch} onClick={() => { setSelectedChapter(ch); setViewMode('content'); }} className="cursor-pointer hover:border-primary hover:shadow-md transition-all group border-2 bg-slate-50/30">
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                <Layers className="w-5 h-5" />
+              </div>
+              <p className="font-bold text-xs flex-1 line-clamp-2">{ch}</p>
             </CardContent>
           </Card>
         ))}
@@ -181,10 +206,10 @@ export default function MyLibraryPage() {
         {/* Creation Section */}
         <section className="space-y-4">
           <h3 className="text-sm font-black text-primary flex items-center gap-2 border-b pb-2 uppercase tracking-wider">
-            <PlusCircle className="w-4 h-4" /> নতুন তৈরি করুন
+            <PlusCircle className="w-4 h-4" /> নতুন তৈরি করুন ({selectedChapter})
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Link href={`/create-lecture-sheet?classId=${selectedClass}&subject=${encodeURIComponent(selectedSubject || '')}`}>
+            <Link href={`/create-lecture-sheet?classId=${selectedClass}&subject=${encodeURIComponent(selectedSubject || '')}&topic=${encodeURIComponent(selectedChapter || '')}`}>
               <Card className="hover:border-orange-500 hover:shadow-lg transition-all group border-l-4 border-l-orange-500 cursor-pointer bg-orange-50/30">
                 <CardContent className="p-6 flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-orange-500 flex items-center justify-center text-white group-hover:scale-110 transition-transform">
@@ -192,7 +217,7 @@ export default function MyLibraryPage() {
                   </div>
                   <div>
                     <h4 className="font-black text-orange-700">লেকচার শিট</h4>
-                    <p className="text-[10px] font-bold text-muted-foreground">নতুন নোট বা লেকচার শিট তৈরি করুন</p>
+                    <p className="text-[10px] font-bold text-muted-foreground">এই অধ্যায়ের নোট তৈরি করুন</p>
                   </div>
                 </CardContent>
               </Card>
@@ -207,7 +232,7 @@ export default function MyLibraryPage() {
                     </div>
                     <div>
                       <h4 className="font-black text-primary">প্রশ্নপত্র</h4>
-                      <p className="text-[10px] font-bold text-muted-foreground">বোর্ড স্ট্যান্ডার্ড সৃজনশীল বা MCQ তৈরি করুন</p>
+                      <p className="text-[10px] font-bold text-muted-foreground">এই অধ্যায়ের প্রশ্ন তৈরি করুন</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -217,11 +242,11 @@ export default function MyLibraryPage() {
                   <DialogTitle className="font-black text-primary text-xl">প্রশ্নের ধরন নির্বাচন করুন</DialogTitle>
                 </DialogHeader>
                 <div className="grid grid-cols-1 gap-3 py-4">
-                  <Button variant="outline" className="h-14 font-bold gap-3 justify-start px-6" onClick={() => router.push(`/create-question?classId=${selectedClass}&subject=${encodeURIComponent(selectedSubject || '')}&type=creative`)}>
+                  <Button variant="outline" className="h-14 font-bold gap-3 justify-start px-6" onClick={() => router.push(`/create-question?classId=${selectedClass}&subject=${encodeURIComponent(selectedSubject || '')}&chapter=${encodeURIComponent(selectedChapter || '')}&type=creative`)}>
                     <div className="w-8 h-8 rounded bg-primary/10 text-primary flex items-center justify-center"><FileText className="w-4 h-4" /></div>
                     সৃজনশীল প্রশ্নপত্র
                   </Button>
-                  <Button variant="outline" className="h-14 font-bold gap-3 justify-start px-6" onClick={() => router.push(`/create-question?classId=${selectedClass}&subject=${encodeURIComponent(selectedSubject || '')}&type=mcq`)}>
+                  <Button variant="outline" className="h-14 font-bold gap-3 justify-start px-6" onClick={() => router.push(`/create-question?classId=${selectedClass}&subject=${encodeURIComponent(selectedSubject || '')}&chapter=${encodeURIComponent(selectedChapter || '')}&type=mcq`)}>
                     <div className="w-8 h-8 rounded bg-orange-100 text-orange-600 flex items-center justify-center"><ListChecks className="w-4 h-4" /></div>
                     বহুনির্বাচনি (MCQ) প্রশ্নপত্র
                   </Button>
@@ -306,7 +331,7 @@ export default function MyLibraryPage() {
                            <div className="w-8 h-8 rounded bg-primary/5 flex items-center justify-center text-primary shrink-0"><FileText className="w-4 h-4" /></div>
                          )}
                          <CardTitle className="text-sm font-bold truncate">
-                           {q.chapter || q.exam}
+                           {q.exam} - {q.chapter || 'অধ্যায় নেই'}
                          </CardTitle>
                        </div>
                        {!isSelecting && (
@@ -343,7 +368,7 @@ export default function MyLibraryPage() {
           {currentItems.questions.length === 0 && currentItems.sheets.length === 0 && (
             <div className="p-20 text-center border-dashed border-2 bg-muted/5 rounded-2xl">
               <HelpCircle className="w-12 h-12 text-muted-foreground/20 mx-auto mb-4" />
-              <p className="text-muted-foreground font-bold">এই বিষয়ে আপনার কোনো সংগ্রহ নেই।</p>
+              <p className="text-muted-foreground font-bold">এই অধ্যায়ে আপনার কোনো সংগ্রহ নেই।</p>
             </div>
           )}
         </section>
@@ -353,7 +378,8 @@ export default function MyLibraryPage() {
 
   const handleBack = () => {
     if (isSelecting) { setIsSelecting(false); setSelectedDocIds([]); return; }
-    if (viewMode === 'content') { setViewMode('subjects'); setSelectedSubject(null); return; }
+    if (viewMode === 'content') { setViewMode('chapters'); setSelectedChapter(null); return; }
+    if (viewMode === 'chapters') { setViewMode('subjects'); setSelectedSubject(null); return; }
     if (viewMode === 'subjects') { setViewMode('classes'); setSelectedClass(null); return; }
   };
 
@@ -376,7 +402,7 @@ export default function MyLibraryPage() {
             </div>
             <div>
               <h2 className="text-2xl font-bold">আমার লাইব্রেরি</h2>
-              <p className="text-xs text-muted-foreground font-bold">আপনার সব সংগ্রহ এখানে ফোল্ডার আকারে সাজানো আছে</p>
+              <p className="text-xs text-muted-foreground font-bold">আপনার সব সংগ্রহ এখানে সুসংগঠিতভাবে সাজানো আছে</p>
             </div>
           </div>
           <div className="flex gap-2">
@@ -389,17 +415,23 @@ export default function MyLibraryPage() {
         </div>
 
         <div className="flex items-center gap-2 text-xs font-bold overflow-x-auto whitespace-nowrap pb-2 text-muted-foreground">
-          <span className={cn("cursor-pointer hover:text-primary", viewMode === 'classes' && "text-primary")} onClick={() => { setViewMode('classes'); setSelectedClass(null); setSelectedSubject(null); setIsSelecting(false); }}>লাইব্রেরি</span>
+          <span className={cn("cursor-pointer hover:text-primary", viewMode === 'classes' && "text-primary")} onClick={() => { setViewMode('classes'); setSelectedClass(null); setSelectedSubject(null); setSelectedChapter(null); setIsSelecting(false); }}>লাইব্রেরি</span>
           {selectedClass && (
             <>
               <ChevronRight className="w-3 h-3 shrink-0" />
-              <span className={cn("cursor-pointer hover:text-primary", viewMode === 'subjects' && "text-primary")} onClick={() => { setViewMode('subjects'); setSelectedSubject(null); setIsSelecting(false); }}>{CLASSES.find(c => c.id === selectedClass)?.label} শ্রেণি</span>
+              <span className={cn("cursor-pointer hover:text-primary", viewMode === 'subjects' && "text-primary")} onClick={() => { setViewMode('subjects'); setSelectedSubject(null); setSelectedChapter(null); setIsSelecting(false); }}>{CLASSES.find(c => c.id === selectedClass)?.label} শ্রেণি</span>
             </>
           )}
           {selectedSubject && (
             <>
               <ChevronRight className="w-3 h-3 shrink-0" />
-              <span className={cn("cursor-pointer hover:text-primary", viewMode === 'content' && "text-primary")} onClick={() => { setViewMode('content'); }}>{selectedSubject}</span>
+              <span className={cn("cursor-pointer hover:text-primary", viewMode === 'chapters' && "text-primary")} onClick={() => { setViewMode('chapters'); setSelectedChapter(null); }}>{selectedSubject}</span>
+            </>
+          )}
+          {selectedChapter && (
+            <>
+              <ChevronRight className="w-3 h-3 shrink-0" />
+              <span className={cn("cursor-pointer hover:text-primary", viewMode === 'content' && "text-primary")} onClick={() => { setViewMode('content'); }}>{selectedChapter}</span>
             </>
           )}
         </div>
@@ -408,6 +440,7 @@ export default function MyLibraryPage() {
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
         {viewMode === 'classes' && renderClasses()}
         {viewMode === 'subjects' && renderSubjects()}
+        {viewMode === 'chapters' && renderChapters()}
         {viewMode === 'content' && renderSubjectContent()}
       </div>
 
