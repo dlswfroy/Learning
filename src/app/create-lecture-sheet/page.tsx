@@ -56,8 +56,8 @@ function formatMath(text: string) {
     '\\\\eta': 'η', '\\\\rho': 'ρ', '\\\\lambda': 'λ', '\\\\mu': 'μ',
     '\\\\div': '÷', '\\\\rightarrow': '→', '\\\\to': '→', '\\\\arrow': '→',
     '\\\\in': '∈', '\\\\mathbb\\{N\\}': 'ℕ', '\\\\mathbb\\{R\\}': 'ℝ', '\\\\mathbb\\{Z\\}': 'ℤ',
-    '\\\\mathbb\\{Q\\}': 'ℚ', '\\\\subset': '⊂', '\\\\subseteq': '⊆', '\\\\cup': '∪',
-    '\\\\cap': '∩', '\\\\emptyset': '∅', '\\\\forall': '∀', '\\\\exists': '∃', 
+    '\\\\mathbb\\{Q\\}': 'ℚ', '\\\\subset': '⊂', '\\\\subseteq': '⊆', '\\\\cup': 'cup',
+    '\\\\cap': 'cap', '\\\\emptyset': '∅', '\\\\forall': '∀', '\\\\exists': '∃', 
     '\\\\Rightarrow': '⇒', '\\\\leftarrow': '←', '\\\\Leftarrow': '⇐', 
     '\\\\leftrightarrow': '↔', '\\\\Leftrightarrow': '⇔',
     '\\\\left': '', '\\\\right': '', '\\\\\%': '%', '\\\\setminus': '\\', '\\\\backslash': '\\',
@@ -247,6 +247,12 @@ function CreateLectureSheetContent() {
         const range = selection.getRangeAt(0);
         span.appendChild(range.extractContents());
         range.insertNode(span);
+        
+        // Ensure continuous selection for repetitive shortcuts
+        const newRange = document.createRange();
+        newRange.selectNodeContents(span);
+        selection.removeAllRanges();
+        selection.addRange(newRange);
       } else if (command === 'lineHeight') {
         const range = selection.getRangeAt(0);
         if (range) {
@@ -255,6 +261,11 @@ function CreateLectureSheetContent() {
           span.style.display = 'inline-block';
           span.appendChild(range.extractContents());
           range.insertNode(span);
+          
+          const newRange = document.createRange();
+          newRange.selectNodeContents(span);
+          selection.removeAllRanges();
+          selection.addRange(newRange);
         }
       } else {
         document.execCommand(command, false, value || '');
@@ -277,23 +288,23 @@ function CreateLectureSheetContent() {
     const hasSelection = selection && selection.rangeCount > 0 && !selection.isCollapsed;
     
     if (hasSelection) {
-      // Try to estimate current size from selection parent
+      // Robust calculation of current size from selection
       let currentSize = 12;
-      const parent = selection.getRangeAt(0).commonAncestorContainer;
+      const range = selection.getRangeAt(0);
+      const parent = range.commonAncestorContainer;
       const element = parent.nodeType === 1 ? (parent as HTMLElement) : parent.parentElement;
       if (element) {
         const styleSize = window.getComputedStyle(element).fontSize;
         const match = styleSize.match(/(\d+(\.\d+)?)/);
         if (match) {
-          // Computed size in px, converting to pt (approx 1pt = 1.33px)
           currentSize = Math.round(parseFloat(match[0]) * 0.75);
         }
       }
-      const newSize = Math.max(6, currentSize + delta);
+      const newSize = Math.max(1, currentSize + delta);
       handleFormatting('fontSize', newSize.toString());
     } else if (activeEditIdx !== null) {
       const currentSize = pageStyles[activeEditIdx]?.fontSize || globalFontSize;
-      const newSize = Math.max(6, currentSize + delta);
+      const newSize = Math.max(1, currentSize + delta);
       handleFormatting('fontSize', newSize.toString());
     }
   };
@@ -572,7 +583,7 @@ function CreateLectureSheetContent() {
                         <label className="text-[10px] font-bold text-slate-500 flex justify-between">ফন্ট সাইজ (pt) <span>{toBengaliNumber(pageStyles[activeEditIdx].fontSize)}pt</span></label>
                         <Slider 
                           value={[pageStyles[activeEditIdx].fontSize]} 
-                          min={8} max={24} step={0.5} 
+                          min={1} max={100} step={0.5} 
                           onMouseDown={(e) => e.preventDefault()}
                           onValueChange={([v]) => handleFormatting('fontSize', v.toString())} 
                         />
@@ -582,7 +593,7 @@ function CreateLectureSheetContent() {
                         <label className="text-[10px] font-bold text-slate-500 flex justify-between">লাইন স্পেসিং <span>{toBengaliNumber(pageStyles[activeEditIdx].lineHeight)}</span></label>
                         <Slider 
                           value={[pageStyles[activeEditIdx].lineHeight]} 
-                          min={1.0} max={3.0} step={0.1} 
+                          min={0.5} max={5.0} step={0.1} 
                           onMouseDown={(e) => e.preventDefault()}
                           onValueChange={([v]) => handleFormatting('lineHeight', v.toString())} 
                         />
@@ -656,7 +667,7 @@ function CreateLectureSheetContent() {
                         </div>
                         <Slider 
                           value={[globalFontSize]} 
-                          min={8} max={24} step={0.5} 
+                          min={1} max={100} step={0.5} 
                           onMouseDown={(e) => e.preventDefault()}
                           onValueChange={([v]) => handleGlobalFontSizeChange(v)} 
                         />
@@ -672,7 +683,7 @@ function CreateLectureSheetContent() {
                         </div>
                         <Slider 
                           value={[globalLineHeight]} 
-                          min={1.0} max={3.0} step={0.1} 
+                          min={0.5} max={5.0} step={0.1} 
                           onMouseDown={(e) => e.preventDefault()}
                           onValueChange={([v]) => handleGlobalLineHeightChange(v)} 
                         />
@@ -792,6 +803,7 @@ function CreateLectureSheetContent() {
                           const htmlValue = e.currentTarget?.innerHTML || "";
                           setManualPages(prev => ({ ...prev, [idx]: htmlValue }));
                         }}
+                        onFocus={() => setActiveEditIdx(idx)}
                         className={cn("content-area flex-1 font-kalpurush outline-none", activeEditIdx === idx && "bg-blue-50/20 p-1 rounded border border-dashed border-blue-300")}
                         style={{ lineHeight: String(style.lineHeight), fontSize: `${style.fontSize}pt`, fontWeight: style.bold ? 'bold' : 'normal', textDecoration: style.underline ? 'underline' : 'none', color: style.color, textAlign: style.align as any }}
                         dangerouslySetInnerHTML={{ __html: manualPages[idx] || pageHtml }}
