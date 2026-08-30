@@ -28,7 +28,7 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 
 function formatMath(text: string) {
   if (!text) return '';
-  // Remove markdown artifacts and LaTeX delimiters
+  // Remove markdown artifacts like ### and ** from Gemini output
   let formatted = text.replace(/\$|\\\(|\\\)|\\\[|\\\]|###|\*\*/g, '');
   
   formatted = formatted.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
@@ -156,6 +156,7 @@ function CreateLectureSheetContent() {
   useEffect(() => {
     if (!isPrintMode) return;
 
+    // Check if manual pages already exist and seem to match current content
     if (Object.keys(manualPages).length > 0) {
       const sortedIndices = Object.keys(manualPages).map(Number).sort((a, b) => a - b);
       const restoredPages = sortedIndices.map(idx => manualPages[idx]);
@@ -163,6 +164,7 @@ function CreateLectureSheetContent() {
       const editorText = data.content.replace(/<[^>]*>/g, '').replace(/\s/g, '');
       const manualCombinedText = restoredPages.join('').replace(/<[^>]*>/g, '').replace(/\s|&nbsp;/g, '');
       
+      // If the texts are roughly equal, use the manual pages instead of re-paginating
       if (Math.abs(editorText.length - manualCombinedText.length) < 25) {
         setPaginatedPages(restoredPages);
         return;
@@ -183,6 +185,7 @@ function CreateLectureSheetContent() {
       container.style.fontSize = globalFontSize + 'pt';
       container.style.lineHeight = String(globalLineHeight);
       
+      // Clear container and measure content lines
       const tempLines = contentHtml.split('\n');
       const lineHtml = tempLines.map(line => `<div class="measure-line" style="min-height: 1.2em;">${line.trim() || '&nbsp;'}</div>`).join('');
       container.innerHTML = lineHtml;
@@ -217,6 +220,7 @@ function CreateLectureSheetContent() {
       const pagesToRender = newPages.length > 0 ? newPages : [""];
       setPaginatedPages(pagesToRender);
       
+      // Initialize styles for new pages if they don't exist
       const initialStyles: Record<number, any> = {};
       const initialManual: Record<number, string> = {};
       pagesToRender.forEach((p, i) => {
@@ -248,7 +252,7 @@ function CreateLectureSheetContent() {
         span.appendChild(range.extractContents());
         range.insertNode(span);
         
-        // Ensure continuous selection for repetitive shortcuts
+        // Restore selection to allow continuous adjustment
         const newRange = document.createRange();
         newRange.selectNodeContents(span);
         selection.removeAllRanges();
@@ -288,17 +292,14 @@ function CreateLectureSheetContent() {
     const hasSelection = selection && selection.rangeCount > 0 && !selection.isCollapsed;
     
     if (hasSelection) {
-      // Robust calculation of current size from selection
+      // Get current size to increment
       let currentSize = 12;
       const range = selection.getRangeAt(0);
-      const parent = range.commonAncestorContainer;
-      const element = parent.nodeType === 1 ? (parent as HTMLElement) : parent.parentElement;
-      if (element) {
-        const styleSize = window.getComputedStyle(element).fontSize;
-        const match = styleSize.match(/(\d+(\.\d+)?)/);
-        if (match) {
-          currentSize = Math.round(parseFloat(match[0]) * 0.75);
-        }
+      const parent = range.commonAncestorContainer.parentElement;
+      if (parent) {
+        const styleSize = window.getComputedStyle(parent).fontSize;
+        const match = styleSize.match(/(\d+)/);
+        if (match) currentSize = Math.round(parseInt(match[0]) * 0.75);
       }
       const newSize = Math.max(1, currentSize + delta);
       handleFormatting('fontSize', newSize.toString());
@@ -316,6 +317,7 @@ function CreateLectureSheetContent() {
     let updatedFullContent = data.content;
     let updatedManualPages = { ...manualPages };
 
+    // Important: Capture EXACT current state from DOM if in print mode to prevent data reversion
     if (isPrintMode) {
       const papers = document.querySelectorAll('.paper');
       const tempManual: Record<number, string> = {};
@@ -349,6 +351,7 @@ function CreateLectureSheetContent() {
     setDoc(ref, payload, { merge: true })
       .then(() => { 
         setSaving(false); 
+        // Synchronize local state immediately to ensure UI is stable
         setManualPages(updatedManualPages);
         setData(prev => ({ ...prev, content: updatedFullContent }));
         setPaginatedPages(Object.keys(updatedManualPages).map(Number).sort((a, b) => a - b).map(i => updatedManualPages[i]));
@@ -427,6 +430,7 @@ function CreateLectureSheetContent() {
     const newPaginated = paginatedPages.filter((_, i) => i !== idx);
     setPaginatedPages(newPaginated);
     
+    // Remap manual pages and styles to match new indices
     const nextManual: Record<number, string> = {};
     const nextStyles: Record<number, any> = {};
 
