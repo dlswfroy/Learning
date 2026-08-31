@@ -316,14 +316,16 @@ export default function SettingsPage() {
     setSheetUploadProgress(0);
 
     try {
-      const storagePath = `pdf-sheets/${sheetClassId}/${sheetSubject}/${sheetFile.name}`;
+      // Optimized upload path
+      const timestamp = Date.now();
+      const storagePath = `pdf-sheets/${sheetClassId}/${sheetSubject}/${timestamp}_${sheetFile.name}`;
       const storageRef = ref(storage, storagePath);
       const uploadTask = uploadBytesResumable(storageRef, sheetFile);
 
       uploadTask.on('state_changed', 
         (snapshot) => {
           const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          setSheetUploadProgress(progress);
+          setSheetUploadProgress(Math.floor(progress));
         }, 
         (error) => {
           toast({ variant: "destructive", title: "আপলোড ব্যর্থ", description: error.message });
@@ -530,7 +532,7 @@ export default function SettingsPage() {
                   <CardTitle className="text-lg flex items-center gap-2 font-bold text-indigo-700">
                     <FileType className="w-5 h-5" /> পিডিএফ সিট আপলোড
                   </CardTitle>
-                  <CardDescription className="font-bold">লেকচার সিট, সৃজনশীল প্রশ্ন, এমসিকিউ বা মডেল টেস্ট পিডিএফ আপলোড করুন।</CardDescription>
+                  <CardDescription className="font-bold">লেকচার শিট, সৃজনশীল প্রশ্ন, এমসিকিউ বা মডেল টেস্ট পিডিএফ আপলোড করুন।</CardDescription>
                 </CardHeader>
                 <CardContent className="p-4 space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -596,7 +598,7 @@ export default function SettingsPage() {
                     <div className="space-y-2">
                       <div className="flex justify-between text-[10px] font-bold">
                         <span>আপলোড হচ্ছে...</span>
-                        <span>{Math.round(sheetUploadProgress)}%</span>
+                        <span>{sheetUploadProgress}%</span>
                       </div>
                       <Progress value={sheetUploadProgress} className="h-2" />
                     </div>

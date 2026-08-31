@@ -27,12 +27,13 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 
 function formatMath(text: string) {
   if (!text) return '';
+  // Clean up formatting artifacts and improve scientific unit handling
   let formatted = text.replace(/#+\s*\**|\*\*/g, '');
   
-  // Clean up broken scientific units and powers from OCR/Input (e.g. g=9.8 ms newline -2)
+  // Fix scientific units like g=9.8 ms^-2 from OCR errors
   formatted = formatted.replace(/([a-zA-Z])\s*\n\s*([-+]?\d+)/g, '$1^$2');
   formatted = formatted.replace(/ms\s*\n\s*-2/g, 'ms^-2');
-  formatted = formatted.replace(/−/g, '-'); // Replace unicode minus for consistent parsing
+  formatted = formatted.replace(/−/g, '-'); 
   
   formatted = formatted.replace(/\$|\\\(|\\\)|\\\[|\\\]/g, '');
   formatted = formatted.replace(/\n\s*\n\s*\n+/g, '\n\n');
@@ -46,7 +47,6 @@ function formatMath(text: string) {
   formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
   formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>');
   
-  // Improved power/superscript/subscript handling for physics/math
   formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/\^([-+]?\d+|[a-zA-Z])/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
@@ -82,7 +82,7 @@ async function processWatermarkImage(file: File): Promise<string> {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const maxSide = 800; // Optimized size
+        const maxSide = 800;
         let width = img.width;
         let height = img.height;
         if (width > height) { if (width > maxSide) { height *= maxSide / width; width = maxSide; } }
@@ -91,7 +91,7 @@ async function processWatermarkImage(file: File): Promise<string> {
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.6)); // Balanced quality for DB size
+        resolve(canvas.toDataURL('image/jpeg', 0.6));
       };
       img.onerror = reject;
       img.src = e.target?.result as string;
@@ -128,17 +128,6 @@ function CreateLectureSheetContent() {
     type: 'lecture_sheet'
   });
 
-  useEffect(() => {
-    if (!editId) {
-      const classIdParam = searchParams.get('classId');
-      const subjectParam = searchParams.get('subject');
-      const topicParam = searchParams.get('topic');
-      if (classIdParam || subjectParam || topicParam) {
-        setData(prev => ({ ...prev, classId: classIdParam || prev.classId, subject: subjectParam || prev.subject, topic: topicParam || prev.topic }));
-      }
-    }
-  }, [searchParams, editId]);
-
   const [printSettings, setPrintSettings] = useState<any>({
     marginTop: 0.5, marginBottom: 0.5, marginLeft: 0.5, marginRight: 0.5,
     watermarkOpacity: 10, watermarkText: '', watermarkFontSize: 80, watermarkRotation: -45,
@@ -153,6 +142,17 @@ function CreateLectureSheetContent() {
   const [globalLineHeight, setGlobalLineHeight] = useState(1.2);
   const [fontSizeDraft, setFontSizeDraft] = useState("");
   const [lineHeightDraft, setLineHeightDraft] = useState("");
+
+  useEffect(() => {
+    if (!editId) {
+      const classIdParam = searchParams.get('classId');
+      const subjectParam = searchParams.get('subject');
+      const topicParam = searchParams.get('topic');
+      if (classIdParam || subjectParam || topicParam) {
+        setData(prev => ({ ...prev, classId: classIdParam || prev.classId, subject: subjectParam || prev.subject, topic: topicParam || prev.topic }));
+      }
+    }
+  }, [searchParams, editId]);
 
   useEffect(() => { if (!userLoading && !user) router.push('/auth'); }, [user, userLoading, router]);
   
@@ -192,6 +192,7 @@ function CreateLectureSheetContent() {
     } else { setFontSizeDraft(String(globalFontSize)); setLineHeightDraft(String(globalLineHeight)); }
   }, [activeEditIdx, globalFontSize, globalLineHeight, pageStyles]);
 
+  // Pagination and Measure logic
   useEffect(() => {
     if (!isPrintMode) return;
     if (Object.keys(manualPages).length > 0) {
@@ -202,14 +203,14 @@ function CreateLectureSheetContent() {
     if (data.content && measurementRef.current) {
       const container = measurementRef.current;
       const contentHtml = formatMath(data.content);
-      const mT = parseFloat(String(printSettings.marginTop)) || 0.5, mB = parseFloat(String(printSettings.marginBottom)) || 0.5, mL = parseFloat(String(printSettings.marginLeft)) || 0.5, mR = parseFloat(String(printSettings.marginRight)) || 0.5;
+      const mT = parseFloat(String(printSettings.marginTop)) || 0.5, mL = parseFloat(String(printSettings.marginLeft)) || 0.5, mR = parseFloat(String(printSettings.marginRight)) || 0.5;
       container.style.width = (8.27 - mL - mR) + 'in';
       container.style.fontSize = globalFontSize + 'pt';
       container.style.lineHeight = String(globalLineHeight);
       const tempLines = contentHtml.split('\n');
       container.innerHTML = tempLines.map(line => `<div class="measure-line" style="min-height: 1.2em;">${line.trim() || '&nbsp;'}</div>`).join('');
       const headerSpace = 135, footerSpace = 65, topicSpacePx = 65, totalPageHeightPx = 11.69 * 96;
-      const availableHeightPx = totalPageHeightPx - (mT * 96) - (mB * 96) - headerSpace - footerSpace;
+      const availableHeightPx = totalPageHeightPx - (mT * 96) - (parseFloat(printSettings.marginBottom) * 96) - headerSpace - footerSpace;
       const newPages: string[] = [];
       let currentChunk = "", currentHeight = 0;
       const lines = container.querySelectorAll('.measure-line');
@@ -223,7 +224,10 @@ function CreateLectureSheetContent() {
       const pagesToRender = newPages.length > 0 ? newPages : [""];
       setPaginatedPages(pagesToRender);
       const initialStyles: Record<number, any> = {}, initialManual: Record<number, string> = {};
-      pagesToRender.forEach((p, i) => { initialStyles[i] = pageStyles[i] || { fontSize: globalFontSize, lineHeight: globalLineHeight, bold: false, italic: false, underline: false, color: '#000000', align: 'justify', mT, mB, mL, mR }; initialManual[i] = p; });
+      pagesToRender.forEach((p, i) => { 
+        initialStyles[i] = pageStyles[i] || { fontSize: globalFontSize, lineHeight: globalLineHeight, bold: false, italic: false, underline: false, color: '#000000', align: 'justify', mT, mB: printSettings.marginBottom, mL, mR }; 
+        initialManual[i] = p; 
+      });
       setPageStyles(initialStyles); setManualPages(initialManual);
     }
   }, [isPrintMode, data.content, printSettings, globalFontSize, globalLineHeight, manualPages, pageStyles]);
@@ -250,15 +254,11 @@ function CreateLectureSheetContent() {
         try {
           span.appendChild(range.extractContents()); 
           range.insertNode(span);
-          
-          // Re-select for repeat use
           const newRange = document.createRange();
           newRange.selectNodeContents(span);
           selection.removeAllRanges();
           selection.addRange(newRange);
-        } catch (e) {
-          document.execCommand('fontSize', false, '3');
-        }
+        } catch (e) { document.execCommand('fontSize', false, '3'); }
       }
       else document.execCommand(command, false, value || '');
     } else if (activeEditIdx !== null) {
@@ -300,7 +300,6 @@ function CreateLectureSheetContent() {
     const docId = editId || doc(collection(db, 'lecture-sheets')).id;
     const ref = doc(db, 'lecture-sheets', docId);
     
-    // Ownership bypass as requested - any active user can save
     const payload: any = { 
       ...data, 
       content: updatedFullContent, 
@@ -327,12 +326,13 @@ function CreateLectureSheetContent() {
     });
   }, [user, db, editId, data, printSettings, pageStyles, manualPages, router, toast, isPrintMode]);
 
+  // Shortcut key handling
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => { 
       if ((e.ctrlKey || e.metaKey)) { 
         const key = e.key.toLowerCase();
-        if (['s', 'n', 'd', 'l', 'e', 'r', '[', ']', 'x'].includes(key)) {
-          if (key === 'x') return; // Let browser handle native cut
+        if (['s', 'n', 'd', 'l', 'e', 'r', '[', ']', 'x', 'z', 'y'].includes(key)) {
+          if (key === 'x' || key === 'z' || key === 'y') return; 
           e.preventDefault();
           if (key === 's') handleSave();
           else if (key === 'n') setPaginatedPages(prev => [...prev, ""]);
@@ -347,11 +347,7 @@ function CreateLectureSheetContent() {
             if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
               const parent = selection.anchorNode?.parentElement;
               let currentSize = 10.5;
-              if (parent) {
-                const style = window.getComputedStyle(parent);
-                // Convert px back to pt accurately (1pt = 1.333px)
-                currentSize = (parseFloat(style.fontSize) * 0.75) || 10.5;
-              }
+              if (parent) { currentSize = (parseFloat(window.getComputedStyle(parent).fontSize) * 0.75) || 10.5; }
               handleFormatting('fontSize', Math.max(1, currentSize - 0.5).toString());
             } else if (activeEditIdx !== null) {
               const currentSize = pageStyles[activeEditIdx]?.fontSize || globalFontSize || 10.5;
@@ -365,10 +361,7 @@ function CreateLectureSheetContent() {
             if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
               const parent = selection.anchorNode?.parentElement;
               let currentSize = 10.5;
-              if (parent) {
-                const style = window.getComputedStyle(parent);
-                currentSize = (parseFloat(style.fontSize) * 0.75) || 10.5;
-              }
+              if (parent) { currentSize = (parseFloat(window.getComputedStyle(parent).fontSize) * 0.75) || 10.5; }
               handleFormatting('fontSize', Math.min(100, currentSize + 0.5).toString());
             } else if (activeEditIdx !== null) {
               const currentSize = pageStyles[activeEditIdx]?.fontSize || globalFontSize || 10.5;
