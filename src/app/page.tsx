@@ -120,7 +120,7 @@ export default function Home() {
       <section>
         <div className="flex items-center justify-between mb-6 border-b-2 border-primary/10 pb-2">
           <h3 className="text-lg font-black text-foreground flex items-center gap-2">
-            <GraduationCap className="w-5 h-5 text-primary" />
+            <GraduationCap className="w-4 h-4 md:w-5 md:h-5 text-primary" />
             শ্রেণি নির্বাচন করুন
           </h3>
         </div>
@@ -130,7 +130,7 @@ export default function Home() {
               <Card className="hover:border-primary hover:shadow-xl transition-all group overflow-hidden border-2 shadow-sm bg-white">
                 <CardContent className="p-4 flex flex-col items-center text-center space-y-2">
                   <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all shadow-inner">
-                    <GraduationCap className="w-5 h-5" />
+                    <GraduationCap className="w-4 h-4 md:w-5 md:h-5" />
                   </div>
                   <div>
                     <p className="font-black text-base group-hover:text-primary transition-colors">{cls.label} শ্রেণি</p>
