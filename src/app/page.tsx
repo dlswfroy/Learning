@@ -83,32 +83,42 @@ function formatChapterDisplay(name: string): string {
   return cleanName.split(/[\s:]/)[0] || cleanName;
 }
 
-function normalizeForSort(name: string): number {
-  if (!name) return 999;
-  const bnToEn: Record<string, string> = { '০':'0', '১':'1', '২':'2', '৩':'3', '৪':'4', '৫':'5', '৬':'6', '৭':'7', '৮':'8', '৯':'9' };
-  const n = name.toString().replace(/[০-৯]/g, m => bnToEn[m]);
-  const match = n.match(/\d+/);
-  if (match) return parseInt(match[0]);
-  
-  const wordMap: Record<string, number> = {
-    'প্রথম': 1, 'দ্বিতীয়': 2, 'তৃতীয়': 3, 'চতুর্থ': 4, 'পঞ্চম': 5,
-    'ষষ্ঠ': 6, 'সপ্তম': 7, 'অষ্টম': 8, 'নবম': 9, 'দশম': 10,
-    'একাদশ': 11, 'দ্বাদশ': 12, 'ত্রয়োদশ': 13, 'চতুর্দশ': 14, 'পঞ্চদশ': 15
-  };
-  for (const [word, val] of Object.entries(wordMap)) {
-    if (name.includes(word)) return val;
-  }
-  return 999;
-}
-
 function getNormalizedKey(name: string): string {
-  if (!name) return 'general';
+  if (!name) return '999';
+  let n = name.toString().toLowerCase().trim();
   const bnToEn: Record<string, string> = { '০':'0', '১':'1', '২':'2', '৩':'3', '৪':'4', '৫':'5', '৬':'6', '৭':'7', '৮':'8', '৯':'9' };
-  let n = name.toString().toLowerCase().trim().replace(/[০-৯]/g, m => bnToEn[m]);
-  const wordMap: Record<string, string> = { 'প্রথম': '1', 'দ্বিতীয়': '2', 'তৃতীয়': '3', 'চতুর্থ': '4', 'পঞ্চম': '5', 'ষষ্ঠ': '6', 'সপ্তম': '7', 'অষ্টম': '8', 'নবম': '9', 'দশম': '10' };
-  for (const [word, digit] of Object.entries(wordMap)) { if (n.includes(word)) return digit; }
+  n = n.replace(/[০-৯]/g, m => bnToEn[m]);
+  
+  const wordMap: Record<string, string> = {
+    'প্রথম': '1', '১ম': '1', '১': '1',
+    'দ্বিতীয়': '2', '২য়': '2', '২': '2',
+    'তৃতীয়': '3', '৩য়': '3', '৩': '3',
+    'চতুর্থ': '4', '৪র্থ': '4', '৪': '4',
+    'পঞ্চম': '5', '৫ম': '5', '৫': '5',
+    'ষষ্ঠ': '6', '৬ষ্ঠ': '6', '৬': '6',
+    'সপ্তম': '7', '৭ম': '7', '৭': '7',
+    'অষ্টম': '8', '৮ম': '8', '৮': '8',
+    'নবম': '9', '৯ম': '9', '৯': '9',
+    'দশম': '10', '১০ম': '10', '১০': '10',
+    'একাদশ': '11', '১১': '11', '১১শ': '11',
+    'দ্বাদশ': '12', '১২': '12', '১২শ': '12',
+    'ত্রয়োদশ': '13', '১৩': '13', '১৩শ': '13',
+    'চতুর্দশ': '14', '১৪': '14', '১৪শ': '14',
+    'পঞ্চদশ': '15', '১৫': '15', '১৫শ': '15'
+  };
+
+  for (const [word, val] of Object.entries(wordMap)) {
+    if (n.includes(word)) return val;
+  }
+
   const match = n.match(/\d+/);
   return match ? match[0] : n;
+}
+
+function normalizeForSort(name: string): number {
+  const norm = getNormalizedKey(name);
+  const num = parseInt(norm);
+  return isNaN(num) ? 998 : num;
 }
 
 export default function Home() {
@@ -199,7 +209,7 @@ export default function Home() {
             
             const predefined = getChaptersForSubject(cls.id, selectedSubject);
             
-            // Advanced deduplication by normalized key
+            // Precise deduplication by normalized key
             const chapterMap = new Map();
             [...predefined, ...Object.keys(classChapters)].forEach(name => {
               const key = getNormalizedKey(name);
@@ -232,7 +242,7 @@ export default function Home() {
                                 <SelectTrigger className="h-7 text-[10px] font-black border-black bg-white">
                                   <SelectValue placeholder="বিষয়" />
                                 </SelectTrigger>
-                                <SelectContent className="font-kalpurush">
+                                <SelectContent className="font-kalpurush border-2 border-black">
                                   {allSubjects.map(sub => (
                                     <SelectItem key={sub} value={sub} className="text-[11px] font-bold">{sub}</SelectItem>
                                   ))}
@@ -312,7 +322,7 @@ export default function Home() {
         <Link href="/create-question">
           <Card className={cn(glassClass, "bg-blue-500/10 overflow-hidden group hover:scale-105 transition-all border-l-4 border-l-blue-600 h-full")}>
             <CardHeader className="p-1">
-              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-blue-600 flex items-center justify-center text-white mb-1 shadow-md group-hover:rotate-12 transition-transform">
+              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-blue-600 flex items-center justify-center text-white mb-1 shadow-md group-hover:rotate-12 transition-transform border border-white/20">
                 <BrainCircuit className="w-4 h-4 md:w-5 md:h-5" />
               </div>
               <CardTitle className="text-blue-900 font-black text-[10px] md:text-[12px] leading-tight">প্রশ্ন ব্যাংক</CardTitle>
@@ -326,7 +336,7 @@ export default function Home() {
         <Link href="/create-lecture-sheet">
           <Card className={cn(glassClass, "bg-orange-500/10 overflow-hidden group hover:scale-105 transition-all border-l-4 border-l-orange-600 h-full")}>
             <CardHeader className="p-1">
-              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-orange-500 flex items-center justify-center text-white mb-1 shadow-md group-hover:rotate-12 transition-transform">
+              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-orange-500 flex items-center justify-center text-white mb-1 shadow-md group-hover:rotate-12 transition-transform border border-white/20">
                 <BookOpen className="w-4 h-4 md:w-5 md:h-5" />
               </div>
               <CardTitle className="text-orange-900 font-black text-[10px] md:text-[12px] leading-tight">লেকচার শিট</CardTitle>
@@ -340,7 +350,7 @@ export default function Home() {
         <Link href="/diary">
           <Card className={cn(glassClass, "bg-indigo-500/10 overflow-hidden group hover:scale-105 transition-all border-l-4 border-l-indigo-600 h-full")}>
             <CardHeader className="p-1">
-              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-indigo-600 flex items-center justify-center text-white mb-1 shadow-md group-hover:rotate-12 transition-transform">
+              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-indigo-600 flex items-center justify-center text-white mb-1 shadow-md group-hover:rotate-12 transition-transform border border-white/20">
                 <NotebookPen className="w-4 h-4 md:w-5 md:h-5" />
               </div>
               <CardTitle className="text-indigo-900 font-black text-[10px] md:text-[12px] leading-tight">টিচার্স ডায়েরি</CardTitle>
@@ -354,7 +364,7 @@ export default function Home() {
         <Link href="/students">
           <Card className={cn(glassClass, "bg-green-500/10 overflow-hidden group hover:scale-105 transition-all border-l-4 border-l-green-600 h-full")}>
             <CardHeader className="p-1">
-              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-green-600 flex items-center justify-center text-white mb-1 shadow-md group-hover:rotate-12 transition-transform">
+              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-green-600 flex items-center justify-center text-white mb-1 shadow-md group-hover:rotate-12 transition-transform border border-white/20">
                 <Users className="w-4 h-4 md:w-5 md:h-5" />
               </div>
               <CardTitle className="text-green-900 font-black text-[10px] md:text-[12px] leading-tight">শিক্ষার্থী</CardTitle>
@@ -368,7 +378,7 @@ export default function Home() {
         <Link href="/settings?tab=sheets">
           <Card className={cn(glassClass, "bg-rose-500/10 overflow-hidden group hover:scale-105 transition-all border-l-4 border-l-rose-600 h-full")}>
             <CardHeader className="p-1">
-              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-rose-600 flex items-center justify-center text-white mb-1 shadow-md group-hover:rotate-12 transition-transform">
+              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-rose-600 flex items-center justify-center text-white mb-1 shadow-md group-hover:rotate-12 transition-transform border border-white/20">
                 <FileUp className="w-4 h-4 md:w-5 md:h-5" />
               </div>
               <CardTitle className="text-rose-900 font-black text-[10px] md:text-[12px] leading-tight">কুইক আপলোড</CardTitle>
@@ -382,7 +392,7 @@ export default function Home() {
         <Link href="/my-questions">
           <Card className={cn(glassClass, "bg-cyan-500/10 overflow-hidden group hover:scale-105 transition-all border-l-4 border-l-cyan-600 h-full")}>
             <CardHeader className="p-1">
-              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-cyan-500 flex items-center justify-center text-white mb-1 shadow-md group-hover:rotate-12 transition-transform">
+              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-cyan-500 flex items-center justify-center text-white mb-1 shadow-md group-hover:rotate-12 transition-transform border border-white/20">
                 <Library className="w-4 h-4 md:w-5 md:h-5" />
               </div>
               <CardTitle className="text-cyan-900 font-black text-[10px] md:text-[12px] leading-tight">আমার লাইব্রেরি</CardTitle>
