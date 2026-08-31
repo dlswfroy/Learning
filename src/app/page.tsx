@@ -19,7 +19,7 @@ import {
   LayoutGrid,
   FileText
 } from 'lucide-react';
-import { CLASSES, getSubjectsForClass } from '@/lib/constants';
+import { CLASSES, getSubjectsForClass, getChaptersForSubject } from '@/lib/constants';
 import { collection } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -131,9 +131,12 @@ export default function Home() {
             const allSubjects = getSubjectsForClass(cls.id);
             const selectedSubject = selectedSubjects[cls.id] || allSubjects[0];
             const classChapters = stats.classData[cls.id]?.[selectedSubject] || {};
-            const chapterNames = Object.keys(classChapters).sort();
             
-            // Show all chapters by chunking into smaller rows for readability within the same board
+            // Get all predefined chapters and merge with any found in DB
+            const predefined = getChaptersForSubject(cls.id, selectedSubject);
+            const chapterNames = Array.from(new Set([...predefined, ...Object.keys(classChapters)])).sort();
+            
+            // Show all chapters by chunking into smaller rows for readability
             const chapterChunks = chunkArray(chapterNames, 8); 
 
             return (
@@ -176,7 +179,7 @@ export default function Home() {
                             <td className="border-r-2 border-black p-1 text-center font-black text-[11px]">লেকচার শিট</td>
                             {chunk.map(ch => (
                               <td key={ch} className="border-r-2 border-black p-1 text-center font-black text-[13px] drop-shadow-md">
-                                {toBengaliNumber(classChapters[ch].lectureSheet)}
+                                {toBengaliNumber(classChapters[ch]?.lectureSheet || 0)}
                               </td>
                             ))}
                           </tr>
@@ -186,7 +189,7 @@ export default function Home() {
                             <td className="border-r-2 border-black p-1 text-center font-black text-[11px]">সৃজনশীল</td>
                             {chunk.map(ch => (
                               <td key={ch} className="border-r-2 border-black p-1 text-center font-black text-[13px] drop-shadow-md">
-                                {toBengaliNumber(classChapters[ch].creative)}
+                                {toBengaliNumber(classChapters[ch]?.creative || 0)}
                               </td>
                             ))}
                           </tr>
@@ -196,7 +199,7 @@ export default function Home() {
                             <td className="border-r-2 border-black p-1 text-center font-black text-[11px]">বহুনির্বাচনী</td>
                             {chunk.map(ch => (
                               <td key={ch} className="border-r-2 border-black p-1 text-center font-black text-[13px] drop-shadow-md">
-                                {toBengaliNumber(classChapters[ch].mcq)}
+                                {toBengaliNumber(classChapters[ch]?.mcq || 0)}
                               </td>
                             ))}
                           </tr>
@@ -206,7 +209,7 @@ export default function Home() {
                             <td className="border-r-2 border-black p-1 text-center font-black text-[11px]">উত্তরমালা</td>
                             {chunk.map(ch => (
                               <td key={ch} className="border-r-2 border-black p-1 text-center font-black text-[13px] drop-shadow-md">
-                                {toBengaliNumber(classChapters[ch].answerKey)}
+                                {toBengaliNumber(classChapters[ch]?.answerKey || 0)}
                               </td>
                             ))}
                           </tr>
@@ -216,7 +219,7 @@ export default function Home() {
                             <td className="border-r-2 border-black p-1 text-center font-black text-[11px]">মডেল টেস্ট</td>
                             {chunk.map(ch => (
                               <td key={ch} className="border-r-2 border-black p-1 text-center font-black text-[13px] drop-shadow-md">
-                                {toBengaliNumber(classChapters[ch].modelTest)}
+                                {toBengaliNumber(classChapters[ch]?.modelTest || 0)}
                               </td>
                             ))}
                           </tr>
@@ -359,4 +362,3 @@ export default function Home() {
     </div>
   );
 }
-
