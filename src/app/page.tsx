@@ -53,7 +53,6 @@ const BENGALI_ORDINALS = [
 
 /**
  * Normalized key for robust data mapping.
- * Ensures "1", "১ম অধ্যায়", "প্রথম" all point to "1".
  */
 function getNormalizedKey(name: string): string {
   if (!name) return 'general';
@@ -171,7 +170,6 @@ export default function Home() {
 
   return (
     <div className="space-y-12 animate-fade-in font-kalpurush">
-      {/* 1. Dashboard Cards - Moved to Top */}
       <section className="grid grid-cols-4 lg:grid-cols-6 gap-1.5 md:gap-2">
         <Link href="/create-question">
           <Card className={cn(glassClass, "bg-blue-500/10 overflow-hidden group hover:scale-105 transition-all border-l-4 border-l-blue-600 h-full")}>
@@ -258,7 +256,6 @@ export default function Home() {
         </Link>
       </section>
 
-      {/* 2. Class Selection Section - Moved after Dashboard cards */}
       <section>
         <div className="flex items-center justify-between mb-6 border-b-2 border-black pb-2">
           <h3 className="text-lg font-black text-foreground flex items-center gap-2">
@@ -287,7 +284,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 3. Live Board Section - Moved to Bottom */}
       <section className="space-y-8">
         <div className="flex items-center justify-between border-b-2 border-black pb-2">
           <div className="flex items-center gap-2">
@@ -307,7 +303,6 @@ export default function Home() {
             
             const predefined = getChaptersForSubject(cls.id, selectedSubject);
             
-            // Deduplicate chapters by normalized key for the board
             const chapterMap = new Map();
             [...predefined, ...Object.keys(classChaptersStats)].forEach(name => {
               const key = getNormalizedKey(name);
@@ -359,7 +354,12 @@ export default function Home() {
                             <td className="border-r-2 border-black p-1 text-center font-black text-[10px] text-blue-900">লেকচার শিট</td>
                             {chunk.map(ch => (
                               <td key={ch.key} className="border-r-2 border-black p-1 text-center font-black text-[12px]">
-                                {toBengaliNumber(classChaptersStats[ch.key]?.lectureSheet || 0)}
+                                <Link 
+                                  href={`/my-questions?classId=${cls.id}&subject=${encodeURIComponent(selectedSubject)}&chapter=${encodeURIComponent(ch.display)}&category=sheet`}
+                                  className="hover:text-blue-600 hover:underline transition-all"
+                                >
+                                  {toBengaliNumber(classChaptersStats[ch.key]?.lectureSheet || 0)}
+                                </Link>
                               </td>
                             ))}
                           </tr>
@@ -368,7 +368,12 @@ export default function Home() {
                             <td className="border-r-2 border-black p-1 text-center font-black text-[10px] text-orange-900">সৃজনশীল</td>
                             {chunk.map(ch => (
                               <td key={ch.key} className="border-r-2 border-black p-1 text-center font-black text-[12px]">
-                                {toBengaliNumber(classChaptersStats[ch.key]?.creative || 0)}
+                                <Link 
+                                  href={`/my-questions?classId=${cls.id}&subject=${encodeURIComponent(selectedSubject)}&chapter=${encodeURIComponent(ch.display)}&category=creative`}
+                                  className="hover:text-orange-600 hover:underline transition-all"
+                                >
+                                  {toBengaliNumber(classChaptersStats[ch.key]?.creative || 0)}
+                                </Link>
                               </td>
                             ))}
                           </tr>
@@ -377,7 +382,12 @@ export default function Home() {
                             <td className="border-r-2 border-black p-1 text-center font-black text-[10px] text-indigo-900">বহুনির্বাচনী</td>
                             {chunk.map(ch => (
                               <td key={ch.key} className="border-r-2 border-black p-1 text-center font-black text-[12px]">
-                                {toBengaliNumber(classChaptersStats[ch.key]?.mcq || 0)}
+                                <Link 
+                                  href={`/my-questions?classId=${cls.id}&subject=${encodeURIComponent(selectedSubject)}&chapter=${encodeURIComponent(ch.display)}&category=mcq`}
+                                  className="hover:text-indigo-600 hover:underline transition-all"
+                                >
+                                  {toBengaliNumber(classChaptersStats[ch.key]?.mcq || 0)}
+                                </Link>
                               </td>
                             ))}
                           </tr>
@@ -386,7 +396,12 @@ export default function Home() {
                             <td className="border-r-2 border-black p-1 text-center font-black text-[10px] text-green-900">উত্তরমালা</td>
                             {chunk.map(ch => (
                               <td key={ch.key} className="border-r-2 border-black p-1 text-center font-black text-[12px]">
-                                {toBengaliNumber(classChaptersStats[ch.key]?.answerKey || 0)}
+                                <Link 
+                                  href={`/my-questions?classId=${cls.id}&subject=${encodeURIComponent(selectedSubject)}&chapter=${encodeURIComponent(ch.display)}&category=answer`}
+                                  className="hover:text-green-600 hover:underline transition-all"
+                                >
+                                  {toBengaliNumber(classChaptersStats[ch.key]?.answerKey || 0)}
+                                </Link>
                               </td>
                             ))}
                           </tr>
@@ -395,7 +410,12 @@ export default function Home() {
                             <td className="border-r-2 border-black p-1 text-center font-black text-[10px] text-rose-900">মডেল টেস্ট</td>
                             {chunk.map(ch => (
                               <td key={ch.key} className="border-r-2 border-black p-1 text-center font-black text-[12px]">
-                                {toBengaliNumber(classChaptersStats[ch.key]?.modelTest || 0)}
+                                <Link 
+                                  href={`/my-questions?classId=${cls.id}&subject=${encodeURIComponent(selectedSubject)}&chapter=${encodeURIComponent(ch.display)}&category=model`}
+                                  className="hover:text-rose-600 hover:underline transition-all"
+                                >
+                                  {toBengaliNumber(classChaptersStats[ch.key]?.modelTest || 0)}
+                                </Link>
                               </td>
                             ))}
                           </tr>

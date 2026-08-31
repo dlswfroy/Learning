@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, Suspense } from 'react';
 import { useFirestore, useUser, useCollection } from '@/firebase';
 import { collection, query, where, deleteDoc, doc, getDocs } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -49,7 +49,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
 import { CLASSES, getSubjectsForClass, getChaptersForSubject } from '@/lib/constants';
@@ -104,10 +104,11 @@ function getChapterSortValue(name: string): number {
 type ViewMode = 'classes' | 'subjects' | 'chapters' | 'content';
 type Category = 'all' | 'sheet' | 'creative' | 'mcq' | 'model' | 'answer';
 
-export default function MyLibraryPage() {
+function MyLibraryContent() {
   const db = useFirestore();
   const { user, loading: userLoading } = useUser();
   const router = useRouter();
+  const searchParams = useSearchParams();
   
   const [viewMode, setViewMode] = useState<ViewMode>('classes');
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
@@ -120,6 +121,22 @@ export default function MyLibraryPage() {
   const [merging, setMerging] = useState(false);
 
   useEffect(() => { if (!userLoading && !user) router.push('/auth'); }, [user, userLoading, router]);
+
+  // Handle URL navigation parameters
+  useEffect(() => {
+    const cid = searchParams.get('classId');
+    const sub = searchParams.get('subject');
+    const ch = searchParams.get('chapter');
+    const cat = searchParams.get('category');
+
+    if (cid && sub && ch && cat) {
+      setSelectedClass(cid);
+      setSelectedSubject(sub);
+      setSelectedChapter(ch);
+      setActiveCategory(cat as any);
+      setViewMode('content');
+    }
+  }, [searchParams]);
 
   const questionsQuery = useMemo(() => db && user ? query(collection(db, 'questions'), where('userId', '==', user.uid)) : null, [db, user]);
   const sheetsQuery = useMemo(() => db && user ? query(collection(db, 'lecture-sheets'), where('userId', '==', user.uid)) : null, [db, user]);
@@ -155,30 +172,23 @@ export default function MyLibraryPage() {
        ...libraryData.pdfSheets.filter(p => p.classId === selectedClass && p.subject === selectedSubject)
     ];
     const dbChapters = itemsInSubj.map(i => (i as any).chapter || (i as any).topic || (i as any).chapterName).filter(Boolean) as string[];
-    
-    // Advanced deduplication by normalized key
     const chapterMap = new Map<string, string>();
-    
     [...predefinedList, ...dbChapters].forEach(name => {
       const key = getNormalizedChapterKey(name);
-      // Prefer names from syllabus for better display
       if (!chapterMap.has(key) || (predefinedList.includes(name) && !predefinedList.includes(chapterMap.get(key)!))) {
         chapterMap.set(key, name);
       }
     });
-
     const sortedChapters = Array.from(chapterMap.values()).sort((a, b) => {
       const valA = getChapterSortValue(a);
       const valB = getChapterSortValue(b);
       if (valA !== valB) return valA - valB;
       return a.localeCompare(b, 'bn');
     });
-    
     const hasUncategorized = itemsInSubj.some(i => !(i as any).chapter && !(i as any).topic && !(i as any).chapterName);
     if (hasUncategorized && !chapterMap.has('general')) {
       sortedChapters.unshift('সাধারণ অধ্যায়');
     }
-    
     return sortedChapters.length > 0 ? sortedChapters : ['সাধারণ অধ্যায়'];
   }, [selectedClass, selectedSubject, libraryData]);
 
@@ -524,3 +534,11 @@ export default function MyLibraryPage() {
 }
 
 function FilePlus({ className }: { className?: string }) { return <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M9 15h6"/><path d="M12 12v6"/></svg>; }
+
+export default function MyLibraryPage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center p-20"><Loader2 className="animate-spin text-primary" /></div>}>
+      <MyLibraryContent />
+    </Suspense>
+  );
+}
