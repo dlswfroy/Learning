@@ -51,55 +51,23 @@ const BENGALI_ORDINALS = [
   'একাদশ', 'দ্বাদশ', 'ত্রয়োদশ', 'চতুর্দশ', 'পঞ্চদশ', 'ষোড়শ', 'সপ্তদশ', 'অষ্টাদশ', 'ঊনবিংশ', 'বিংশ'
 ];
 
-function formatChapterDisplay(name: string): string {
-  if (!name) return '';
-  const cleanName = name.trim();
-  
-  const bnToEn: Record<string, string> = { '০':'0', '১':'1', '২':'2', '৩':'3', '৪':'4', '৫':'5', '৬':'6', '৭':'7', '৮':'8', '৯':'9' };
-  const n = cleanName.replace(/[০-৯]/g, m => bnToEn[m]);
-  const match = n.match(/\d+/);
-  
-  if (match) {
-    const num = parseInt(match[0]);
-    if (num >= 1 && num <= 20) return BENGALI_ORDINALS[num - 1];
-    return toBengaliNumber(num);
-  }
-
-  const wordMap: Record<string, string> = {
-    'প্রথম': '১ম', 'দ্বিতীয়': '২য়', 'তৃতীয়': '৩য়', 'চতুর্থ': '৪র্থ', 'পঞ্চম': '৫ম',
-    'ষষ্ঠ': '৬ষ্ঠ', 'সপ্তম': '৭ম', 'অষ্টম': '৮ম', 'নবম': '৯ম', 'দশম': '১০ম',
-    'একাদশ': 'একাদশ', 'দ্বাদশ': 'দ্বাদশ', 'ত্রয়োদশ': 'ত্রয়োদশ', 'চতুর্দশ': 'চতুর্দশ'
-  };
-  
-  for (const [word, ordinal] of Object.entries(wordMap)) {
-    if (cleanName.includes(word)) return ordinal;
-  }
-
-  if (cleanName.toLowerCase().startsWith('unit')) {
-    const uNum = n.match(/\d+/);
-    return uNum ? `U${uNum[0]}` : cleanName;
-  }
-
-  return cleanName.split(/[\s:]/)[0] || cleanName;
-}
-
 function getNormalizedKey(name: string): string {
-  if (!name) return '999';
+  if (!name) return 'general';
   let n = name.toString().toLowerCase().trim();
   const bnToEn: Record<string, string> = { '০':'0', '১':'1', '২':'2', '৩':'3', '৪':'4', '৫':'5', '৬':'6', '৭':'7', '৮':'8', '৯':'9' };
   n = n.replace(/[০-৯]/g, m => bnToEn[m]);
   
   const wordMap: Record<string, string> = {
-    'প্রথম': '1', '১ম': '1', '১': '1',
-    'দ্বিতীয়': '2', '২য়': '2', '২': '2',
-    'তৃতীয়': '3', '৩য়': '3', '৩': '3',
-    'চতুর্থ': '4', '৪র্থ': '4', '৪': '4',
-    'পঞ্চম': '5', '৫ম': '5', '৫': '5',
-    'ষষ্ঠ': '6', '৬ষ্ঠ': '6', '৬': '6',
-    'সপ্তম': '7', '৭ম': '7', '৭': '7',
-    'অষ্টম': '8', '৮ম': '8', '৮': '8',
-    'নবম': '9', '৯ম': '9', '৯': '9',
-    'দশম': '10', '১০ম': '10', '১০': '10',
+    'প্রথম': '1', '১ম': '1', '১': '1', '1st': '1',
+    'দ্বিতীয়': '2', '২য়': '2', '২': '2', '2nd': '2',
+    'তৃতীয়': '3', '৩য়': '3', '৩': '3', '3rd': '3',
+    'চতুর্থ': '4', '৪র্থ': '4', '৪': '4', '4th': '4',
+    'পঞ্চম': '5', '৫ম': '5', '৫': '5', '5th': '5',
+    'ষষ্ঠ': '6', '৬ষ্ঠ': '6', '৬': '6', '6th': '6',
+    'সপ্তম': '7', '৭ম': '7', '৭': '7', '7th': '7',
+    'অষ্টম': '8', '৮ম': '8', '৮': '8', '8th': '8',
+    'নবম': '9', '৯ম': '9', '৯': '9', '9th': '9',
+    'দশম': '10', '১০ম': '10', '১০': '10', '10th': '10',
     'একাদশ': '11', '১১': '11', '১১শ': '11',
     'দ্বাদশ': '12', '১২': '12', '১২শ': '12',
     'ত্রয়োদশ': '13', '১৩': '13', '১৩শ': '13',
@@ -113,6 +81,19 @@ function getNormalizedKey(name: string): string {
 
   const match = n.match(/\d+/);
   return match ? match[0] : n;
+}
+
+function formatChapterDisplay(name: string): string {
+  if (!name || name === 'general') return 'সাধারণ';
+  const key = getNormalizedKey(name);
+  const num = parseInt(key);
+  
+  if (!isNaN(num)) {
+    if (num >= 1 && num <= 20) return BENGALI_ORDINALS[num - 1];
+    return toBengaliNumber(num);
+  }
+
+  return name.split(/[\s:]/)[0] || name;
 }
 
 function normalizeForSort(name: string): number {
@@ -139,36 +120,33 @@ export default function Home() {
   const stats = useMemo(() => {
     const classData: Record<string, Record<string, Record<string, any>>> = {};
     CLASSES.forEach(c => { classData[c.id] = {}; });
-    const getChapterName = (item: any) => (item.chapter || item.topic || item.chapterName || 'সাধারণ অধ্যায়').trim();
-
-    allPdfSheets?.forEach(item => {
-      const cid = item.classId; const sub = item.subject; const ch = getChapterName(item);
+    
+    const aggregate = (cid: string, sub: string, chRaw: string, type: string) => {
       if (!classData[cid]) return;
       if (!classData[cid][sub]) classData[cid][sub] = {};
-      if (!classData[cid][sub][ch]) classData[cid][sub][ch] = { creative: 0, lectureSheet: 0, mcq: 0, answerKey: 0, modelTest: 0 };
-      if (item.category === 'creative') classData[cid][sub][ch].creative++;
-      else if (item.category === 'lecture_sheet') classData[cid][sub][ch].lectureSheet++;
-      else if (item.category === 'mcq') classData[cid][sub][ch].mcq++;
-      else if (item.category === 'answer_key') classData[cid][sub][ch].answerKey++;
-      else if (item.category === 'model_test') classData[cid][sub][ch].modelTest++;
+      const key = getNormalizedKey(chRaw);
+      if (!classData[cid][sub][key]) {
+        classData[cid][sub][key] = { creative: 0, lectureSheet: 0, mcq: 0, answerKey: 0, modelTest: 0 };
+      }
+      classData[cid][sub][key][type]++;
+    };
+
+    allPdfSheets?.forEach(item => {
+      const type = item.category === 'creative' ? 'creative' : 
+                   item.category === 'lecture_sheet' ? 'lectureSheet' :
+                   item.category === 'mcq' ? 'mcq' :
+                   item.category === 'answer_key' ? 'answerKey' :
+                   item.category === 'model_test' ? 'modelTest' : null;
+      if (type) aggregate(item.classId, item.subject, item.chapterName || '', type);
     });
 
     allQuestions?.forEach(item => {
-      const cid = item.classId; const sub = item.subject; const ch = getChapterName(item);
-      if (!classData[cid]) return;
-      if (!classData[cid][sub]) classData[cid][sub] = {};
-      if (!classData[cid][sub][ch]) classData[cid][sub][ch] = { creative: 0, lectureSheet: 0, mcq: 0, answerKey: 0, modelTest: 0 };
-      if (item.examType === 'model_test') classData[cid][sub][ch].modelTest++;
-      else if (item.isMcq) classData[cid][sub][ch].mcq++;
-      else classData[cid][sub][ch].creative++;
+      const type = item.examType === 'model_test' ? 'modelTest' : (item.isMcq ? 'mcq' : 'creative');
+      aggregate(item.classId, item.subject, item.chapter || '', type);
     });
 
     allLectureSheets?.forEach(item => {
-      const cid = item.classId; const sub = item.subject; const ch = getChapterName(item);
-      if (!classData[cid]) return;
-      if (!classData[cid][sub]) classData[cid][sub] = {};
-      if (!classData[cid][sub][ch]) classData[cid][sub][ch] = { creative: 0, lectureSheet: 0, mcq: 0, answerKey: 0, modelTest: 0 };
-      classData[cid][sub][ch].lectureSheet++;
+      aggregate(item.classId, item.subject, item.topic || '', 'lectureSheet');
     });
 
     return { classData };
@@ -205,23 +183,24 @@ export default function Home() {
           {CLASSES.map((cls) => {
             const allSubjects = getSubjectsForClass(cls.id);
             const selectedSubject = selectedSubjects[cls.id] || allSubjects[0];
-            const classChapters = stats.classData[cls.id]?.[selectedSubject] || {};
+            const classChaptersStats = stats.classData[cls.id]?.[selectedSubject] || {};
             
             const predefined = getChaptersForSubject(cls.id, selectedSubject);
             
-            // Precise deduplication by normalized key
+            // Generate list of objects with normalized keys for robust matching
             const chapterMap = new Map();
-            [...predefined, ...Object.keys(classChapters)].forEach(name => {
+            
+            [...predefined, ...Object.keys(classChaptersStats)].forEach(name => {
               const key = getNormalizedKey(name);
-              if (!chapterMap.has(key) || (predefined.includes(name) && !predefined.includes(chapterMap.get(key)))) {
-                chapterMap.set(key, name);
+              if (!chapterMap.has(key) || (predefined.includes(name) && !predefined.includes(chapterMap.get(key).display))) {
+                chapterMap.set(key, { key, display: name });
               }
             });
             
-            const chapterNames = Array.from(chapterMap.values())
-              .sort((a, b) => normalizeForSort(a) - normalizeForSort(b));
+            const sortedChapterList = Array.from(chapterMap.values())
+              .sort((a, b) => normalizeForSort(a.display) - normalizeForSort(b.display));
             
-            const chapterChunks = chunkArray(chapterNames, 20); 
+            const chapterChunks = chunkArray(sortedChapterList, 20); 
 
             return (
               <div key={cls.id} className={cn(glassClass, "rounded-xl overflow-hidden bg-white/40 p-1")}>
@@ -251,8 +230,8 @@ export default function Home() {
                               <div className="text-[8px] font-black mt-0.5 text-cyan-900 uppercase">ড্রপ ডাউন</div>
                             </td>
                             {chunk.map(ch => (
-                              <td key={ch} className="min-w-[45px] border-r-2 border-black bg-yellow-100 p-1.5 text-center font-black text-[10px] align-middle text-black">
-                                {formatChapterDisplay(ch)}
+                              <td key={ch.key} className="min-w-[45px] border-r-2 border-black bg-yellow-100 p-1.5 text-center font-black text-[10px] align-middle text-black">
+                                {formatChapterDisplay(ch.display)}
                               </td>
                             ))}
                           </tr>
@@ -260,8 +239,8 @@ export default function Home() {
                           <tr className="border-b border-black bg-blue-50">
                             <td className="border-r-2 border-black p-1 text-center font-black text-[10px] text-blue-900">লেকচার শিট</td>
                             {chunk.map(ch => (
-                              <td key={ch} className="border-r-2 border-black p-1 text-center font-black text-[12px]">
-                                {toBengaliNumber(classChapters[ch]?.lectureSheet || 0)}
+                              <td key={ch.key} className="border-r-2 border-black p-1 text-center font-black text-[12px]">
+                                {toBengaliNumber(classChaptersStats[ch.key]?.lectureSheet || 0)}
                               </td>
                             ))}
                           </tr>
@@ -269,8 +248,8 @@ export default function Home() {
                           <tr className="border-b border-black bg-orange-50">
                             <td className="border-r-2 border-black p-1 text-center font-black text-[10px] text-orange-900">সৃজনশীল</td>
                             {chunk.map(ch => (
-                              <td key={ch} className="border-r-2 border-black p-1 text-center font-black text-[12px]">
-                                {toBengaliNumber(classChapters[ch]?.creative || 0)}
+                              <td key={ch.key} className="border-r-2 border-black p-1 text-center font-black text-[12px]">
+                                {toBengaliNumber(classChaptersStats[ch.key]?.creative || 0)}
                               </td>
                             ))}
                           </tr>
@@ -278,8 +257,8 @@ export default function Home() {
                           <tr className="border-b border-black bg-indigo-50">
                             <td className="border-r-2 border-black p-1 text-center font-black text-[10px] text-indigo-900">বহুনির্বাচনী</td>
                             {chunk.map(ch => (
-                              <td key={ch} className="border-r-2 border-black p-1 text-center font-black text-[12px]">
-                                {toBengaliNumber(classChapters[ch]?.mcq || 0)}
+                              <td key={ch.key} className="border-r-2 border-black p-1 text-center font-black text-[12px]">
+                                {toBengaliNumber(classChaptersStats[ch.key]?.mcq || 0)}
                               </td>
                             ))}
                           </tr>
@@ -287,8 +266,8 @@ export default function Home() {
                           <tr className="border-b border-black bg-green-50">
                             <td className="border-r-2 border-black p-1 text-center font-black text-[10px] text-green-900">উত্তরমালা</td>
                             {chunk.map(ch => (
-                              <td key={ch} className="border-r-2 border-black p-1 text-center font-black text-[12px]">
-                                {toBengaliNumber(classChapters[ch]?.answerKey || 0)}
+                              <td key={ch.key} className="border-r-2 border-black p-1 text-center font-black text-[12px]">
+                                {toBengaliNumber(classChaptersStats[ch.key]?.answerKey || 0)}
                               </td>
                             ))}
                           </tr>
@@ -296,8 +275,8 @@ export default function Home() {
                           <tr className="bg-rose-50">
                             <td className="border-r-2 border-black p-1 text-center font-black text-[10px] text-rose-900">মডেল টেস্ট</td>
                             {chunk.map(ch => (
-                              <td key={ch} className="border-r-2 border-black p-1 text-center font-black text-[12px]">
-                                {toBengaliNumber(classChapters[ch]?.modelTest || 0)}
+                              <td key={ch.key} className="border-r-2 border-black p-1 text-center font-black text-[12px]">
+                                {toBengaliNumber(classChaptersStats[ch.key]?.modelTest || 0)}
                               </td>
                             ))}
                           </tr>

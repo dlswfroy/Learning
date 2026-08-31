@@ -64,7 +64,7 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 }
 
 function getNormalizedChapterKey(name: string): string {
-  if (!name) return '999';
+  if (!name) return 'general';
   let n = name.toString().toLowerCase().trim();
   const bnToEn: Record<string, string> = { '০':'0', '১':'1', '২':'2', '৩':'3', '৪':'4', '৫':'5', '৬':'6', '৭':'7', '৮':'8', '৯':'9' };
   n = n.replace(/[০-৯]/g, m => bnToEn[m]);
@@ -176,7 +176,7 @@ export default function MyLibraryPage() {
     
     const hasUncategorized = itemsInSubj.some(i => !(i as any).chapter && !(i as any).topic && !(i as any).chapterName);
     if (hasUncategorized && !chapterMap.has('general')) {
-      sortedChapters.push('সাধারণ অধ্যায়');
+      sortedChapters.unshift('সাধারণ অধ্যায়');
     }
     
     return sortedChapters.length > 0 ? sortedChapters : ['সাধারণ অধ্যায়'];
