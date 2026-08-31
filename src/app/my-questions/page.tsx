@@ -64,7 +64,7 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 }
 
 function normalizeChapter(name: string): string {
-  if (!name) return 'general';
+  if (!name) return '999';
   let n = name.toString().toLowerCase().trim();
   const bnToEn: Record<string, string> = { '০':'0', '১':'1', '২':'2', '৩':'3', '৪':'4', '৫':'5', '৬':'6', '৭':'7', '৮':'8', '৯':'9' };
   n = n.replace(/[০-৯]/g, m => bnToEn[m]);
@@ -80,10 +80,16 @@ function normalizeChapter(name: string): string {
     'নবম': '9', '৯ম': '9', '9th': '9',
     'দশম': '10', '১০ম': '10', '10th': '10'
   };
-  for (const [word, digit] of Object.entries(wordMap)) { if (n.startsWith(word)) return digit; }
+  for (const [word, digit] of Object.entries(wordMap)) { if (n.includes(word)) return digit; }
   const match = n.match(/\d+/);
   if (match) return match[0];
   return n;
+}
+
+function getChapterSortValue(name: string): number {
+  const norm = normalizeChapter(name);
+  const num = parseInt(norm);
+  return isNaN(num) ? 998 : num;
 }
 
 type ViewMode = 'classes' | 'subjects' | 'chapters' | 'content';
@@ -140,23 +146,21 @@ export default function MyLibraryPage() {
        ...libraryData.pdfSheets.filter(p => p.classId === selectedClass && p.subject === selectedSubject)
     ];
     const dbChapters = itemsInSubj.map(i => (i as any).chapter || (i as any).topic || (i as any).chapterName).filter(Boolean) as string[];
-    const allNames = Array.from(new Set([...predefinedList, ...dbChapters]));
+    
+    // Deduplication by normalized key
     const groups: Record<string, string> = {};
-    allNames.forEach(name => {
+    [...predefinedList, ...dbChapters].forEach(name => {
       const key = normalizeChapter(name);
-      const isPredefined = predefinedList.includes(name);
-      if (!groups[key] || isPredefined) groups[key] = name;
+      if (!groups[key] || predefinedList.includes(name)) groups[key] = name;
     });
+
     const sortedChapters = Object.values(groups).sort((a, b) => {
-      const keyA = normalizeChapter(a);
-      const keyB = normalizeChapter(b);
-      const numA = parseInt(keyA);
-      const numB = parseInt(keyB);
-      if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
-      return a.localeCompare(b, 'bn', { numeric: true });
+      return getChapterSortValue(a) - getChapterSortValue(b);
     });
+    
     const hasUncategorized = itemsInSubj.some(i => !(i as any).chapter && !(i as any).topic && !(i as any).chapterName);
-    if (hasUncategorized) sortedChapters.push('সাধারণ অধ্যায়');
+    if (hasUncategorized && !groups['999']) sortedChapters.push('সাধারণ অধ্যায়');
+    
     return sortedChapters.length > 0 ? sortedChapters : ['সাধারণ অধ্যায়'];
   }, [selectedClass, selectedSubject, libraryData]);
 

@@ -86,7 +86,7 @@ function formatChapterDisplay(name: string): string {
 function normalizeForSort(name: string): number {
   if (!name) return 999;
   const bnToEn: Record<string, string> = { '০':'0', '১':'1', '২':'2', '৩':'3', '৪':'4', '৫':'5', '৬':'6', '৭':'7', '৮':'8', '৯':'9' };
-  const n = name.replace(/[০-৯]/g, m => bnToEn[m]);
+  const n = name.toString().replace(/[০-৯]/g, m => bnToEn[m]);
   const match = n.match(/\d+/);
   if (match) return parseInt(match[0]);
   
@@ -99,6 +99,16 @@ function normalizeForSort(name: string): number {
     if (name.includes(word)) return val;
   }
   return 999;
+}
+
+function getNormalizedKey(name: string): string {
+  if (!name) return 'general';
+  const bnToEn: Record<string, string> = { '০':'0', '১':'1', '২':'2', '৩':'3', '৪':'4', '৫':'5', '৬':'6', '৭':'7', '৮':'8', '৯':'9' };
+  let n = name.toString().toLowerCase().trim().replace(/[০-৯]/g, m => bnToEn[m]);
+  const wordMap: Record<string, string> = { 'প্রথম': '1', 'দ্বিতীয়': '2', 'তৃতীয়': '3', 'চতুর্থ': '4', 'পঞ্চম': '5', 'ষষ্ঠ': '6', 'সপ্তম': '7', 'অষ্টম': '8', 'নবম': '9', 'দশম': '10' };
+  for (const [word, digit] of Object.entries(wordMap)) { if (n.includes(word)) return digit; }
+  const match = n.match(/\d+/);
+  return match ? match[0] : n;
 }
 
 export default function Home() {
@@ -188,7 +198,17 @@ export default function Home() {
             const classChapters = stats.classData[cls.id]?.[selectedSubject] || {};
             
             const predefined = getChaptersForSubject(cls.id, selectedSubject);
-            const chapterNames = Array.from(new Set([...predefined, ...Object.keys(classChapters)]))
+            
+            // Advanced deduplication by normalized key
+            const chapterMap = new Map();
+            [...predefined, ...Object.keys(classChapters)].forEach(name => {
+              const key = getNormalizedKey(name);
+              if (!chapterMap.has(key) || (predefined.includes(name) && !predefined.includes(chapterMap.get(key)))) {
+                chapterMap.set(key, name);
+              }
+            });
+            
+            const chapterNames = Array.from(chapterMap.values())
               .sort((a, b) => normalizeForSort(a) - normalizeForSort(b));
             
             const chapterChunks = chunkArray(chapterNames, 20); 
