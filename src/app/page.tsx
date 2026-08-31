@@ -46,6 +46,23 @@ function chunkArray<T>(array: T[], size: number): T[][] {
   return chunks;
 }
 
+// Helper to format chapter names for the board display
+function formatChapterDisplay(name: string): string {
+  if (!name) return '';
+  // Match Bengali ordinals: ১ম, ২য়, ৩য়, ৪র্থ, ৫র্থ, ৬ষ্ঠ, ৭ম, ৮ম, ৯ম, ১০ম
+  const match = name.match(/^([০-৯]+[মযরর্থষঠ]*)/);
+  if (match) return match[1];
+  
+  // For English subjects (Unit 1, Unit 2 etc)
+  if (name.toLowerCase().startsWith('unit')) {
+    const num = name.match(/\d+/);
+    return num ? `U${num[0]}` : name;
+  }
+  
+  // Fallback: Return first word or first 5 chars
+  return name.split(/[\s:]/)[0] || name;
+}
+
 export default function Home() {
   const { user, loading } = useUser();
   const router = useRouter();
@@ -134,7 +151,7 @@ export default function Home() {
             
             // Get all predefined chapters and merge with any found in DB
             const predefined = getChaptersForSubject(cls.id, selectedSubject);
-            const chapterNames = Array.from(new Set([...predefined, ...Object.keys(classChapters)])).sort();
+            const chapterNames = Array.from(new Set([...predefined, ...Object.keys(classChapters)])).sort((a, b) => a.localeCompare(b, 'bn', { numeric: true }));
             
             // Show all chapters by chunking into smaller rows for readability
             const chapterChunks = chunkArray(chapterNames, 8); 
@@ -169,7 +186,7 @@ export default function Home() {
                             </td>
                             {chunk.map(ch => (
                               <td key={ch} className="min-w-[100px] border-r-2 border-black bg-yellow-300 p-2 text-center font-black text-[11px] align-middle break-words text-black">
-                                {ch}
+                                {formatChapterDisplay(ch)}
                               </td>
                             ))}
                           </tr>
