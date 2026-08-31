@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "Book": {
@@ -18,6 +17,23 @@
         "userId": { "type": "string" }
       },
       "required": ["classId", "subject", "fileName", "pdfUrl", "userId"]
+    },
+    "PDFSheet": {
+      "title": "PDF Sheet",
+      "description": "An uploaded PDF study material or question sheet.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "category": { "type": "string", "enum": ["lecture_sheet", "creative", "mcq", "model_test"] },
+        "classId": { "type": "string" },
+        "subject": { "type": "string" },
+        "chapterName": { "type": "string" },
+        "fileName": { "type": "string" },
+        "pdfUrl": { "type": "string" },
+        "uploadedAt": { "type": "string", "format": "date-time" },
+        "userId": { "type": "string" }
+      },
+      "required": ["category", "classId", "subject", "fileName", "pdfUrl", "userId"]
     },
     "QuestionSet": {
       "title": "Question Set",
@@ -179,6 +195,10 @@
     "/books/{bookId}": {
       "schema": "Book",
       "description": "Collection of uploaded books metadata."
+    },
+    "/pdf-sheets/{sheetId}": {
+      "schema": "PDFSheet",
+      "description": "Collection of uploaded PDF materials."
     },
     "/questions/{questionId}": {
       "schema": "QuestionSet",

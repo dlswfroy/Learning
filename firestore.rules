@@ -35,6 +35,11 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow write: if isAdmin();
     }
+
+    match /pdf-sheets/{sheetId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
     
     match /diary/{diaryId} {
       allow read: if request.auth != null;
