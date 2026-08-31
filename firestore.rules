@@ -22,7 +22,7 @@ service cloud.firestore {
 
     match /lecture-sheets/{sheetId} {
       allow read: if request.auth != null;
-      // Allow any active user to write (Universal editing enabled as requested)
+      // Universal editing for active users
       allow write: if isActive();
     }
 

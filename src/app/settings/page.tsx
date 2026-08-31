@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings as SettingsIcon, CheckCircle, Trash2, Loader2, Link as LinkIcon, Filter, BookCopy, User, Globe, Save, Camera, FileText, Users, ShieldCheck, FileUp, FileType } from 'lucide-react';
+import { Settings as SettingsIcon, CheckCircle, Trash2, Loader2, Link as LinkIcon, Filter, BookCopy, User, Globe, Save, Camera, FileText, Users, ShieldCheck, FileUp, FileType, ExternalLink } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { toast } from '@/hooks/use-toast';
@@ -90,11 +90,13 @@ export default function SettingsPage() {
   const [uploading, setUploading] = useState(false);
   
   // Sheet management states
+  const [sheetUploadType, setSheetUploadType] = useState<'file' | 'link'>('file');
   const [sheetCategory, setSheetCategory] = useState<string>('');
   const [sheetClassId, setSheetClassId] = useState<string>('');
   const [sheetSubject, setSheetSubject] = useState<string>('');
   const [sheetChapter, setSheetChapter] = useState<string>('');
   const [sheetFile, setSheetFile] = useState<File | null>(null);
+  const [sheetManualUrl, setSheetManualUrl] = useState<string>('');
   const [sheetUploading, setSheetUploading] = useState(false);
   const [sheetUploadProgress, setSheetUploadProgress] = useState(0);
 
@@ -307,16 +309,56 @@ export default function SettingsPage() {
   };
 
   const handleUploadSheet = async () => {
-    if (!db || !storage || !isAdmin || !sheetFile || !sheetCategory || !sheetClassId || !sheetSubject) {
-      toast({ variant: "destructive", title: "তথ্য অসম্পূর্ণ", description: "সবগুলো ঘর পূরণ করুন এবং ফাইল নির্বাচন করুন।" });
+    if (!db || !isAdmin || !sheetCategory || !sheetClassId || !sheetSubject) {
+      toast({ variant: "destructive", title: "তথ্য অসম্পূর্ণ", description: "সবগুলো ঘর পূরণ করুন।" });
+      return;
+    }
+
+    if (sheetUploadType === 'file' && !sheetFile) {
+      toast({ variant: "destructive", title: "ফাইল নেই", description: "পিডিএফ ফাইল নির্বাচন করুন।" });
+      return;
+    }
+
+    if (sheetUploadType === 'link' && !sheetManualUrl) {
+      toast({ variant: "destructive", title: "লিঙ্ক নেই", description: "পিডিএফ লিঙ্ক লিখুন।" });
       return;
     }
 
     setSheetUploading(true);
-    setSheetUploadProgress(0);
 
+    if (sheetUploadType === 'link') {
+      const sheetData = {
+        category: sheetCategory,
+        classId: sheetClassId,
+        subject: sheetSubject,
+        chapterName: sheetChapter || 'সাধারণ',
+        fileName: 'PDF Link',
+        pdfUrl: sheetManualUrl,
+        uploadedAt: serverTimestamp(),
+        userId: user?.uid || ''
+      };
+
+      try {
+        await addDoc(collection(db, 'pdf-sheets'), sheetData);
+        toast({ title: "সফল", description: "পিডিএফ লিঙ্কটি যুক্ত করা হয়েছে।" });
+        setSheetManualUrl('');
+        setSheetChapter('');
+      } catch (e) {
+        toast({ variant: "destructive", title: "ত্রুটি", description: "সেভ করা সম্ভব হয়নি।" });
+      } finally {
+        setSheetUploading(false);
+      }
+      return;
+    }
+
+    // Direct File Upload Logic
+    if (!storage || !sheetFile) {
+      setSheetUploading(false);
+      return;
+    }
+
+    setSheetUploadProgress(0);
     try {
-      // Optimized upload path
       const timestamp = Date.now();
       const storagePath = `pdf-sheets/${sheetClassId}/${sheetSubject}/${timestamp}_${sheetFile.name}`;
       const storageRef = ref(storage, storagePath);
@@ -535,6 +577,20 @@ export default function SettingsPage() {
                   <CardDescription className="font-bold">লেকচার শিট, সৃজনশীল প্রশ্ন, এমসিকিউ বা মডেল টেস্ট পিডিএফ আপলোড করুন।</CardDescription>
                 </CardHeader>
                 <CardContent className="p-4 space-y-6">
+                  <div className="space-y-4 border-b pb-4">
+                    <Label className="font-bold text-indigo-700">আপলোড পদ্ধতি</Label>
+                    <RadioGroup value={sheetUploadType} onValueChange={(v) => setSheetUploadType(v as 'file' | 'link')} className="flex gap-6">
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="file" id="sheet-file" />
+                        <Label htmlFor="sheet-file" className="cursor-pointer font-bold text-xs">ফাইল আপলোড</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="link" id="sheet-link" />
+                        <Label htmlFor="sheet-link" className="cursor-pointer font-bold text-xs">লিঙ্ক আপলোড (URL)</Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-bold">ক্যাটাগরি</label>
@@ -576,37 +632,51 @@ export default function SettingsPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-bold">পিডিএফ ফাইল নির্বাচন করুন</label>
-                    <div className="flex items-center gap-4">
-                      <Input 
-                        type="file" 
-                        ref={sheetInputRef}
-                        accept="application/pdf" 
-                        onChange={e => setSheetFile(e.target.files?.[0] || null)} 
-                        className="flex-1 font-bold"
-                        disabled={sheetUploading}
-                      />
-                      {sheetFile && (
-                        <Button variant="ghost" onClick={() => { setSheetFile(null); if(sheetInputRef.current) sheetInputRef.current.value = ''; }} className="text-destructive">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
+                    {sheetUploadType === 'file' ? (
+                      <>
+                        <label className="text-sm font-bold">পিডিএফ ফাইল নির্বাচন করুন</label>
+                        <div className="flex items-center gap-4">
+                          <Input 
+                            type="file" 
+                            ref={sheetInputRef}
+                            accept="application/pdf" 
+                            onChange={e => setSheetFile(e.target.files?.[0] || null)} 
+                            className="flex-1 font-bold"
+                            disabled={sheetUploading}
+                          />
+                          {sheetFile && (
+                            <Button variant="ghost" onClick={() => { setSheetFile(null); if(sheetInputRef.current) sheetInputRef.current.value = ''; }} className="text-destructive">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                        {sheetUploading && (
+                          <div className="space-y-2 mt-2">
+                            <div className="flex justify-between text-[10px] font-bold">
+                              <span>আপলোড হচ্ছে...</span>
+                              <span>{sheetUploadProgress}%</span>
+                            </div>
+                            <Progress value={sheetUploadProgress} className="h-2" />
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <label className="text-sm font-bold">পিডিএফ লিঙ্ক (URL) দিন</label>
+                        <Input 
+                          placeholder="https://example.com/sheet.pdf" 
+                          value={sheetManualUrl} 
+                          onChange={e => setSheetManualUrl(e.target.value)} 
+                          className="font-bold"
+                          disabled={sheetUploading}
+                        />
+                      </>
+                    )}
                   </div>
-
-                  {sheetUploading && (
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-[10px] font-bold">
-                        <span>আপলোড হচ্ছে...</span>
-                        <span>{sheetUploadProgress}%</span>
-                      </div>
-                      <Progress value={sheetUploadProgress} className="h-2" />
-                    </div>
-                  )}
                 </CardContent>
                 <CardFooter className="flex justify-end border-t bg-muted/20 py-3">
-                  <Button onClick={handleUploadSheet} disabled={sheetUploading || !sheetFile} className="bg-indigo-600 hover:bg-indigo-700 text-white h-10 gap-2 px-10 font-bold shadow-lg">
-                    {sheetUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileUp className="w-4 h-4" />} সিট আপলোড করুন
+                  <Button onClick={handleUploadSheet} disabled={sheetUploading || (sheetUploadType === 'file' && !sheetFile) || (sheetUploadType === 'link' && !sheetManualUrl)} className="bg-indigo-600 hover:bg-indigo-700 text-white h-10 gap-2 px-10 font-bold shadow-lg">
+                    {sheetUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileUp className="w-4 h-4" />} {sheetUploadType === 'file' ? 'সিট আপলোড করুন' : 'লিঙ্ক সেভ করুন'}
                   </Button>
                 </CardFooter>
               </Card>
