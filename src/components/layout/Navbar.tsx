@@ -95,7 +95,7 @@ function NavbarContent() {
             <Menu className="w-6 h-6" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-[280px] p-0 border-r-primary/20 font-kalpurush">
+        <SheetContent side="left" className="w-[250px] p-0 border-r-primary/20 font-kalpurush">
           <SheetHeader className="p-6 bg-primary text-white border-b border-white/10">
             <div className="flex items-center gap-3">
               <div className="bg-white p-1.5 rounded-xl text-primary shadow-lg shrink-0">
@@ -105,7 +105,7 @@ function NavbarContent() {
                   <BookOpenText className="w-8 h-8" />
                 )}
               </div>
-              <SheetTitle className="text-white text-lg font-black leading-tight text-left">
+              <SheetTitle className="text-white text-[14px] font-black leading-tight text-left">
                 {appName}
               </SheetTitle>
             </div>
