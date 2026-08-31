@@ -28,7 +28,9 @@ import {
   FilePlus,
   HelpCircle,
   Layers,
-  LayoutGrid
+  LayoutGrid,
+  ExternalLink,
+  Download
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -107,18 +109,25 @@ export default function MyLibraryPage() {
 
   const questionsQuery = useMemo(() => db && user ? query(collection(db, 'questions'), where('userId', '==', user.uid)) : null, [db, user]);
   const sheetsQuery = useMemo(() => db && user ? query(collection(db, 'lecture-sheets'), where('userId', '==', user.uid)) : null, [db, user]);
+  const pdfSheetsQuery = useMemo(() => db && user ? query(collection(db, 'pdf-sheets')) : null, [db, user]);
 
   const { data: rawQuestions, loading: questionsLoading } = useCollection(questionsQuery);
   const { data: rawSheets, loading: sheetsLoading } = useCollection(sheetsQuery);
+  const { data: rawPdfSheets, loading: pdfSheetsLoading } = useCollection(pdfSheetsQuery);
 
-  const libraryData = useMemo(() => ({ questions: rawQuestions || [], sheets: rawSheets || [] }), [rawQuestions, rawSheets]);
+  const libraryData = useMemo(() => ({ 
+    questions: rawQuestions || [], 
+    sheets: rawSheets || [],
+    pdfSheets: rawPdfSheets || []
+  }), [rawQuestions, rawSheets, rawPdfSheets]);
 
   const currentSubjects = useMemo(() => {
     if (!selectedClass) return [];
     const predefined = getSubjectsForClass(selectedClass);
     const fromDb = [
       ...libraryData.questions.filter(q => q.classId === selectedClass).map(q => q.subject),
-      ...libraryData.sheets.filter(s => s.classId === selectedClass).map(s => s.subject)
+      ...libraryData.sheets.filter(s => s.classId === selectedClass).map(s => s.subject),
+      ...libraryData.pdfSheets.filter(p => p.classId === selectedClass).map(p => p.subject)
     ].filter(Boolean) as string[];
     return Array.from(new Set([...predefined, ...fromDb])).sort((a, b) => a.localeCompare(b, 'bn'));
   }, [selectedClass, libraryData]);
@@ -128,9 +137,10 @@ export default function MyLibraryPage() {
     const predefinedList = getChaptersForSubject(selectedClass, selectedSubject);
     const itemsInSubj = [
        ...libraryData.questions.filter(q => q.classId === selectedClass && q.subject === selectedSubject),
-       ...libraryData.sheets.filter(s => s.classId === selectedClass && s.subject === selectedSubject)
+       ...libraryData.sheets.filter(s => s.classId === selectedClass && s.subject === selectedSubject),
+       ...libraryData.pdfSheets.filter(p => p.classId === selectedClass && p.subject === selectedSubject)
     ];
-    const dbChapters = itemsInSubj.map(i => (i as any).chapter || (i as any).topic).filter(Boolean) as string[];
+    const dbChapters = itemsInSubj.map(i => (i as any).chapter || (i as any).topic || (i as any).chapterName).filter(Boolean) as string[];
     const allNames = Array.from(new Set([...predefinedList, ...dbChapters]));
     const groups: Record<string, string> = {};
     allNames.forEach(name => {
@@ -146,7 +156,7 @@ export default function MyLibraryPage() {
       if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
       return a.localeCompare(b, 'bn', { numeric: true });
     });
-    const hasUncategorized = itemsInSubj.some(i => !(i as any).chapter && !(i as any).topic);
+    const hasUncategorized = itemsInSubj.some(i => !(i as any).chapter && !(i as any).topic && !(i as any).chapterName);
     if (hasUncategorized) sortedChapters.push('সাধারণ অধ্যায়');
     return sortedChapters.length > 0 ? sortedChapters : ['সাধারণ অধ্যায়'];
   }, [selectedClass, selectedSubject, libraryData]);
@@ -154,37 +164,54 @@ export default function MyLibraryPage() {
   const currentItems = useMemo(() => {
     let qs = libraryData.questions;
     let ss = libraryData.sheets;
-    if (selectedClass) { qs = qs.filter(q => q.classId === selectedClass); ss = ss.filter(s => s.classId === selectedClass); }
-    if (selectedSubject) { qs = qs.filter(q => q.subject === selectedSubject); ss = ss.filter(s => s.subject === selectedSubject); }
+    let ps = libraryData.pdfSheets;
+
+    if (selectedClass) { 
+      qs = qs.filter(q => q.classId === selectedClass); 
+      ss = ss.filter(s => s.classId === selectedClass);
+      ps = ps.filter(p => p.classId === selectedClass);
+    }
+    if (selectedSubject) { 
+      qs = qs.filter(q => q.subject === selectedSubject); 
+      ss = ss.filter(s => s.subject === selectedSubject);
+      ps = ps.filter(p => p.subject === selectedSubject);
+    }
     if (selectedChapter) { 
       const isGeneral = selectedChapter === 'সাধারণ অধ্যায়';
       const selectedKey = normalizeChapter(selectedChapter);
       qs = qs.filter(q => isGeneral ? (!q.chapter) : (normalizeChapter(q.chapter) === selectedKey));
       ss = ss.filter(s => isGeneral ? (!s.topic) : (normalizeChapter(s.topic) === selectedKey));
+      ps = ps.filter(p => isGeneral ? (!p.chapterName) : (normalizeChapter(p.chapterName) === selectedKey));
     }
 
     if (activeCategory === 'sheet') {
       qs = [];
       ss = ss.filter(s => s.type === 'lecture_sheet' || !s.type);
+      ps = ps.filter(p => p.category === 'lecture_sheet');
     } else if (activeCategory === 'creative') {
       qs = qs.filter(q => !q.isMcq && q.examType !== 'model_test');
       ss = ss.filter(s => s.type === 'creative');
+      ps = ps.filter(p => p.category === 'creative');
     } else if (activeCategory === 'mcq') {
       qs = qs.filter(q => q.isMcq && q.examType !== 'model_test');
       ss = ss.filter(s => s.type === 'mcq');
+      ps = ps.filter(p => p.category === 'mcq');
     } else if (activeCategory === 'model') {
       qs = qs.filter(q => q.examType === 'model_test');
       ss = [];
+      ps = ps.filter(p => p.category === 'model_test');
     }
 
-    return { questions: qs, sheets: ss };
+    return { questions: qs, sheets: ss, pdfSheets: ps };
   }, [libraryData, selectedClass, selectedSubject, selectedChapter, activeCategory]);
 
   const getChapterStats = (chapterName: string) => {
     const isGeneral = chapterName === 'সাধারণ অধ্যায়';
     const key = normalizeChapter(chapterName);
     const chapterSheets = libraryData.sheets.filter(s => s.classId === selectedClass && s.subject === selectedSubject && (isGeneral ? !s.topic : normalizeChapter(s.topic) === key));
+    const chapterPdfSheets = libraryData.pdfSheets.filter(p => p.classId === selectedClass && p.subject === selectedSubject && (isGeneral ? !p.chapterName : normalizeChapter(p.chapterName) === key));
     const chapterQuestionSets = libraryData.questions.filter(q => q.classId === selectedClass && q.subject === selectedSubject && (isGeneral ? !q.chapter : normalizeChapter(q.chapter) === key));
+    
     let totalQuestions = 0, mcqCount = 0, creativeCount = 0;
     chapterQuestionSets.forEach(set => {
       if (set.questions) {
@@ -192,7 +219,7 @@ export default function MyLibraryPage() {
         set.questions.forEach((q: any) => { if (q.type === 'mcq') mcqCount++; else if (q.type === 'creative') creativeCount++; });
       }
     });
-    return { sheets: chapterSheets.length, total: totalQuestions, mcq: mcqCount, creative: creativeCount };
+    return { sheets: chapterSheets.length + chapterPdfSheets.length, total: totalQuestions, mcq: mcqCount, creative: creativeCount };
   };
 
   const toggleSelection = (id: string) => { if (!isSelecting) return; setSelectedDocIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]); };
@@ -212,7 +239,7 @@ export default function MyLibraryPage() {
     finally { setMerging(false); }
   };
 
-  const handleDelete = async (id: string, type: 'questions' | 'lecture-sheets') => {
+  const handleDelete = async (id: string, type: 'questions' | 'lecture-sheets' | 'pdf-sheets') => {
     try { await deleteDoc(doc(db!, type, id)); toast({ title: "সফল", description: "আইটেমটি মুছে ফেলা হয়েছে।" }); }
     catch (e) { toast({ variant: "destructive", title: "ত্রুটি", description: "মুছে ফেলা সম্ভব হয়নি।" }); }
   };
@@ -269,7 +296,7 @@ export default function MyLibraryPage() {
                 <p className="font-bold text-xs flex-1 line-clamp-2">{ch}</p>
               </div>
               <div className="grid grid-cols-2 gap-2 pt-2 border-t border-indigo-100">
-                <div className="flex items-center gap-1.5 text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded"><FileText className="w-3 h-3" /> শিট: {toBengaliNumber(stats.sheets)}</div>
+                <div className="flex items-center gap-1.5 text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded"><FileText className="w-3 h-3" /> সিট/পিডিএফ: {toBengaliNumber(stats.sheets)}</div>
                 <div className="flex items-center gap-1.5 text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded"><BrainCircuit className="w-3 h-3" /> প্রশ্ন: {toBengaliNumber(stats.total)}</div>
                 <div className="flex items-center gap-1.5 text-[10px] font-bold text-primary bg-primary/5 px-2 py-1 rounded">সৃজনশীল: {toBengaliNumber(stats.creative)}</div>
                 <div className="flex items-center gap-1.5 text-[10px] font-bold text-orange-700 bg-orange-100/50 px-2 py-1 rounded">MCQ: {toBengaliNumber(stats.mcq)}</div>
@@ -319,7 +346,7 @@ export default function MyLibraryPage() {
       <section className="space-y-6">
         <div className="flex flex-col gap-4 border-b pb-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-black text-foreground flex items-center gap-2 uppercase tracking-wider"><Folder className="w-4 h-4" /> আমার সংগ্রহ ({toBengaliNumber(currentItems.questions.length + currentItems.sheets.length)})</h3>
+            <h3 className="text-sm font-black text-foreground flex items-center gap-2 uppercase tracking-wider"><Folder className="w-4 h-4" /> আমার সংগ্রহ ({toBengaliNumber(currentItems.questions.length + currentItems.sheets.length + currentItems.pdfSheets.length)})</h3>
             {currentItems.questions.length > 0 && (
               <Button variant={isSelecting ? "destructive" : "outline"} size="sm" onClick={() => { setIsSelecting(!isSelecting); setSelectedDocIds([]); }} className="h-8 gap-2 font-bold text-xs">
                 {isSelecting ? <X className="w-3.5 h-3.5" /> : <ListChecks className="w-3.5 h-3.5" />}{isSelecting ? "বাতিল" : "প্রশ্ন বাছাই করুন"}</Button>
@@ -349,6 +376,7 @@ export default function MyLibraryPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Render regular editable sheets */}
           {currentItems.sheets.map(s => (
             <Card key={s.id} className="hover:border-orange-400/40 transition-all shadow-sm bg-white border-2">
               <CardHeader className="pb-3 p-4">
@@ -376,6 +404,35 @@ export default function MyLibraryPage() {
             </Card>
           ))}
 
+          {/* Render uploaded PDF sheets */}
+          {currentItems.pdfSheets.map(ps => (
+            <Card key={ps.id} className="hover:border-indigo-400/40 transition-all shadow-sm bg-white border-2 border-indigo-100">
+              <CardHeader className="pb-3 p-4">
+                <div className="flex justify-between items-start">
+                   <div className="flex items-center gap-3 pr-4 min-w-0">
+                     <div className="w-8 h-8 rounded bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0"><FileText className="w-4 h-4" /></div>
+                     <CardTitle className="text-sm font-bold truncate">{ps.chapterName} - {ps.subject}</CardTitle>
+                   </div>
+                   <div className="flex gap-1">
+                     <a href={ps.pdfUrl} target="_blank" rel="noopener noreferrer"><Button variant="ghost" size="icon" className="h-7 w-7 text-indigo-600"><ExternalLink className="w-3.5 h-3.5" /></Button></a>
+                     <AlertDialog>
+                       <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive"><Trash2 className="w-3.5 h-3.5" /></Button></AlertDialogTrigger>
+                       <AlertDialogContent className="font-kalpurush"><AlertDialogHeader><AlertDialogTitle className="font-bold">মুছে ফেলবেন?</AlertDialogTitle></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>বাতিল</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(ps.id, 'pdf-sheets')} className="bg-destructive text-white">মুছে ফেলুন</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+                     </AlertDialog>
+                   </div>
+                </div>
+              </CardHeader>
+              <CardFooter className="pt-0 p-4 flex justify-between items-center text-[9px] font-bold text-muted-foreground bg-indigo-50/20 rounded-b-lg">
+                <span className="flex items-center gap-1">
+                  <Badge variant="outline" className="text-[8px] h-4 font-bold px-1.5 border-indigo-200 text-indigo-700">{ps.category === 'lecture_sheet' ? 'পিডিএফ নোট' : ps.category === 'creative' ? 'সৃজনশীল পিডিএফ' : ps.category === 'mcq' ? 'MCQ পিডিএফ' : 'মডেল টেস্ট'}</Badge>
+                  <Calendar className="w-3 h-3 ml-2 mr-1" /> {ps.uploadedAt?.toDate ? format(ps.uploadedAt.toDate(), 'dd MMM, yy', { locale: bn }) : ''}
+                </span>
+                <a href={ps.pdfUrl} target="_blank" rel="noopener noreferrer"><Button size="sm" variant="outline" className="h-6 text-[9px] font-bold gap-1 border-indigo-500 text-indigo-700 bg-white"><Download className="w-3 h-3" /> ভিউ/ডাউনলোড</Button></a>
+              </CardFooter>
+            </Card>
+          ))}
+
+          {/* Render question sets */}
           {currentItems.questions.map(q => {
             const isSelected = selectedDocIds.includes(q.id);
             return (
@@ -409,14 +466,14 @@ export default function MyLibraryPage() {
           })}
         </div>
 
-        {currentItems.questions.length === 0 && currentItems.sheets.length === 0 && (
+        {currentItems.questions.length === 0 && currentItems.sheets.length === 0 && currentItems.pdfSheets.length === 0 && (
           <div className="p-20 text-center border-dashed border-2 bg-muted/5 rounded-2xl"><HelpCircle className="w-12 h-12 text-muted-foreground/20 mx-auto mb-4" /><p className="text-muted-foreground font-bold">এই ক্যাটাগরিতে আপনার কোনো সংগ্রহ নেই।</p></div>
         )}
       </section>
     </div>
   );
 
-  if (userLoading || questionsLoading || sheetsLoading) return <div className="flex flex-col items-center justify-center p-20 min-h-[50vh]"><Loader2 className="w-10 h-10 animate-spin text-primary" /><p className="mt-4 text-muted-foreground font-bold">লাইব্রেরি লোড হচ্ছে...</p></div>;
+  if (userLoading || questionsLoading || sheetsLoading || pdfSheetsLoading) return <div className="flex flex-col items-center justify-center p-20 min-h-[50vh]"><Loader2 className="w-10 h-10 animate-spin text-primary" /><p className="mt-4 text-muted-foreground font-bold">লাইব্রেরি লোড হচ্ছে...</p></div>;
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 animate-fade-in pb-32 font-kalpurush">
@@ -431,7 +488,7 @@ export default function MyLibraryPage() {
           <div className="flex items-center gap-2 text-xs font-bold overflow-x-auto whitespace-nowrap pb-1 text-muted-foreground scrollbar-hide">
             <span className={cn("cursor-pointer hover:text-primary transition-colors px-1", viewMode === 'classes' && "text-primary")} onClick={() => { setViewMode('classes'); setSelectedClass(null); setSelectedSubject(null); setSelectedChapter(null); setIsSelecting(false); setActiveCategory('all'); }}>লাইব্রেরি</span>
             {selectedClass && (<><ChevronRight className="w-3 h-3 shrink-0" /><span className={cn("cursor-pointer hover:text-primary transition-colors px-1", viewMode === 'subjects' && "text-primary")} onClick={() => { setViewMode('subjects'); setSelectedSubject(null); setSelectedChapter(null); setIsSelecting(false); setActiveCategory('all'); }}>{CLASSES.find(c => c.id === selectedClass)?.label} শ্রেণি</span></>)}
-            {selectedSubject && (<><ChevronRight className="w-3 h-3 shrink-0" /><span className={cn("cursor-pointer hover:text-primary transition-colors px-1", viewMode === 'chapters' && "text-primary")} onClick={() => { setViewMode('chapters'); setSelectedChapter(null); setActiveCategory('all'); }}>{selectedSubject}</span></>)}
+            {selectedSubject && (<><ChevronRight className="w-3 h-3 shrink-0" /><span className={cn("cursor-pointer hover:text-primary transition-colors px-1", viewMode === 'chapters' && "text-primary")} onClick={() => { setViewMode('chapters'); setSelectedSubject(null); setSelectedChapter(null); setIsSelecting(false); setActiveCategory('all'); }}>{selectedSubject}</span></>)}
             {selectedChapter && (<><ChevronRight className="w-3 h-3 shrink-0" /><span className={cn("cursor-pointer hover:text-primary transition-colors px-1", viewMode === 'content' && "text-primary")} onClick={() => { setViewMode('content'); }}>{selectedChapter}</span></>)}
           </div>
           <Button variant="outline" size="sm" onClick={handleBack} className="gap-2 font-bold border-primary text-primary h-8 self-end sm:self-center bg-white shadow-sm hover:bg-primary hover:text-white transition-all"><ArrowLeft className="w-3.5 h-3.5" /> ফিরে যান</Button>
@@ -445,3 +502,4 @@ export default function MyLibraryPage() {
 
 function ListChecks({ className }: { className?: string }) { return <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/></svg>; }
 function FilePlus({ className }: { className?: string }) { return <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M9 15h6"/><path d="M12 12v6"/></svg>; }
+
