@@ -37,15 +37,21 @@ function toBengaliNumber(n: number | string | undefined | null): string {
   return n.toString().replace(/\d/g, (digit) => bengaliDigits[parseInt(digit)]);
 }
 
+function chunkArray<T>(array: T[], size: number): T[][] {
+  const chunks = [];
+  for (let i = 0; i < array.length; i += size) {
+    chunks.push(array.slice(i, i + size));
+  }
+  return chunks;
+}
+
 export default function Home() {
   const { user, loading } = useUser();
   const router = useRouter();
   const db = useFirestore();
 
-  // Selected subjects for each class board
   const [selectedSubjects, setSelectedSubjects] = useState<Record<string, string>>({});
 
-  // Fetch all content for aggregation
   const qQuery = useMemo(() => db ? collection(db, 'questions') : null, [db]);
   const pQuery = useMemo(() => db ? collection(db, 'pdf-sheets') : null, [db]);
   const lQuery = useMemo(() => db ? collection(db, 'lecture-sheets') : null, [db]);
@@ -54,25 +60,16 @@ export default function Home() {
   const { data: allPdfSheets } = useCollection(pQuery);
   const { data: allLectureSheets } = useCollection(lQuery);
 
-  // Aggregate stats by class, subject and chapter
   const stats = useMemo(() => {
     const classData: Record<string, Record<string, Record<string, any>>> = {};
-    
-    CLASSES.forEach(c => {
-      classData[c.id] = {};
-    });
-
+    CLASSES.forEach(c => { classData[c.id] = {}; });
     const getChapterName = (item: any) => (item.chapter || item.topic || item.chapterName || 'সাধারণ অধ্যায়').trim();
 
-    // Process PDF Sheets
     allPdfSheets?.forEach(item => {
-      const cid = item.classId;
-      const sub = item.subject;
-      const ch = getChapterName(item);
+      const cid = item.classId; const sub = item.subject; const ch = getChapterName(item);
       if (!classData[cid]) return;
       if (!classData[cid][sub]) classData[cid][sub] = {};
       if (!classData[cid][sub][ch]) classData[cid][sub][ch] = { creative: 0, lectureSheet: 0, mcq: 0, answerKey: 0, modelTest: 0 };
-      
       if (item.category === 'creative') classData[cid][sub][ch].creative++;
       else if (item.category === 'lecture_sheet') classData[cid][sub][ch].lectureSheet++;
       else if (item.category === 'mcq') classData[cid][sub][ch].mcq++;
@@ -80,25 +77,18 @@ export default function Home() {
       else if (item.category === 'model_test') classData[cid][sub][ch].modelTest++;
     });
 
-    // Process Questions
     allQuestions?.forEach(item => {
-      const cid = item.classId;
-      const sub = item.subject;
-      const ch = getChapterName(item);
+      const cid = item.classId; const sub = item.subject; const ch = getChapterName(item);
       if (!classData[cid]) return;
       if (!classData[cid][sub]) classData[cid][sub] = {};
       if (!classData[cid][sub][ch]) classData[cid][sub][ch] = { creative: 0, lectureSheet: 0, mcq: 0, answerKey: 0, modelTest: 0 };
-      
       if (item.examType === 'model_test') classData[cid][sub][ch].modelTest++;
       else if (item.isMcq) classData[cid][sub][ch].mcq++;
       else classData[cid][sub][ch].creative++;
     });
 
-    // Process Native Lecture Sheets
     allLectureSheets?.forEach(item => {
-      const cid = item.classId;
-      const sub = item.subject;
-      const ch = getChapterName(item);
+      const cid = item.classId; const sub = item.subject; const ch = getChapterName(item);
       if (!classData[cid]) return;
       if (!classData[cid][sub]) classData[cid][sub] = {};
       if (!classData[cid][sub][ch]) classData[cid][sub][ch] = { creative: 0, lectureSheet: 0, mcq: 0, answerKey: 0, modelTest: 0 };
@@ -108,11 +98,7 @@ export default function Home() {
     return { classData };
   }, [allQuestions, allPdfSheets, allLectureSheets]);
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/auth');
-    }
-  }, [user, loading, router]);
+  useEffect(() => { if (!loading && !user) router.push('/auth'); }, [user, loading, router]);
 
   if (loading || !user) {
     return (
@@ -123,110 +109,127 @@ export default function Home() {
     );
   }
 
-  const glassClass = "backdrop-blur-xl border-2 border-black shadow-[0_8px_32px_0_rgba(31,38,135,0.37)]";
+  const glassClass = "backdrop-blur-2xl border-2 border-black shadow-[0_12px_40px_rgba(0,0,0,0.4)]";
 
   return (
-    <div className="space-y-8 animate-fade-in font-kalpurush">
+    <div className="space-y-12 animate-fade-in font-kalpurush">
       {/* Live Board Section */}
-      <section className="space-y-6">
+      <section className="space-y-8">
         <div className="flex items-center justify-between border-b-2 border-black pb-2">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-red-600 text-white flex items-center justify-center animate-pulse shadow-[0_0_15px_rgba(220,38,38,0.8)]">
-              <LayoutGrid className="w-4 h-4" />
+            <div className="w-8 h-8 rounded-lg bg-red-600 text-white flex items-center justify-center animate-bounce shadow-[0_0_20px_rgba(220,38,38,1)] border border-white/20">
+              <LayoutGrid className="w-5 h-5" />
             </div>
-            <h3 className="text-lg font-black text-foreground">লাইভ কন্টেন্ট বোর্ড</h3>
+            <h3 className="text-xl font-black text-foreground uppercase tracking-tight">লাইভ কন্টেন্ট ড্যাশবোর্ড</h3>
           </div>
-          <Badge className="bg-primary text-white font-bold text-[10px] shadow-[0_0_10px_rgba(37,99,235,0.5)]">রিয়েল-টাইম আপডেট</Badge>
+          <Badge className="bg-yellow-400 text-black font-black text-[10px] shadow-[0_0_15px_rgba(250,204,21,1)] animate-pulse border border-black">রিয়েল-টাইম আপডেট</Badge>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-10">
           {CLASSES.map((cls) => {
             const allSubjects = getSubjectsForClass(cls.id);
             const selectedSubject = selectedSubjects[cls.id] || allSubjects[0];
             const classChapters = stats.classData[cls.id]?.[selectedSubject] || {};
             const chapterNames = Object.keys(classChapters).sort();
+            
+            // Chunk chapters for multi-line support if they don't fit
+            const chapterChunks = chunkArray(chapterNames, 8); 
 
             return (
-              <Card key={cls.id} className={cn(glassClass, "overflow-hidden bg-white/60")}>
-                <CardHeader className="bg-primary/20 border-b border-black p-3 flex flex-row items-center justify-between space-y-0">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center border-2 border-white shadow-lg">
-                      <GraduationCap className="w-4 h-4 text-white" />
-                    </div>
-                    <span className="font-black text-sm text-primary-foreground drop-shadow-sm">{cls.label} শ্রেণির বোর্ড</span>
-                  </div>
-                  <div className="w-36 md:w-44">
-                    <Select 
-                      value={selectedSubject} 
-                      onValueChange={(val) => setSelectedSubjects(prev => ({...prev, [cls.id]: val}))}
-                    >
-                      <SelectTrigger className="h-8 text-[11px] font-black border-black bg-white/80 backdrop-blur-sm shadow-inner">
-                        <SelectValue placeholder="বিষয়" />
-                      </SelectTrigger>
-                      <SelectContent className="font-kalpurush">
-                        {allSubjects.map(sub => (
-                          <SelectItem key={sub} value={sub} className="text-[11px] font-bold">{sub}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-[11px] font-bold border-collapse">
-                      <thead>
-                        <tr className="bg-white/80 border-b border-black">
-                          <th className="p-2 text-center text-foreground border-r border-black w-1/2">অধ্যায়ের নাম</th>
-                          <th className="p-2 text-center text-primary w-1/2">লাইভ কন্টেন্ট তথ্য</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {chapterNames.length > 0 ? (
-                          chapterNames.map(ch => (
-                            <tr key={ch} className="border-b border-black last:border-b-0">
-                              <td className="p-2 text-foreground font-black text-center align-middle border-r border-black bg-white/40 break-words backdrop-blur-sm">
+              <div key={cls.id} className={cn(glassClass, "rounded-xl overflow-hidden bg-white/10 p-1")}>
+                <div className="overflow-x-auto custom-scrollbar">
+                  {chapterChunks.length > 0 ? (
+                    chapterChunks.map((chunk, chunkIdx) => (
+                      <table key={chunkIdx} className="w-full border-collapse border-2 border-black mb-4 last:mb-0">
+                        <tbody>
+                          {/* Row 1: Class Name & Subject Dropdown & Chapter Names */}
+                          <tr className="border-b-2 border-black">
+                            <td rowSpan={6} className="w-12 border-r-2 border-black bg-white/40 font-black text-center align-middle whitespace-nowrap px-1 text-primary-foreground drop-shadow-lg" style={{ writingMode: 'vertical-lr', transform: 'rotate(180deg)' }}>
+                              শ্রেণি: {cls.label}
+                            </td>
+                            <td className="w-40 border-r-2 border-black bg-cyan-400 p-1 text-center">
+                              <Select 
+                                value={selectedSubject} 
+                                onValueChange={(val) => setSelectedSubjects(prev => ({...prev, [cls.id]: val}))}
+                              >
+                                <SelectTrigger className="h-8 text-[11px] font-black border-black bg-white shadow-inner">
+                                  <SelectValue placeholder="বিষয় নির্বাচন" />
+                                </SelectTrigger>
+                                <SelectContent className="font-kalpurush">
+                                  {allSubjects.map(sub => (
+                                    <SelectItem key={sub} value={sub} className="text-[11px] font-bold">{sub}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <div className="text-[8px] font-black mt-0.5 text-cyan-950 uppercase tracking-tighter">বিষয়ের ড্রপ ডাউন</div>
+                            </td>
+                            {chunk.map(ch => (
+                              <td key={ch} className="min-w-[100px] border-r-2 border-black bg-yellow-300 p-2 text-center font-black text-[11px] align-middle break-words text-black">
                                 {ch}
                               </td>
-                              <td className="p-0">
-                                <table className="w-full h-full border-none">
-                                  <tbody className="divide-y divide-black/10">
-                                    <tr className="border-b border-black/10 bg-blue-400/10">
-                                      <td className="p-1 pl-4 text-blue-700 border-r border-black/10 w-2/3">লেকচার শিট</td>
-                                      <td className="p-1 text-center font-black w-1/3 text-blue-800">{toBengaliNumber(classChapters[ch].lectureSheet)}</td>
-                                    </tr>
-                                    <tr className="border-b border-black/10 bg-orange-400/10">
-                                      <td className="p-1 pl-4 text-orange-700 border-r border-black/10 w-2/3">সৃজনশীল</td>
-                                      <td className="p-1 text-center font-black w-1/3 text-orange-800">{toBengaliNumber(classChapters[ch].creative)}</td>
-                                    </tr>
-                                    <tr className="border-b border-black/10 bg-indigo-400/10">
-                                      <td className="p-1 pl-4 text-indigo-700 border-r border-black/10 w-2/3">বহুনির্বাচনী</td>
-                                      <td className="p-1 text-center font-black w-1/3 text-indigo-800">{toBengaliNumber(classChapters[ch].mcq)}</td>
-                                    </tr>
-                                    <tr className="border-b border-black/10 bg-green-400/10">
-                                      <td className="p-1 pl-4 text-green-700 border-r border-black/10 w-2/3">উত্তরমালা</td>
-                                      <td className="p-1 text-center font-black w-1/3 text-green-800">{toBengaliNumber(classChapters[ch].answerKey)}</td>
-                                    </tr>
-                                    <tr className="bg-rose-400/10">
-                                      <td className="p-1 pl-4 text-rose-700 border-r border-black/10 w-2/3">মডেল টেস্ট</td>
-                                      <td className="p-1 text-center font-black w-1/3 text-rose-800">{toBengaliNumber(classChapters[ch].modelTest)}</td>
-                                    </tr>
-                                  </tbody>
-                                </table>
-                              </td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan={2} className="p-6 text-center text-muted-foreground font-bold italic bg-white/20 backdrop-blur-sm">
-                              এই বিষয়ের কোনো কন্টেন্ট এখনো নেই।
-                            </td>
+                            ))}
                           </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
+
+                          {/* Row 2: Lecture Sheet */}
+                          <tr className="border-b border-black/20 bg-blue-500/80 text-white">
+                            <td className="border-r-2 border-black p-1 text-center font-black text-[11px]">লেকচার শিট</td>
+                            {chunk.map(ch => (
+                              <td key={ch} className="border-r border-black/20 p-1 text-center font-black text-[13px] drop-shadow-md">
+                                {toBengaliNumber(classChapters[ch].lectureSheet)}
+                              </td>
+                            ))}
+                          </tr>
+
+                          {/* Row 3: Creative */}
+                          <tr className="border-b border-black/20 bg-orange-500/80 text-white">
+                            <td className="border-r-2 border-black p-1 text-center font-black text-[11px]">সৃজনশীল</td>
+                            {chunk.map(ch => (
+                              <td key={ch} className="border-r border-black/20 p-1 text-center font-black text-[13px] drop-shadow-md">
+                                {toBengaliNumber(classChapters[ch].creative)}
+                              </td>
+                            ))}
+                          </tr>
+
+                          {/* Row 4: MCQ */}
+                          <tr className="border-b border-black/20 bg-indigo-600/80 text-white">
+                            <td className="border-r-2 border-black p-1 text-center font-black text-[11px]">বহুনির্বাচনী</td>
+                            {chunk.map(ch => (
+                              <td key={ch} className="border-r border-black/20 p-1 text-center font-black text-[13px] drop-shadow-md">
+                                {toBengaliNumber(classChapters[ch].mcq)}
+                              </td>
+                            ))}
+                          </tr>
+
+                          {/* Row 5: Answer Key */}
+                          <tr className="border-b border-black/20 bg-green-500/80 text-white">
+                            <td className="border-r-2 border-black p-1 text-center font-black text-[11px]">উত্তরমালা</td>
+                            {chunk.map(ch => (
+                              <td key={ch} className="border-r border-black/20 p-1 text-center font-black text-[13px] drop-shadow-md">
+                                {toBengaliNumber(classChapters[ch].answerKey)}
+                              </td>
+                            ))}
+                          </tr>
+
+                          {/* Row 6: Model Test */}
+                          <tr className="bg-rose-600/80 text-white">
+                            <td className="border-r-2 border-black p-1 text-center font-black text-[11px]">মডেল টেস্ট</td>
+                            {chunk.map(ch => (
+                              <td key={ch} className="border-r border-black/20 p-1 text-center font-black text-[13px] drop-shadow-md">
+                                {toBengaliNumber(classChapters[ch].modelTest)}
+                              </td>
+                            ))}
+                          </tr>
+                        </tbody>
+                      </table>
+                    ))
+                  ) : (
+                    <div className="p-10 text-center bg-white/20 backdrop-blur-md border-2 border-black rounded-lg">
+                       <p className="text-black font-black text-lg drop-shadow-sm uppercase">এই বিষয়ের কোনো ডাটা পাওয়া যায়নি</p>
+                       <p className="text-[10px] font-bold text-muted-foreground">ড্রপ-ডাউন থেকে অন্য বিষয় সিলেক্ট করে দেখুন</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             );
           })}
         </div>
@@ -346,6 +349,13 @@ export default function Home() {
           ))}
         </div>
       </section>
+      
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar { height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #000; border-radius: 10px; }
+      `}</style>
     </div>
   );
 }
+
