@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, Suspense, useMemo, useRef, useCallback } from 'react';
@@ -27,31 +28,22 @@ function toBengaliNumber(n: number | string | undefined | null): string {
 
 function formatMath(text: string) {
   if (!text) return '';
-  // Clean up formatting artifacts and improve scientific unit handling
   let formatted = text.replace(/#+\s*\**|\*\*/g, '');
-  
-  // Fix scientific units like g=9.8 ms^-2 from OCR errors
   formatted = formatted.replace(/([a-zA-Z])\s*\n\s*([-+]?\d+)/g, '$1^$2');
   formatted = formatted.replace(/ms\s*\n\s*-2/g, 'ms^-2');
   formatted = formatted.replace(/−/g, '-'); 
-  
   formatted = formatted.replace(/\$|\\\(|\\\)|\\\[|\\\]/g, '');
   formatted = formatted.replace(/\n\s*\n\s*\n+/g, '\n\n');
   formatted = formatted.replace(/\(\((.*?)\)\)/g, '$1').replace(/\[\[(.*?)\]\]/g, '$1').trim();
-  
   formatted = formatted.replace(/\\text\{([^}]+)\}/g, '<span class="math-text">$1</span>');
-  
   const fracRegex = /\\frac\{((?:[^{}]|\{[^{}]*\})*)\}\s*\{((?:[^{}]|\{[^{}]*\})*)\}/g;
   formatted = formatted.replace(fracRegex, '<span class="math-frac"><span class="math-num">$1</span><span class="math-den">$2</span></span>');
-  
   formatted = formatted.replace(/\\sqrt\[([^\]]+)\]\{([^}]+)\}/g, '<span class="math-sqrt"><sup class="math-root">$1</sup>√<span class="math-sqrt-stem">$2</span></span>');
   formatted = formatted.replace(/\\sqrt\{([^}]+)\}/g, '<span class="math-sqrt">√<span class="math-sqrt-stem">$1</span></span>');
-  
   formatted = formatted.replace(/\^\{([^}]+)\}/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/\^([-+]?\d+|[a-zA-Z])/g, '<sup class="math-sup">$1</sup>');
   formatted = formatted.replace(/_\{([^}]+)\}/g, '<sub class="math-sub">$1</sub>');
   formatted = formatted.replace(/_([-+]?\d+|[a-zA-Z])/g, '<sub class="math-sub">$1</sub>');
-  
   const symbolMap: Record<string, string> = {
     '\\\\log': 'log', '\\\\triangle': '△', '\\\\angle': '∠', '\\\\circ': '°',
     '\\\\theta': 'θ', '\\\\pi': 'π', '\\\\pm': '±', '\\\\times': '×',
@@ -192,7 +184,6 @@ function CreateLectureSheetContent() {
     } else { setFontSizeDraft(String(globalFontSize)); setLineHeightDraft(String(globalLineHeight)); }
   }, [activeEditIdx, globalFontSize, globalLineHeight, pageStyles]);
 
-  // Pagination and Measure logic
   useEffect(() => {
     if (!isPrintMode) return;
     if (Object.keys(manualPages).length > 0) {
@@ -254,8 +245,6 @@ function CreateLectureSheetContent() {
         try {
           span.appendChild(range.extractContents()); 
           range.insertNode(span);
-          
-          // Re-select to allow continuous increments
           const newRange = document.createRange();
           newRange.selectNodeContents(span);
           selection.removeAllRanges();
@@ -328,15 +317,12 @@ function CreateLectureSheetContent() {
     });
   }, [user, db, editId, data, printSettings, pageStyles, manualPages, router, toast, isPrintMode]);
 
-  // Shortcut key handling - Optimized and 100% functional
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => { 
       if ((e.ctrlKey || e.metaKey)) { 
         const key = e.key.toLowerCase();
         if (['s', 'n', 'd', 'l', 'e', 'r', '[', ']', 'x', 'z', 'y', 'b', 'i', 'u', 'c', 'v', 'a'].includes(key)) {
-          // Allow default cut/copy/paste behavior
           if (['x', 'c', 'v', 'a', 'z', 'y'].includes(key)) return; 
-          
           e.preventDefault();
           if (key === 's') handleSave();
           else if (key === 'n') setPaginatedPages(prev => [...prev, ""]);
@@ -354,7 +340,7 @@ function CreateLectureSheetContent() {
               if (parent) { 
                 const style = window.getComputedStyle(parent);
                 const fs = parseFloat(style.fontSize);
-                currentSize = (fs * 0.75) || 10.5; // Convert px to pt approx
+                currentSize = (fs * 0.75) || 10.5;
               }
               const nextVal = Math.max(1, currentSize - 0.5);
               handleFormatting('fontSize', nextVal.toString());
@@ -485,7 +471,10 @@ function CreateLectureSheetContent() {
       {isPrintMode && (
         <div className="print-view-container flex flex-col h-screen fixed inset-0 top-0 left-0 bg-slate-100 z-[40] font-kalpurush overflow-hidden">
           <header className="no-print h-14 bg-white border-b flex items-center justify-between px-6 shrink-0 shadow-sm z-50">
-             <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center"><Eye className="w-5 h-5" /></div><h3 className="font-bold text-lg">প্রিন্ট প্রিভিউ ও লেআউট (মোট {toBengaliNumber(paginatedPages.length)} পাতা)</h3></div>
+             <div className="flex items-center gap-3">
+               <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center"><Eye className="w-5 h-5" /></div>
+               <h3 className="font-bold text-lg">প্রিন্ট প্রিভিউ ও লেআউট - {data.institution || softwareConfig?.appName || 'টপ গ্রেড'}</h3>
+             </div>
              <div className="flex gap-3">
                <Button variant="outline" size="sm" onClick={() => router.back()} className="gap-2 font-bold border-primary text-primary bg-white"><ArrowLeft className="w-4 h-4" /> ফিরে যান</Button>
                <Button size="sm" onClick={handleSave} disabled={saving} className="gap-2 font-bold bg-green-600 hover:bg-green-700 px-4">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} সেভ (Ctrl+S)</Button>

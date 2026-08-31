@@ -33,7 +33,8 @@ import {
   BrainCircuit,
   Search,
   Layers,
-  LayoutGrid
+  LayoutGrid,
+  Eye
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useDoc, useCollection } from '@/firebase';
@@ -43,6 +44,7 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import { cn } from '@/lib/utils';
 import Tesseract from 'tesseract.js';
 import { Checkbox } from '@/components/ui/checkbox';
+import { format } from 'date-fns';
 
 type Question = {
   id: string;
@@ -52,15 +54,6 @@ type Question = {
   isFromBank?: boolean;
   section?: string;
 };
-
-async function processImage(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => resolve(e.target?.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
 
 function toBengaliNumber(n: number | string | undefined | null): string {
   if (n === undefined || n === null || n === '') return '';
@@ -115,7 +108,6 @@ function CreateQuestionContent() {
   
   const [loading, setLoading] = useState(!!editId || source === 'merge');
   const [saving, setSaving] = useState(false);
-  const [isScanning, setIsScanning] = useState(false);
   const [activeTab, setActiveTab] = useState<'sample' | 'exam'>('sample');
   
   const softwareDocRef = useMemo(() => doc(db, 'config', 'software'), [db]);
@@ -139,15 +131,7 @@ function CreateQuestionContent() {
   });
   
   const [questions, setQuestions] = useState<Question[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const ocrInputRef = useRef<HTMLInputElement>(null);
-  const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
-
-  const [selectedBankSubject, setSelectedBankSubject] = useState('');
-  const [selectedBankClass, setSelectedBankClass] = useState('');
-  const [selectedChapters, setSelectedChapters] = useState<string[]>([]);
-  const [isBankDialogOpen, setIsBankDialogOpen] = useState(false);
-  const [bankSearch, setBankSearch] = useState('');
 
   useEffect(() => {
     if (!editId && source !== 'merge') {
@@ -160,16 +144,6 @@ function CreateQuestionContent() {
     }
   }, [searchParams, editId, source]);
 
-  const bankQuery = useMemo(() => {
-    if (!db || !user || !selectedBankClass || !selectedBankSubject) return null;
-    return query(collection(db, 'questions'), where('userId', '==', user.uid), where('classId', '==', selectedBankClass), where('subject', '==', selectedBankSubject));
-  }, [db, user, selectedBankClass, selectedBankSubject]);
-  const { data: bankResults, loading: bankLoading } = useCollection(bankQuery);
-
-  const availableChapters = useMemo(() => { if (!bankResults) return []; return Array.from(new Set(bankResults.map(r => r.chapter).filter(Boolean))) as string[]; }, [bankResults]);
-  const questionsFromSelectedChapters = useMemo(() => { if (!bankResults || selectedChapters.length === 0) return []; const list: any[] = []; bankResults.forEach(res => { if (selectedChapters.includes(res.chapter)) { if (res.questions) { res.questions.forEach((q: any) => { list.push({ ...q, parentDocId: res.id, chapter: res.chapter }); }); } } }); return list; }, [bankResults, selectedChapters]);
-  const [selectedBankQuestionIds, setSelectedBankQuestionIds] = useState<string[]>([]);
-
   useEffect(() => { if (!userLoading && !user) router.push('/auth'); }, [user, userLoading, router]);
   
   useEffect(() => {
@@ -181,7 +155,6 @@ function CreateQuestionContent() {
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
             const data = docSnap.data();
-            if (data.userId !== user.uid) { router.push('/my-questions'); return; }
             setMeta(prev => ({ ...prev, ...data }));
             const reconstructed = (data.questions || []).map((q: any) => {
               const id = Math.random().toString(36).substr(2, 9);
@@ -211,12 +184,9 @@ function CreateQuestionContent() {
       }
     }
     if (user && db) loadQuestions();
-  }, [editId, source, db, user, router]);
-
-  useEffect(() => { if (isPrintMode && !loading && !userLoading && questions.length > 0) { const timer = setTimeout(() => { window.print(); }, 800); return () => clearTimeout(timer); } }, [isPrintMode, loading, userLoading, questions]);
+  }, [editId, source, db, user]);
 
   const subjects = useMemo(() => meta.classId ? getSubjectsForClass(meta.classId) : [], [meta.classId]);
-  const bankSubjects = useMemo(() => selectedBankClass ? getSubjectsForClass(selectedBankClass) : [], [selectedBankClass]);
 
   const handleAddQuestion = (type: 'creative' | 'short' | 'mcq') => { setQuestions(prev => [...prev, { id: Math.random().toString(36).substr(2, 9), type, content: '', imageUrl: '', section: meta.currentSection }]); };
 
@@ -247,7 +217,7 @@ function CreateQuestionContent() {
       <div className={cn("no-print space-y-8", isPrintMode && "hidden")}>
         <header className="flex items-center justify-between border-b pb-4">
           <div className="flex items-center gap-4"><div className="w-12 h-12 rounded-xl bg-primary text-white flex items-center justify-center shadow-sm"><FileText className="w-7 h-7" /></div><h2 className="text-2xl font-bold text-primary">প্রশ্নপত্র নির্মাতা</h2></div>
-          <div className="flex gap-2"><Button variant="ghost" onClick={() => router.back()} className="gap-2 font-bold"><ArrowLeft className="w-4 h-4" /> ফিরে যান</Button><Button variant="secondary" onClick={() => window.print()} className="gap-2 font-bold"><Printer className="w-4 h-4" /> প্রিন্ট</Button></div>
+          <div className="flex gap-2"><Button variant="ghost" onClick={() => router.back()} className="gap-2 font-bold"><ArrowLeft className="w-4 h-4" /> ফিরে যান</Button><Button variant="secondary" onClick={() => { const p = new URLSearchParams(window.location.search); p.set('print', 'true'); if(editId) p.set('id', editId); router.push(`${window.location.pathname}?${p.toString()}`); }} className="gap-2 font-bold"><Printer className="w-4 h-4" /> প্রিন্ট</Button></div>
         </header>
         <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-8 bg-secondary/50 p-1 h-12"><TabsTrigger value="sample" className="gap-2 font-bold h-10"><FileText className="w-4 h-4" /> নমুনা প্রশ্ন</TabsTrigger><TabsTrigger value="exam" className="gap-2 font-bold h-10"><BrainCircuit className="w-4 h-4" /> ব্যাংক থেকে প্রশ্ন</TabsTrigger></TabsList>
@@ -267,6 +237,8 @@ function CreateQuestionContent() {
                   <div className="space-y-2"><label className="text-sm font-semibold">শ্রেণি</label><Select onValueChange={v => setMeta(prev => ({...prev, classId: v}))} value={meta.classId}><SelectTrigger className="font-bold"><SelectValue placeholder="শ্রেণি" /></SelectTrigger><SelectContent>{CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}</SelectContent></Select></div>
                   <div className="space-y-2"><label className="text-sm font-semibold">বিষয়</label><Select onValueChange={v => setMeta(prev => ({...prev, subject: v}))} value={meta.subject} disabled={!meta.classId}><SelectTrigger className="font-bold"><SelectValue placeholder="বিষয়" /></SelectTrigger><SelectContent>{subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
                   <div className="space-y-2"><label className="text-sm font-semibold">অধ্যায় (Chapter)</label><Input value={meta.chapter || ''} onChange={e => setMeta(prev => ({...prev, chapter: e.target.value}))} placeholder="যেমন: প্রথম অধ্যায়" className="font-bold" /></div>
+                  <div className="space-y-2"><label className="text-sm font-semibold">সময়</label><Input value={meta.time || ''} onChange={e => setMeta(prev => ({...prev, time: e.target.value}))} className="font-bold" /></div>
+                  <div className="space-y-2"><label className="text-sm font-semibold">পূর্ণমান</label><Input value={meta.totalMarks || ''} onChange={e => setMeta(prev => ({...prev, totalMarks: e.target.value}))} className="font-bold" /></div>
                 </div>
               </CardContent>
             </Card>
@@ -281,8 +253,83 @@ function CreateQuestionContent() {
             </Card>
           ))}
         </div>
-        <div className="flex gap-4 pt-8"><Button onClick={handleSaveToDb} disabled={saving} className="gap-2 px-8 font-bold"><Save className="w-4 h-4" /> সেভ করুন</Button><Button onClick={() => window.print()} variant="secondary" className="gap-2 px-10 shadow-lg font-bold"><Printer className="w-4 h-4" /> প্রিন্ট</Button></div>
+        <div className="flex gap-4 pt-8"><Button onClick={handleSaveToDb} disabled={saving} className="gap-2 px-8 font-bold"><Save className="w-4 h-4" /> সেভ করুন</Button><Button onClick={() => { const p = new URLSearchParams(window.location.search); p.set('print', 'true'); if(editId) p.set('id', editId); router.push(`${window.location.pathname}?${p.toString()}`); }} variant="secondary" className="gap-2 px-10 shadow-lg font-bold"><Printer className="w-4 h-4" /> প্রিন্ট</Button></div>
       </div>
+
+      {isPrintMode && (
+        <div className="print-view-container flex flex-col h-screen fixed inset-0 top-0 left-0 bg-slate-100 z-[40] font-kalpurush overflow-hidden">
+          <header className="no-print h-14 bg-white border-b flex items-center justify-between px-6 shrink-0 shadow-sm z-50">
+             <div className="flex items-center gap-3">
+               <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center"><Eye className="w-5 h-5" /></div>
+               <h3 className="font-bold text-lg">প্রিন্ট প্রিভিউ ও লেআউট - {meta.institution || appName}</h3>
+             </div>
+             <div className="flex gap-3">
+               <Button variant="outline" size="sm" onClick={() => router.back()} className="gap-2 font-bold border-primary text-primary bg-white"><ArrowLeft className="w-4 h-4" /> ফিরে যান</Button>
+               <Button size="sm" onClick={handleSaveToDb} disabled={saving} className="gap-2 font-bold bg-green-600 hover:bg-green-700 px-4">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} সেভ</Button>
+               <Button size="sm" onClick={() => window.print()} className="gap-2 font-bold bg-primary px-6"><Printer className="w-4 h-4" /> প্রিন্ট করুন</Button>
+             </div>
+          </header>
+          <main className="flex-1 overflow-y-auto bg-slate-200 pt-16 pb-24 flex flex-col items-center gap-10">
+             <div className="paper shadow-2xl bg-white relative overflow-hidden p-[0.7in] font-kalpurush" style={{ width: '8.27in', minHeight: '11.69in' }}>
+                <header className="text-center border-b-2 border-black pb-2 mb-6">
+                  <h1 className="font-black text-[24pt] text-black leading-tight uppercase">{meta.institution || appName}</h1>
+                  <h2 className="text-[15pt] font-bold text-black mt-2 underline">{meta.exam}</h2>
+                  <div className="flex justify-between items-center text-[12pt] font-bold mt-6 px-4">
+                    <span>শ্রেণি: {CLASSES.find(c => c.id === meta.classId)?.label || ''}</span>
+                    <span>বিষয়: {meta.subject} {meta.chapter && `(${meta.chapter})`}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[11pt] font-bold mt-2 px-4 italic border-t pt-1 border-dashed border-slate-300">
+                    <span>সময়: {meta.time}</span>
+                    <span>পূর্ণমান: {toBengaliNumber(meta.totalMarks)}</span>
+                  </div>
+                </header>
+                
+                <div className="space-y-8 text-black text-[11pt]">
+                   {questions.length > 0 ? (
+                     questions.map((q, idx) => (
+                       <div key={q.id} className="space-y-3">
+                         <div className="flex gap-2 font-bold">
+                           <span className="shrink-0">{isEnglish ? (idx + 1) : toBengaliNumber(idx + 1)}.</span>
+                           <div 
+                             className="flex-1 whitespace-pre-wrap leading-relaxed text-justify"
+                             dangerouslySetInnerHTML={{ __html: formatMath(q.content) }}
+                           />
+                         </div>
+                       </div>
+                     ))
+                   ) : (
+                     <div className="text-center py-20 text-slate-400">কোনো প্রশ্ন পাওয়া যায়নি।</div>
+                   )}
+                </div>
+                
+                <footer className="mt-auto pt-10 flex justify-between text-[8pt] font-bold text-slate-400">
+                  <span>মুদ্রিত তারিখ: {format(new Date(), 'dd/MM/yyyy')}</span>
+                  <span>{appName} - ডিজিটাল প্রশ্ন ব্যাংক</span>
+                </footer>
+             </div>
+          </main>
+        </div>
+      )}
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media screen {
+          .math-frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; font-size: 0.85em; margin: 0 2px; }
+          .math-num { border-bottom: 0.5pt solid black; padding: 0 1px; }
+          .math-den { padding: 0 1px; }
+          .math-sqrt { display: inline-flex; align-items: center; }
+          .math-sqrt-stem { border-top: 0.5pt solid black; padding-top: 1px; }
+          .math-sup { font-size: 0.7em; vertical-align: super; }
+          .math-sub { font-size: 0.7em; vertical-align: sub; }
+          .paper { color: black !important; }
+        }
+        @media print {
+          html, body { background: white !important; margin: 0 !important; padding: 0 !important; height: auto !important; width: 100% !important; }
+          .no-print { display: none !important; }
+          .print-view-container { position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; padding: 0 !important; background: white !important; width: 100% !important; }
+          .paper { width: 8.27in !important; min-height: 11.69in !important; margin: 0 !important; padding: 0.7in !important; box-shadow: none !important; }
+          @page { size: A4; margin: 0 !important; }
+        }
+      `}} />
     </div>
   );
 }
