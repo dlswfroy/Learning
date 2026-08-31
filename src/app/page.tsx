@@ -19,14 +19,8 @@ import {
   LayoutGrid,
   FileText
 } from 'lucide-react';
-import { CLASSES } from '@/lib/constants';
+import { CLASSES, getSubjectsForClass } from '@/lib/constants';
 import { collection } from 'firebase/firestore';
-import { 
-  Accordion, 
-  AccordionContent, 
-  AccordionItem, 
-  AccordionTrigger 
-} from "@/components/ui/accordion";
 import { Badge } from '@/components/ui/badge';
 import { 
   Select, 
@@ -62,11 +56,9 @@ export default function Home() {
   // Aggregate stats by class, subject and chapter
   const stats = useMemo(() => {
     const classData: Record<string, Record<string, Record<string, any>>> = {};
-    const subjectsInClass: Record<string, Set<string>> = {};
     
     CLASSES.forEach(c => {
       classData[c.id] = {};
-      subjectsInClass[c.id] = new Set();
     });
 
     const getChapterName = (item: any) => (item.chapter || item.topic || item.chapterName || 'সাধারণ অধ্যায়').trim();
@@ -77,7 +69,6 @@ export default function Home() {
       const sub = item.subject;
       const ch = getChapterName(item);
       if (!classData[cid]) return;
-      subjectsInClass[cid].add(sub);
       if (!classData[cid][sub]) classData[cid][sub] = {};
       if (!classData[cid][sub][ch]) classData[cid][sub][ch] = { creative: 0, lectureSheet: 0, mcq: 0, answerKey: 0, modelTest: 0 };
       
@@ -94,7 +85,6 @@ export default function Home() {
       const sub = item.subject;
       const ch = getChapterName(item);
       if (!classData[cid]) return;
-      subjectsInClass[cid].add(sub);
       if (!classData[cid][sub]) classData[cid][sub] = {};
       if (!classData[cid][sub][ch]) classData[cid][sub][ch] = { creative: 0, lectureSheet: 0, mcq: 0, answerKey: 0, modelTest: 0 };
       
@@ -109,18 +99,12 @@ export default function Home() {
       const sub = item.subject;
       const ch = getChapterName(item);
       if (!classData[cid]) return;
-      subjectsInClass[cid].add(sub);
       if (!classData[cid][sub]) classData[cid][sub] = {};
       if (!classData[cid][sub][ch]) classData[cid][sub][ch] = { creative: 0, lectureSheet: 0, mcq: 0, answerKey: 0, modelTest: 0 };
       classData[cid][sub][ch].lectureSheet++;
     });
 
-    const subjectsArray: Record<string, string[]> = {};
-    Object.keys(subjectsInClass).forEach(cid => {
-      subjectsArray[cid] = Array.from(subjectsInClass[cid]).sort();
-    });
-
-    return { classData, subjectsArray };
+    return { classData };
   }, [allQuestions, allPdfSheets, allLectureSheets]);
 
   useEffect(() => {
@@ -141,109 +125,108 @@ export default function Home() {
   return (
     <div className="space-y-8 animate-fade-in font-kalpurush">
       {/* Live Board Section */}
-      <section className="bg-white border-2 border-black rounded-xl p-4 shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between mb-4 border-b border-black/10 pb-2">
+      <section className="space-y-6">
+        <div className="flex items-center justify-between border-b-2 border-black pb-2">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded bg-red-600 text-white flex items-center justify-center animate-pulse">
               <LayoutGrid className="w-4 h-4" />
             </div>
             <h3 className="text-lg font-black text-foreground">লাইভ কন্টেন্ট বোর্ড</h3>
           </div>
-          <Badge className="bg-primary text-white font-bold text-[10px]">লাইভ আপডেট</Badge>
+          <Badge className="bg-primary text-white font-bold text-[10px]">রিয়েল-টাইম আপডেট</Badge>
         </div>
         
-        <Accordion type="single" collapsible className="w-full">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {CLASSES.map((cls) => {
-            const subjects = stats.subjectsArray[cls.id] || [];
-            const selectedSubject = selectedSubjects[cls.id] || (subjects.length > 0 ? subjects[0] : '');
+            const allSubjects = getSubjectsForClass(cls.id);
+            const selectedSubject = selectedSubjects[cls.id] || allSubjects[0];
             const classChapters = stats.classData[cls.id]?.[selectedSubject] || {};
             const chapterNames = Object.keys(classChapters).sort();
-            
-            if (subjects.length === 0) return null;
 
             return (
-              <AccordionItem key={cls.id} value={cls.id} className="border-black/5">
-                <AccordionTrigger className="hover:no-underline py-3 px-2 rounded-lg hover:bg-slate-50 transition-all">
-                  <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
-                      <GraduationCap className="w-3.5 h-3.5 text-primary" />
+              <Card key={cls.id} className="border-2 border-black shadow-sm overflow-hidden bg-white">
+                <CardHeader className="bg-slate-50 border-b border-black p-3 flex flex-row items-center justify-between space-y-0">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+                      <GraduationCap className="w-4 h-4 text-primary" />
                     </div>
-                    <span className="font-black text-sm">শ্রেণি: {cls.label}</span>
-                    <span className="text-[10px] font-bold text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">
-                      {toBengaliNumber(subjects.length)} টি বিষয়
-                    </span>
+                    <span className="font-black text-sm">{cls.label} শ্রেণির বোর্ড</span>
                   </div>
-                </AccordionTrigger>
-                <AccordionContent className="pt-2 px-1">
-                  <div className="overflow-hidden rounded-lg border border-black shadow-inner">
+                  <div className="w-36 md:w-44">
+                    <Select 
+                      value={selectedSubject} 
+                      onValueChange={(val) => setSelectedSubjects(prev => ({...prev, [cls.id]: val}))}
+                    >
+                      <SelectTrigger className="h-8 text-[11px] font-black border-black/40 bg-white">
+                        <SelectValue placeholder="বিষয়" />
+                      </SelectTrigger>
+                      <SelectContent className="font-kalpurush">
+                        {allSubjects.map(sub => (
+                          <SelectItem key={sub} value={sub} className="text-[11px] font-bold">{sub}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
                     <table className="w-full text-[11px] font-bold border-collapse">
                       <thead>
                         <tr className="bg-slate-100 border-b border-black">
                           <th className="p-2 text-center text-foreground border-r border-black w-1/2">অধ্যায়ের নাম</th>
-                          <th className="p-2 text-center text-primary w-1/2">
-                            <Select 
-                              value={selectedSubject} 
-                              onValueChange={(val) => setSelectedSubjects(prev => ({...prev, [cls.id]: val}))}
-                            >
-                              <SelectTrigger className="h-7 text-[10px] font-black border-black/20 bg-white">
-                                <SelectValue placeholder="বিষয় নির্বাচন করুন" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {subjects.map(sub => (
-                                  <SelectItem key={sub} value={sub} className="text-[10px] font-bold">{sub}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </th>
+                          <th className="p-2 text-center text-primary w-1/2">লাইভ কন্টেন্ট তথ্য</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {chapterNames.map(ch => (
-                          <tr key={ch} className="border-b border-black last:border-b-0">
-                            <td className="p-2 text-foreground font-black text-center align-middle border-r border-black bg-white">
-                              {ch}
-                            </td>
-                            <td className="p-0">
-                              <table className="w-full h-full border-none">
-                                <tbody className="divide-y divide-black/10">
-                                  <tr className="border-b border-black">
-                                    <td className="p-1 pl-4 text-blue-600 border-r border-black/10 w-2/3">লেকচার শিট</td>
-                                    <td className="p-1 text-center font-black w-1/3">{toBengaliNumber(classChapters[ch].lectureSheet)}</td>
-                                  </tr>
-                                  <tr className="border-b border-black">
-                                    <td className="p-1 pl-4 text-orange-600 border-r border-black/10 w-2/3">সৃজনশীল</td>
-                                    <td className="p-1 text-center font-black w-1/3">{toBengaliNumber(classChapters[ch].creative)}</td>
-                                  </tr>
-                                  <tr className="border-b border-black">
-                                    <td className="p-1 pl-4 text-indigo-600 border-r border-black/10 w-2/3">বহুনির্বাচনী</td>
-                                    <td className="p-1 text-center font-black w-1/3">{toBengaliNumber(classChapters[ch].mcq)}</td>
-                                  </tr>
-                                  <tr className="border-b border-black">
-                                    <td className="p-1 pl-4 text-green-600 border-r border-black/10 w-2/3">উত্তরমালা</td>
-                                    <td className="p-1 text-center font-black w-1/3">{toBengaliNumber(classChapters[ch].answerKey)}</td>
-                                  </tr>
-                                  <tr>
-                                    <td className="p-1 pl-4 text-rose-600 border-r border-black/10 w-2/3">মডেল টেস্ট</td>
-                                    <td className="p-1 text-center font-black w-1/3">{toBengaliNumber(classChapters[ch].modelTest)}</td>
-                                  </tr>
-                                </tbody>
-                              </table>
+                        {chapterNames.length > 0 ? (
+                          chapterNames.map(ch => (
+                            <tr key={ch} className="border-b border-black last:border-b-0">
+                              <td className="p-2 text-foreground font-black text-center align-middle border-r border-black bg-white break-words">
+                                {ch}
+                              </td>
+                              <td className="p-0">
+                                <table className="w-full h-full border-none">
+                                  <tbody className="divide-y divide-black/10">
+                                    <tr className="border-b border-black/10">
+                                      <td className="p-1 pl-4 text-blue-600 border-r border-black/10 w-2/3">লেকচার শিট</td>
+                                      <td className="p-1 text-center font-black w-1/3">{toBengaliNumber(classChapters[ch].lectureSheet)}</td>
+                                    </tr>
+                                    <tr className="border-b border-black/10">
+                                      <td className="p-1 pl-4 text-orange-600 border-r border-black/10 w-2/3">সৃজনশীল</td>
+                                      <td className="p-1 text-center font-black w-1/3">{toBengaliNumber(classChapters[ch].creative)}</td>
+                                    </tr>
+                                    <tr className="border-b border-black/10">
+                                      <td className="p-1 pl-4 text-indigo-600 border-r border-black/10 w-2/3">বহুনির্বাচনী</td>
+                                      <td className="p-1 text-center font-black w-1/3">{toBengaliNumber(classChapters[ch].mcq)}</td>
+                                    </tr>
+                                    <tr className="border-b border-black/10">
+                                      <td className="p-1 pl-4 text-green-600 border-r border-black/10 w-2/3">উত্তরমালা</td>
+                                      <td className="p-1 text-center font-black w-1/3">{toBengaliNumber(classChapters[ch].answerKey)}</td>
+                                    </tr>
+                                    <tr>
+                                      <td className="p-1 pl-4 text-rose-600 border-r border-black/10 w-2/3">মডেল টেস্ট</td>
+                                      <td className="p-1 text-center font-black w-1/3">{toBengaliNumber(classChapters[ch].modelTest)}</td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={2} className="p-6 text-center text-muted-foreground font-bold italic bg-white">
+                              এই বিষয়ের কোনো কন্টেন্ট এখনো নেই।
                             </td>
                           </tr>
-                        ))}
+                        )}
                       </tbody>
                     </table>
                   </div>
-                </AccordionContent>
-              </AccordionItem>
+                </CardContent>
+              </Card>
             );
           })}
-          {Object.values(stats.classData).every(s => Object.keys(s).length === 0) && (
-            <div className="py-10 text-center text-muted-foreground font-bold italic text-sm">
-              বর্তমানে কোনো লাইভ কন্টেন্ট নেই।
-            </div>
-          )}
-        </Accordion>
+        </div>
       </section>
 
       {/* Dashboard Cards - 4 columns on mobile, 6 columns on desktop */}
