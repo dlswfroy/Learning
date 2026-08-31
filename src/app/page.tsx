@@ -1,17 +1,104 @@
 
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useCollection } from '@/firebase';
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { GraduationCap, ArrowRight, BrainCircuit, Loader2, BookOpen, Library, Users, NotebookPen, FileUp } from 'lucide-react';
+import { 
+  GraduationCap, 
+  ArrowRight, 
+  BrainCircuit, 
+  Loader2, 
+  BookOpen, 
+  Library, 
+  Users, 
+  NotebookPen, 
+  FileUp, 
+  LayoutGrid,
+  FileText,
+  CheckCircle2,
+  Trophy,
+  Brain
+} from 'lucide-react';
 import { CLASSES } from '@/lib/constants';
+import { collection } from 'firebase/firestore';
+import { 
+  Accordion, 
+  AccordionContent, 
+  AccordionItem, 
+  AccordionTrigger 
+} from "@/components/ui/accordion";
+import { Badge } from '@/components/ui/badge';
+
+function toBengaliNumber(n: number | string | undefined | null): string {
+  if (n === undefined || n === null || n === '') return '০';
+  const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+  return n.toString().replace(/\d/g, (digit) => bengaliDigits[parseInt(digit)]);
+}
 
 export default function Home() {
   const { user, loading } = useUser();
   const router = useRouter();
+  const db = useFirestore();
+
+  // Fetch all content for aggregation
+  const qQuery = useMemo(() => db ? collection(db, 'questions') : null, [db]);
+  const pQuery = useMemo(() => db ? collection(db, 'pdf-sheets') : null, [db]);
+  const lQuery = useMemo(() => db ? collection(db, 'lecture-sheets') : null, [db]);
+
+  const { data: allQuestions } = useCollection(qQuery);
+  const { data: allPdfSheets } = useCollection(pQuery);
+  const { data: allLectureSheets } = useCollection(lQuery);
+
+  // Aggregate stats by class and chapter
+  const stats = useMemo(() => {
+    const result: Record<string, { label: string, chapters: Record<string, any> }> = {};
+    
+    CLASSES.forEach(c => {
+      result[c.id] = { label: c.label, chapters: {} };
+    });
+
+    const getChapterName = (item: any) => (item.chapter || item.topic || item.chapterName || 'সাধারণ').trim();
+
+    // Process PDF Sheets
+    allPdfSheets?.forEach(item => {
+      const cid = item.classId;
+      const ch = getChapterName(item);
+      if (!result[cid]) return;
+      if (!result[cid].chapters[ch]) result[cid].chapters[ch] = { creative: 0, lectureSheet: 0, mcq: 0, answerKey: 0, modelTest: 0 };
+      
+      if (item.category === 'creative') result[cid].chapters[ch].creative++;
+      else if (item.category === 'lecture_sheet') result[cid].chapters[ch].lectureSheet++;
+      else if (item.category === 'mcq') result[cid].chapters[ch].mcq++;
+      else if (item.category === 'answer_key') result[cid].chapters[ch].answerKey++;
+      else if (item.category === 'model_test') result[cid].chapters[ch].modelTest++;
+    });
+
+    // Process Questions
+    allQuestions?.forEach(item => {
+      const cid = item.classId;
+      const ch = getChapterName(item);
+      if (!result[cid]) return;
+      if (!result[cid].chapters[ch]) result[cid].chapters[ch] = { creative: 0, lectureSheet: 0, mcq: 0, answerKey: 0, modelTest: 0 };
+      
+      if (item.examType === 'model_test') result[cid].chapters[ch].modelTest++;
+      else if (item.isMcq) result[cid].chapters[ch].mcq++;
+      else result[cid].chapters[ch].creative++;
+    });
+
+    // Process Native Lecture Sheets
+    allLectureSheets?.forEach(item => {
+      const cid = item.classId;
+      const ch = getChapterName(item);
+      if (!result[cid]) return;
+      if (!result[cid].chapters[ch]) result[cid].chapters[ch] = { creative: 0, lectureSheet: 0, mcq: 0, answerKey: 0, modelTest: 0 };
+      result[cid].chapters[ch].lectureSheet++;
+    });
+
+    return result;
+  }, [allQuestions, allPdfSheets, allLectureSheets]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -29,7 +116,78 @@ export default function Home() {
   }
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-8 animate-fade-in font-kalpurush">
+      {/* Live Board Section */}
+      <section className="bg-white border-2 border-black rounded-xl p-4 shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between mb-4 border-b border-black/10 pb-2">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded bg-red-600 text-white flex items-center justify-center animate-pulse">
+              <LayoutGrid className="w-4 h-4" />
+            </div>
+            <h3 className="text-lg font-black text-foreground">লাইভ কন্টেন্ট বোর্ড</h3>
+          </div>
+          <Badge className="bg-primary text-white font-bold text-[10px]">লাইভ আপডেট</Badge>
+        </div>
+        
+        <Accordion type="single" collapsible className="w-full">
+          {CLASSES.map((cls) => {
+            const classData = stats[cls.id]?.chapters || {};
+            const chapterNames = Object.keys(classData).sort();
+            
+            if (chapterNames.length === 0) return null;
+
+            return (
+              <AccordionItem key={cls.id} value={cls.id} className="border-black/5">
+                <AccordionTrigger className="hover:no-underline py-3 px-2 rounded-lg hover:bg-slate-50 transition-all">
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
+                      <GraduationCap className="w-3.5 h-3.5 text-primary" />
+                    </div>
+                    <span className="font-black text-sm">{cls.label} শ্রেণি</span>
+                    <span className="text-[10px] font-bold text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">
+                      {toBengaliNumber(chapterNames.length)} টি অধ্যায়
+                    </span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pt-2 px-1">
+                  <div className="overflow-x-auto rounded-lg border border-black/5 shadow-inner">
+                    <table className="w-full text-[11px] font-bold border-collapse">
+                      <thead>
+                        <tr className="bg-slate-100/80 border-b border-black/10">
+                          <th className="p-2 text-left text-primary whitespace-nowrap">অধ্যায়</th>
+                          <th className="p-2 text-center text-orange-600">সৃজনশীল</th>
+                          <th className="p-2 text-center text-blue-600">লেকচার শিট</th>
+                          <th className="p-2 text-center text-indigo-600">বহুনির্বাচনী</th>
+                          <th className="p-2 text-center text-green-600">উত্তরমালা</th>
+                          <th className="p-2 text-center text-rose-600">মডেল টেস্ট</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {chapterNames.map(ch => (
+                          <tr key={ch} className="hover:bg-slate-50/50">
+                            <td className="p-2 text-foreground font-black min-w-[120px]">{ch}</td>
+                            <td className="p-2 text-center bg-orange-50/20">{toBengaliNumber(classData[ch].creative)}</td>
+                            <td className="p-2 text-center bg-blue-50/20">{toBengaliNumber(classData[ch].lectureSheet)}</td>
+                            <td className="p-2 text-center bg-indigo-50/20">{toBengaliNumber(classData[ch].mcq)}</td>
+                            <td className="p-2 text-center bg-green-50/20">{toBengaliNumber(classData[ch].answerKey)}</td>
+                            <td className="p-2 text-center bg-rose-50/20">{toBengaliNumber(classData[ch].modelTest)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            );
+          })}
+          {Object.values(stats).every(s => Object.keys(s.chapters).length === 0) && (
+            <div className="py-10 text-center text-muted-foreground font-bold italic text-sm">
+              বর্তমানে কোনো লাইভ কন্টেন্ট নেই।
+            </div>
+          )}
+        </Accordion>
+      </section>
+
       {/* Dashboard Cards - 4 columns on mobile, 6 columns on desktop */}
       <section className="grid grid-cols-4 lg:grid-cols-6 gap-1.5 md:gap-2">
         <Link href="/create-question">
