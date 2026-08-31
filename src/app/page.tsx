@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useCollection } from '@/firebase';
 import Link from 'next/link';
@@ -17,10 +17,7 @@ import {
   NotebookPen, 
   FileUp, 
   LayoutGrid,
-  FileText,
-  CheckCircle2,
-  Trophy,
-  Brain
+  FileText
 } from 'lucide-react';
 import { CLASSES } from '@/lib/constants';
 import { collection } from 'firebase/firestore';
@@ -31,6 +28,13 @@ import {
   AccordionTrigger 
 } from "@/components/ui/accordion";
 import { Badge } from '@/components/ui/badge';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 
 function toBengaliNumber(n: number | string | undefined | null): string {
   if (n === undefined || n === null || n === '') return '০';
@@ -43,6 +47,9 @@ export default function Home() {
   const router = useRouter();
   const db = useFirestore();
 
+  // Selected subjects for each class board
+  const [selectedSubjects, setSelectedSubjects] = useState<Record<string, string>>({});
+
   // Fetch all content for aggregation
   const qQuery = useMemo(() => db ? collection(db, 'questions') : null, [db]);
   const pQuery = useMemo(() => db ? collection(db, 'pdf-sheets') : null, [db]);
@@ -52,52 +59,68 @@ export default function Home() {
   const { data: allPdfSheets } = useCollection(pQuery);
   const { data: allLectureSheets } = useCollection(lQuery);
 
-  // Aggregate stats by class and chapter
+  // Aggregate stats by class, subject and chapter
   const stats = useMemo(() => {
-    const result: Record<string, { label: string, chapters: Record<string, any> }> = {};
+    const classData: Record<string, Record<string, Record<string, any>>> = {};
+    const subjectsInClass: Record<string, Set<string>> = {};
     
     CLASSES.forEach(c => {
-      result[c.id] = { label: c.label, chapters: {} };
+      classData[c.id] = {};
+      subjectsInClass[c.id] = new Set();
     });
 
-    const getChapterName = (item: any) => (item.chapter || item.topic || item.chapterName || 'সাধারণ').trim();
+    const getChapterName = (item: any) => (item.chapter || item.topic || item.chapterName || 'সাধারণ অধ্যায়').trim();
 
     // Process PDF Sheets
     allPdfSheets?.forEach(item => {
       const cid = item.classId;
+      const sub = item.subject;
       const ch = getChapterName(item);
-      if (!result[cid]) return;
-      if (!result[cid].chapters[ch]) result[cid].chapters[ch] = { creative: 0, lectureSheet: 0, mcq: 0, answerKey: 0, modelTest: 0 };
+      if (!classData[cid]) return;
+      subjectsInClass[cid].add(sub);
+      if (!classData[cid][sub]) classData[cid][sub] = {};
+      if (!classData[cid][sub][ch]) classData[cid][sub][ch] = { creative: 0, lectureSheet: 0, mcq: 0, answerKey: 0, modelTest: 0 };
       
-      if (item.category === 'creative') result[cid].chapters[ch].creative++;
-      else if (item.category === 'lecture_sheet') result[cid].chapters[ch].lectureSheet++;
-      else if (item.category === 'mcq') result[cid].chapters[ch].mcq++;
-      else if (item.category === 'answer_key') result[cid].chapters[ch].answerKey++;
-      else if (item.category === 'model_test') result[cid].chapters[ch].modelTest++;
+      if (item.category === 'creative') classData[cid][sub][ch].creative++;
+      else if (item.category === 'lecture_sheet') classData[cid][sub][ch].lectureSheet++;
+      else if (item.category === 'mcq') classData[cid][sub][ch].mcq++;
+      else if (item.category === 'answer_key') classData[cid][sub][ch].answerKey++;
+      else if (item.category === 'model_test') classData[cid][sub][ch].modelTest++;
     });
 
     // Process Questions
     allQuestions?.forEach(item => {
       const cid = item.classId;
+      const sub = item.subject;
       const ch = getChapterName(item);
-      if (!result[cid]) return;
-      if (!result[cid].chapters[ch]) result[cid].chapters[ch] = { creative: 0, lectureSheet: 0, mcq: 0, answerKey: 0, modelTest: 0 };
+      if (!classData[cid]) return;
+      subjectsInClass[cid].add(sub);
+      if (!classData[cid][sub]) classData[cid][sub] = {};
+      if (!classData[cid][sub][ch]) classData[cid][sub][ch] = { creative: 0, lectureSheet: 0, mcq: 0, answerKey: 0, modelTest: 0 };
       
-      if (item.examType === 'model_test') result[cid].chapters[ch].modelTest++;
-      else if (item.isMcq) result[cid].chapters[ch].mcq++;
-      else result[cid].chapters[ch].creative++;
+      if (item.examType === 'model_test') classData[cid][sub][ch].modelTest++;
+      else if (item.isMcq) classData[cid][sub][ch].mcq++;
+      else classData[cid][sub][ch].creative++;
     });
 
     // Process Native Lecture Sheets
     allLectureSheets?.forEach(item => {
       const cid = item.classId;
+      const sub = item.subject;
       const ch = getChapterName(item);
-      if (!result[cid]) return;
-      if (!result[cid].chapters[ch]) result[cid].chapters[ch] = { creative: 0, lectureSheet: 0, mcq: 0, answerKey: 0, modelTest: 0 };
-      result[cid].chapters[ch].lectureSheet++;
+      if (!classData[cid]) return;
+      subjectsInClass[cid].add(sub);
+      if (!classData[cid][sub]) classData[cid][sub] = {};
+      if (!classData[cid][sub][ch]) classData[cid][sub][ch] = { creative: 0, lectureSheet: 0, mcq: 0, answerKey: 0, modelTest: 0 };
+      classData[cid][sub][ch].lectureSheet++;
     });
 
-    return result;
+    const subjectsArray: Record<string, string[]> = {};
+    Object.keys(subjectsInClass).forEach(cid => {
+      subjectsArray[cid] = Array.from(subjectsInClass[cid]).sort();
+    });
+
+    return { classData, subjectsArray };
   }, [allQuestions, allPdfSheets, allLectureSheets]);
 
   useEffect(() => {
@@ -131,10 +154,12 @@ export default function Home() {
         
         <Accordion type="single" collapsible className="w-full">
           {CLASSES.map((cls) => {
-            const classData = stats[cls.id]?.chapters || {};
-            const chapterNames = Object.keys(classData).sort();
+            const subjects = stats.subjectsArray[cls.id] || [];
+            const selectedSubject = selectedSubjects[cls.id] || (subjects.length > 0 ? subjects[0] : '');
+            const classChapters = stats.classData[cls.id]?.[selectedSubject] || {};
+            const chapterNames = Object.keys(classChapters).sort();
             
-            if (chapterNames.length === 0) return null;
+            if (subjects.length === 0) return null;
 
             return (
               <AccordionItem key={cls.id} value={cls.id} className="border-black/5">
@@ -143,34 +168,67 @@ export default function Home() {
                     <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
                       <GraduationCap className="w-3.5 h-3.5 text-primary" />
                     </div>
-                    <span className="font-black text-sm">{cls.label} শ্রেণি</span>
+                    <span className="font-black text-sm">শ্রেণি: {cls.label}</span>
                     <span className="text-[10px] font-bold text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">
-                      {toBengaliNumber(chapterNames.length)} টি অধ্যায়
+                      {toBengaliNumber(subjects.length)} টি বিষয়
                     </span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="pt-2 px-1">
-                  <div className="overflow-x-auto rounded-lg border border-black/5 shadow-inner">
+                  <div className="overflow-hidden rounded-lg border border-black shadow-inner">
                     <table className="w-full text-[11px] font-bold border-collapse">
                       <thead>
-                        <tr className="bg-slate-100/80 border-b border-black/10">
-                          <th className="p-2 text-left text-primary whitespace-nowrap">অধ্যায়</th>
-                          <th className="p-2 text-center text-orange-600">সৃজনশীল</th>
-                          <th className="p-2 text-center text-blue-600">লেকচার শিট</th>
-                          <th className="p-2 text-center text-indigo-600">বহুনির্বাচনী</th>
-                          <th className="p-2 text-center text-green-600">উত্তরমালা</th>
-                          <th className="p-2 text-center text-rose-600">মডেল টেস্ট</th>
+                        <tr className="bg-slate-100 border-b border-black">
+                          <th className="p-2 text-center text-foreground border-r border-black w-1/2">অধ্যায়ের নাম</th>
+                          <th className="p-2 text-center text-primary w-1/2">
+                            <Select 
+                              value={selectedSubject} 
+                              onValueChange={(val) => setSelectedSubjects(prev => ({...prev, [cls.id]: val}))}
+                            >
+                              <SelectTrigger className="h-7 text-[10px] font-black border-black/20 bg-white">
+                                <SelectValue placeholder="বিষয় নির্বাচন করুন" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {subjects.map(sub => (
+                                  <SelectItem key={sub} value={sub} className="text-[10px] font-bold">{sub}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100">
+                      <tbody>
                         {chapterNames.map(ch => (
-                          <tr key={ch} className="hover:bg-slate-50/50">
-                            <td className="p-2 text-foreground font-black min-w-[120px]">{ch}</td>
-                            <td className="p-2 text-center bg-orange-50/20">{toBengaliNumber(classData[ch].creative)}</td>
-                            <td className="p-2 text-center bg-blue-50/20">{toBengaliNumber(classData[ch].lectureSheet)}</td>
-                            <td className="p-2 text-center bg-indigo-50/20">{toBengaliNumber(classData[ch].mcq)}</td>
-                            <td className="p-2 text-center bg-green-50/20">{toBengaliNumber(classData[ch].answerKey)}</td>
-                            <td className="p-2 text-center bg-rose-50/20">{toBengaliNumber(classData[ch].modelTest)}</td>
+                          <tr key={ch} className="border-b border-black last:border-b-0">
+                            <td className="p-2 text-foreground font-black text-center align-middle border-r border-black bg-white">
+                              {ch}
+                            </td>
+                            <td className="p-0">
+                              <table className="w-full h-full border-none">
+                                <tbody className="divide-y divide-black/10">
+                                  <tr className="border-b border-black">
+                                    <td className="p-1 pl-4 text-blue-600 border-r border-black/10 w-2/3">লেকচার শিট</td>
+                                    <td className="p-1 text-center font-black w-1/3">{toBengaliNumber(classChapters[ch].lectureSheet)}</td>
+                                  </tr>
+                                  <tr className="border-b border-black">
+                                    <td className="p-1 pl-4 text-orange-600 border-r border-black/10 w-2/3">সৃজনশীল</td>
+                                    <td className="p-1 text-center font-black w-1/3">{toBengaliNumber(classChapters[ch].creative)}</td>
+                                  </tr>
+                                  <tr className="border-b border-black">
+                                    <td className="p-1 pl-4 text-indigo-600 border-r border-black/10 w-2/3">বহুনির্বাচনী</td>
+                                    <td className="p-1 text-center font-black w-1/3">{toBengaliNumber(classChapters[ch].mcq)}</td>
+                                  </tr>
+                                  <tr className="border-b border-black">
+                                    <td className="p-1 pl-4 text-green-600 border-r border-black/10 w-2/3">উত্তরমালা</td>
+                                    <td className="p-1 text-center font-black w-1/3">{toBengaliNumber(classChapters[ch].answerKey)}</td>
+                                  </tr>
+                                  <tr>
+                                    <td className="p-1 pl-4 text-rose-600 border-r border-black/10 w-2/3">মডেল টেস্ট</td>
+                                    <td className="p-1 text-center font-black w-1/3">{toBengaliNumber(classChapters[ch].modelTest)}</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -180,7 +238,7 @@ export default function Home() {
               </AccordionItem>
             );
           })}
-          {Object.values(stats).every(s => Object.keys(s.chapters).length === 0) && (
+          {Object.values(stats.classData).every(s => Object.keys(s).length === 0) && (
             <div className="py-10 text-center text-muted-foreground font-bold italic text-sm">
               বর্তমানে কোনো লাইভ কন্টেন্ট নেই।
             </div>
