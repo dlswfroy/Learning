@@ -51,6 +51,10 @@ const BENGALI_ORDINALS = [
   'একাদশ', 'দ্বাদশ', 'ত্রয়োদশ', 'চতুর্দশ', 'পঞ্চদশ', 'ষোড়শ', 'সপ্তদশ', 'অষ্টাদশ', 'ঊনবিংশ', 'বিংশ'
 ];
 
+/**
+ * Normalized key for robust data mapping.
+ * Ensures "1", "১ম অধ্যায়", "প্রথম" all point to "1".
+ */
 function getNormalizedKey(name: string): string {
   if (!name) return 'general';
   let n = name.toString().toLowerCase().trim();
@@ -167,7 +171,123 @@ export default function Home() {
 
   return (
     <div className="space-y-12 animate-fade-in font-kalpurush">
-      {/* Live Board Section */}
+      {/* 1. Dashboard Cards - Moved to Top */}
+      <section className="grid grid-cols-4 lg:grid-cols-6 gap-1.5 md:gap-2">
+        <Link href="/create-question">
+          <Card className={cn(glassClass, "bg-blue-500/10 overflow-hidden group hover:scale-105 transition-all border-l-4 border-l-blue-600 h-full")}>
+            <CardHeader className="p-1">
+              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-blue-600 flex items-center justify-center text-white mb-1 shadow-md group-hover:rotate-12 transition-transform border border-white/20">
+                <BrainCircuit className="w-4 h-4 md:w-5 md:h-5" />
+              </div>
+              <CardTitle className="text-blue-900 font-black text-[10px] md:text-[12px] leading-tight">প্রশ্ন ব্যাংক</CardTitle>
+            </CardHeader>
+            <CardContent className="p-1 pt-0">
+              <p className="text-[9px] md:text-[10px] font-black text-blue-900/60 leading-tight line-clamp-2">বোর্ড স্ট্যান্ডার্ড সৃজনশীল ও এমসিকিউ।</p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/create-lecture-sheet">
+          <Card className={cn(glassClass, "bg-orange-500/10 overflow-hidden group hover:scale-105 transition-all border-l-4 border-l-orange-600 h-full")}>
+            <CardHeader className="p-1">
+              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-orange-500 flex items-center justify-center text-white mb-1 shadow-md group-hover:rotate-12 transition-transform border border-white/20">
+                <BookOpen className="w-4 h-4 md:w-5 md:h-5" />
+              </div>
+              <CardTitle className="text-orange-900 font-black text-[10px] md:text-[12px] leading-tight">লেকচার শিট</CardTitle>
+            </CardHeader>
+            <CardContent className="p-1 pt-0">
+              <p className="text-[9px] md:text-[10px] font-black text-orange-900/60 leading-tight line-clamp-2">অধ্যায় ভিত্তিক লেকচার নোট তৈরি করুন।</p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/diary">
+          <Card className={cn(glassClass, "bg-indigo-500/10 overflow-hidden group hover:scale-105 transition-all border-l-4 border-l-indigo-600 h-full")}>
+            <CardHeader className="p-1">
+              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-indigo-600 flex items-center justify-center text-white mb-1 shadow-md group-hover:rotate-12 transition-transform border border-white/20">
+                <NotebookPen className="w-4 h-4 md:w-5 md:h-5" />
+              </div>
+              <CardTitle className="text-indigo-900 font-black text-[10px] md:text-[12px] leading-tight">টিচার্স ডায়েরি</CardTitle>
+            </CardHeader>
+            <CardContent className="p-1 pt-0">
+              <p className="text-[9px] md:text-[10px] font-black text-indigo-900/60 leading-tight line-clamp-2">প্রতিদিনের ক্লাস রেকর্ড লিখে রাখুন।</p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/students">
+          <Card className={cn(glassClass, "bg-green-500/10 overflow-hidden group hover:scale-105 transition-all border-l-4 border-l-green-600 h-full")}>
+            <CardHeader className="p-1">
+              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-green-600 flex items-center justify-center text-white mb-1 shadow-md group-hover:rotate-12 transition-transform border border-white/20">
+                <Users className="w-4 h-4 md:w-5 md:h-5" />
+              </div>
+              <CardTitle className="text-green-900 font-black text-[10px] md:text-[12px] leading-tight">শিক্ষার্থী</CardTitle>
+            </CardHeader>
+            <CardContent className="p-1 pt-0">
+              <p className="text-[9px] md:text-[10px] font-black text-green-900/60 leading-tight line-clamp-2">শিক্ষার্থীদের তথ্য ও হাজিরা পরিচালনা।</p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/settings?tab=sheets">
+          <Card className={cn(glassClass, "bg-rose-500/10 overflow-hidden group hover:scale-105 transition-all border-l-4 border-l-rose-600 h-full")}>
+            <CardHeader className="p-1">
+              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-rose-600 flex items-center justify-center text-white mb-1 shadow-md group-hover:rotate-12 transition-transform border border-white/20">
+                <FileUp className="w-4 h-4 md:w-5 md:h-5" />
+              </div>
+              <CardTitle className="text-rose-900 font-black text-[10px] md:text-[12px] leading-tight">কুইক আপলোড</CardTitle>
+            </CardHeader>
+            <CardContent className="p-1 pt-0">
+              <p className="text-[9px] md:text-[10px] font-black text-rose-900/60 leading-tight line-clamp-2">সরাসরি শিট বা প্রশ্ন আপলোড করুন।</p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/my-questions">
+          <Card className={cn(glassClass, "bg-cyan-500/10 overflow-hidden group hover:scale-105 transition-all border-l-4 border-l-cyan-600 h-full")}>
+            <CardHeader className="p-1">
+              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-cyan-500 flex items-center justify-center text-white mb-1 shadow-md group-hover:rotate-12 transition-transform border border-white/20">
+                <Library className="w-4 h-4 md:w-5 md:h-5" />
+              </div>
+              <CardTitle className="text-cyan-900 font-black text-[10px] md:text-[12px] leading-tight">আমার লাইব্রেরি</CardTitle>
+            </CardHeader>
+            <CardContent className="p-1 pt-0">
+              <p className="text-[9px] md:text-[10px] font-black text-cyan-900/60 leading-tight line-clamp-2">আপনার সব সংগ্রহ এখানে পাবেন।</p>
+            </CardContent>
+          </Card>
+        </Link>
+      </section>
+
+      {/* 2. Class Selection Section - Moved after Dashboard cards */}
+      <section>
+        <div className="flex items-center justify-between mb-6 border-b-2 border-black pb-2">
+          <h3 className="text-lg font-black text-foreground flex items-center gap-2">
+            <GraduationCap className="w-4 h-4 md:w-5 md:h-5 text-primary" />
+            শ্রেণি নির্বাচন করুন
+          </h3>
+        </div>
+        <div className="grid grid-cols-4 lg:grid-cols-6 gap-1.5 md:gap-2">
+          {CLASSES.map((cls) => (
+            <Link key={cls.id} href={`/class/${cls.id}`}>
+              <Card className={cn(glassClass, "hover:bg-primary/10 hover:scale-105 transition-all group overflow-hidden bg-white/60")}>
+                <CardContent className="p-1 flex flex-col items-center text-center space-y-1">
+                  <div className="w-4 h-4 md:w-5 md:h-5 rounded-full bg-primary flex items-center justify-center text-white group-hover:bg-white group-hover:text-primary transition-all shadow-md border-2 border-white">
+                    <GraduationCap className="w-4 h-4 md:w-5 md:h-5" />
+                  </div>
+                  <div>
+                    <p className="font-black text-[10px] md:text-[12px] group-hover:text-primary transition-colors">{cls.label} শ্রেণি</p>
+                  </div>
+                  <div className="flex items-center gap-0.5 text-[7px] font-black text-primary opacity-80 group-hover:opacity-100 transition-all uppercase tracking-tighter">
+                    প্রবেশ <ArrowRight className="w-1.5 h-1.5 transition-transform group-hover:translate-x-0.5" />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* 3. Live Board Section - Moved to Bottom */}
       <section className="space-y-8">
         <div className="flex items-center justify-between border-b-2 border-black pb-2">
           <div className="flex items-center gap-2">
@@ -187,9 +307,8 @@ export default function Home() {
             
             const predefined = getChaptersForSubject(cls.id, selectedSubject);
             
-            // Generate list of objects with normalized keys for robust matching
+            // Deduplicate chapters by normalized key for the board
             const chapterMap = new Map();
-            
             [...predefined, ...Object.keys(classChaptersStats)].forEach(name => {
               const key = getNormalizedKey(name);
               if (!chapterMap.has(key) || (predefined.includes(name) && !predefined.includes(chapterMap.get(key).display))) {
@@ -293,121 +412,6 @@ export default function Home() {
               </div>
             );
           })}
-        </div>
-      </section>
-
-      {/* Dashboard Cards */}
-      <section className="grid grid-cols-4 lg:grid-cols-6 gap-1.5 md:gap-2">
-        <Link href="/create-question">
-          <Card className={cn(glassClass, "bg-blue-500/10 overflow-hidden group hover:scale-105 transition-all border-l-4 border-l-blue-600 h-full")}>
-            <CardHeader className="p-1">
-              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-blue-600 flex items-center justify-center text-white mb-1 shadow-md group-hover:rotate-12 transition-transform border border-white/20">
-                <BrainCircuit className="w-4 h-4 md:w-5 md:h-5" />
-              </div>
-              <CardTitle className="text-blue-900 font-black text-[10px] md:text-[12px] leading-tight">প্রশ্ন ব্যাংক</CardTitle>
-            </CardHeader>
-            <CardContent className="p-1 pt-0">
-              <p className="text-[9px] md:text-[10px] font-black text-blue-900/60 leading-tight line-clamp-2">বোর্ড স্ট্যান্ডার্ড সৃজনশীল ও এমসিকিউ।</p>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="/create-lecture-sheet">
-          <Card className={cn(glassClass, "bg-orange-500/10 overflow-hidden group hover:scale-105 transition-all border-l-4 border-l-orange-600 h-full")}>
-            <CardHeader className="p-1">
-              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-orange-500 flex items-center justify-center text-white mb-1 shadow-md group-hover:rotate-12 transition-transform border border-white/20">
-                <BookOpen className="w-4 h-4 md:w-5 md:h-5" />
-              </div>
-              <CardTitle className="text-orange-900 font-black text-[10px] md:text-[12px] leading-tight">লেকচার শিট</CardTitle>
-            </CardHeader>
-            <CardContent className="p-1 pt-0">
-              <p className="text-[9px] md:text-[10px] font-black text-orange-900/60 leading-tight line-clamp-2">অধ্যায় ভিত্তিক লেকচার নোট তৈরি করুন।</p>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="/diary">
-          <Card className={cn(glassClass, "bg-indigo-500/10 overflow-hidden group hover:scale-105 transition-all border-l-4 border-l-indigo-600 h-full")}>
-            <CardHeader className="p-1">
-              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-indigo-600 flex items-center justify-center text-white mb-1 shadow-md group-hover:rotate-12 transition-transform border border-white/20">
-                <NotebookPen className="w-4 h-4 md:w-5 md:h-5" />
-              </div>
-              <CardTitle className="text-indigo-900 font-black text-[10px] md:text-[12px] leading-tight">টিচার্স ডায়েরি</CardTitle>
-            </CardHeader>
-            <CardContent className="p-1 pt-0">
-              <p className="text-[9px] md:text-[10px] font-black text-indigo-900/60 leading-tight line-clamp-2">প্রতিদিনের ক্লাস রেকর্ড লিখে রাখুন।</p>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="/students">
-          <Card className={cn(glassClass, "bg-green-500/10 overflow-hidden group hover:scale-105 transition-all border-l-4 border-l-green-600 h-full")}>
-            <CardHeader className="p-1">
-              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-green-600 flex items-center justify-center text-white mb-1 shadow-md group-hover:rotate-12 transition-transform border border-white/20">
-                <Users className="w-4 h-4 md:w-5 md:h-5" />
-              </div>
-              <CardTitle className="text-green-900 font-black text-[10px] md:text-[12px] leading-tight">শিক্ষার্থী</CardTitle>
-            </CardHeader>
-            <CardContent className="p-1 pt-0">
-              <p className="text-[9px] md:text-[10px] font-black text-green-900/60 leading-tight line-clamp-2">শিক্ষার্থীদের তথ্য ও হাজিরা পরিচালনা।</p>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="/settings?tab=sheets">
-          <Card className={cn(glassClass, "bg-rose-500/10 overflow-hidden group hover:scale-105 transition-all border-l-4 border-l-rose-600 h-full")}>
-            <CardHeader className="p-1">
-              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-rose-600 flex items-center justify-center text-white mb-1 shadow-md group-hover:rotate-12 transition-transform border border-white/20">
-                <FileUp className="w-4 h-4 md:w-5 md:h-5" />
-              </div>
-              <CardTitle className="text-rose-900 font-black text-[10px] md:text-[12px] leading-tight">কুইক আপলোড</CardTitle>
-            </CardHeader>
-            <CardContent className="p-1 pt-0">
-              <p className="text-[9px] md:text-[10px] font-black text-rose-900/60 leading-tight line-clamp-2">সরাসরি শিট বা প্রশ্ন আপলোড করুন।</p>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="/my-questions">
-          <Card className={cn(glassClass, "bg-cyan-500/10 overflow-hidden group hover:scale-105 transition-all border-l-4 border-l-cyan-600 h-full")}>
-            <CardHeader className="p-1">
-              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-cyan-500 flex items-center justify-center text-white mb-1 shadow-md group-hover:rotate-12 transition-transform border border-white/20">
-                <Library className="w-4 h-4 md:w-5 md:h-5" />
-              </div>
-              <CardTitle className="text-cyan-900 font-black text-[10px] md:text-[12px] leading-tight">আমার লাইব্রেরি</CardTitle>
-            </CardHeader>
-            <CardContent className="p-1 pt-0">
-              <p className="text-[9px] md:text-[10px] font-black text-cyan-900/60 leading-tight line-clamp-2">আপনার সব সংগ্রহ এখানে পাবেন।</p>
-            </CardContent>
-          </Card>
-        </Link>
-      </section>
-
-      <section>
-        <div className="flex items-center justify-between mb-6 border-b-2 border-black pb-2">
-          <h3 className="text-lg font-black text-foreground flex items-center gap-2">
-            <GraduationCap className="w-4 h-4 md:w-5 md:h-5 text-primary" />
-            শ্রেণি নির্বাচন করুন
-          </h3>
-        </div>
-        <div className="grid grid-cols-4 lg:grid-cols-6 gap-1.5 md:gap-2">
-          {CLASSES.map((cls) => (
-            <Link key={cls.id} href={`/class/${cls.id}`}>
-              <Card className={cn(glassClass, "hover:bg-primary/10 hover:scale-105 transition-all group overflow-hidden bg-white/60")}>
-                <CardContent className="p-1 flex flex-col items-center text-center space-y-1">
-                  <div className="w-4 h-4 md:w-5 md:h-5 rounded-full bg-primary flex items-center justify-center text-white group-hover:bg-white group-hover:text-primary transition-all shadow-md border-2 border-white">
-                    <GraduationCap className="w-4 h-4 md:w-5 md:h-5" />
-                  </div>
-                  <div>
-                    <p className="font-black text-[10px] md:text-[12px] group-hover:text-primary transition-colors">{cls.label} শ্রেণি</p>
-                  </div>
-                  <div className="flex items-center gap-0.5 text-[7px] font-black text-primary opacity-80 group-hover:opacity-100 transition-all uppercase tracking-tighter">
-                    প্রবেশ <ArrowRight className="w-1.5 h-1.5 transition-transform group-hover:translate-x-0.5" />
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
         </div>
       </section>
       
