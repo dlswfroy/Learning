@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from 'react';
@@ -8,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings as SettingsIcon, CheckCircle, Trash2, Loader2, Link as LinkIcon, Filter, BookCopy, User, Globe, Save, Camera, FileText, Users, ShieldCheck, FileUp, FileType, ExternalLink } from 'lucide-react';
+import { Settings as SettingsIcon, CheckCircle, Trash2, Loader2, Link as LinkIcon, BookCopy, User, Globe, Save, Camera, FileText, Users, ShieldCheck, FileUp, FileType } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { toast } from '@/hooks/use-toast';
@@ -574,7 +575,7 @@ export default function SettingsPage() {
                   <CardTitle className="text-lg flex items-center gap-2 font-bold text-indigo-700">
                     <FileType className="w-5 h-5" /> পিডিএফ সিট আপলোড
                   </CardTitle>
-                  <CardDescription className="font-bold">লেকচার শিট, সৃজনশীল প্রশ্ন, এমসিকিউ বা মডেল টেস্ট পিডিএফ আপলোড করুন।</CardDescription>
+                  <CardDescription className="font-bold">লেকচার শিট, সৃজনশীল প্রশ্ন, এমসিকিউ, মডেল টেস্ট বা উত্তরমালা পিডিএফ আপলোড করুন।</CardDescription>
                 </CardHeader>
                 <CardContent className="p-4 space-y-6">
                   <div className="space-y-4 border-b pb-4">
@@ -601,6 +602,7 @@ export default function SettingsPage() {
                           <SelectItem value="creative">সৃজনশীল প্রশ্ন</SelectItem>
                           <SelectItem value="mcq">বহুনির্বাচনী প্রশ্ন</SelectItem>
                           <SelectItem value="model_test">মডেল টেস্ট</SelectItem>
+                          <SelectItem value="answer_key">উত্তরমালা</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -697,7 +699,7 @@ export default function SettingsPage() {
                             <h4 className="font-bold text-sm text-indigo-900">{sheet.chapterName} - {sheet.subject}</h4>
                             <div className="flex gap-2 items-center mt-0.5">
                               <span className="text-[10px] font-bold px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full">
-                                {sheet.category === 'lecture_sheet' ? 'লেকচার শিট' : sheet.category === 'creative' ? 'সৃজনশীল' : sheet.category === 'mcq' ? 'এমসিকিউ' : 'মডেল টেস্ট'}
+                                {sheet.category === 'lecture_sheet' ? 'লেকচার শিট' : sheet.category === 'creative' ? 'সৃজনশীল' : sheet.category === 'mcq' ? 'এমসিকিউ' : sheet.category === 'model_test' ? 'মডেল টেস্ট' : 'উত্তরমালা'}
                               </span>
                               <span className="text-[10px] text-muted-foreground font-bold">
                                 {CLASSES.find(c => c.id === sheet.classId)?.label} শ্রেণি

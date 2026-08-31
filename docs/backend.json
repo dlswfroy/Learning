@@ -24,7 +24,7 @@
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "category": { "type": "string", "enum": ["lecture_sheet", "creative", "mcq", "model_test"] },
+        "category": { "type": "string", "enum": ["lecture_sheet", "creative", "mcq", "model_test", "answer_key"] },
         "classId": { "type": "string" },
         "subject": { "type": "string" },
         "chapterName": { "type": "string" },

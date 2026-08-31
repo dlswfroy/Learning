@@ -20,7 +20,6 @@ import {
   ChevronRight,
   Folder,
   BrainCircuit,
-  ListChecks,
   ArrowLeft,
   CheckCircle2,
   X,
@@ -88,7 +87,7 @@ function normalizeChapter(name: string): string {
 }
 
 type ViewMode = 'classes' | 'subjects' | 'chapters' | 'content';
-type Category = 'all' | 'sheet' | 'creative' | 'mcq' | 'model';
+type Category = 'all' | 'sheet' | 'creative' | 'mcq' | 'model' | 'answer';
 
 export default function MyLibraryPage() {
   const db = useFirestore();
@@ -200,6 +199,10 @@ export default function MyLibraryPage() {
       qs = qs.filter(q => q.examType === 'model_test');
       ss = [];
       ps = ps.filter(p => p.category === 'model_test');
+    } else if (activeCategory === 'answer') {
+      qs = [];
+      ss = [];
+      ps = ps.filter(p => p.category === 'answer_key');
     }
 
     return { questions: qs, sheets: ss, pdfSheets: ps };
@@ -359,7 +362,8 @@ export default function MyLibraryPage() {
               { id: 'sheet', label: 'লেকচার শিট', icon: BookOpen },
               { id: 'creative', label: 'সৃজনশীল প্রশ্ন', icon: FileText },
               { id: 'mcq', label: 'বহুনির্বাচনী প্রশ্ন', icon: ListChecks },
-              { id: 'model', label: 'মডেল টেস্ট', icon: BrainCircuit }
+              { id: 'model', label: 'মডেল টেস্ট', icon: BrainCircuit },
+              { id: 'answer', label: 'উত্তরমালা', icon: CheckCircle2 }
             ].map((cat) => (
               <Button 
                 key={cat.id} 
@@ -389,7 +393,7 @@ export default function MyLibraryPage() {
                      <Link href={`/create-lecture-sheet?id=${s.id}`}><Button variant="ghost" size="icon" className="h-7 w-7 text-primary"><Edit className="w-3.5 h-3.5" /></Button></Link>
                      <AlertDialog>
                        <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive"><Trash2 className="w-3.5 h-3.5" /></Button></AlertDialogTrigger>
-                       <AlertDialogContent className="font-kalpurush"><AlertDialogHeader><AlertDialogTitle className="font-bold">মুছে ফেলবেন?</AlertDialogTitle></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>বাতিল</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(s.id, 'lecture-sheets')} className="bg-destructive text-white">মুছে ফেলুন</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+                       <AlertDialogContent className="font-kalpurush"><AlertDialogHeader><AlertDialogTitle className="font-bold">মুছে ফেলবেন?</AlertDialogTitle></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>বাতিল</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(s.id, 'lecture-sheets')} className="bg-destructive text-white">মুছে ফেলা হয়েছে</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
                      </AlertDialog>
                    </div>
                 </div>
@@ -417,14 +421,14 @@ export default function MyLibraryPage() {
                      <a href={ps.pdfUrl} target="_blank" rel="noopener noreferrer"><Button variant="ghost" size="icon" className="h-7 w-7 text-indigo-600"><ExternalLink className="w-3.5 h-3.5" /></Button></a>
                      <AlertDialog>
                        <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive"><Trash2 className="w-3.5 h-3.5" /></Button></AlertDialogTrigger>
-                       <AlertDialogContent className="font-kalpurush"><AlertDialogHeader><AlertDialogTitle className="font-bold">মুছে ফেলবেন?</AlertDialogTitle></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>বাতিল</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(ps.id, 'pdf-sheets')} className="bg-destructive text-white">মুছে ফেলুন</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+                       <AlertDialogContent className="font-kalpurush"><AlertDialogHeader><AlertDialogTitle className="font-bold">মুছে ফেলবেন?</AlertDialogTitle></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>বাতিল</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(ps.id, 'pdf-sheets')} className="bg-destructive text-white">মুছে ফেলা হয়েছে</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
                      </AlertDialog>
                    </div>
                 </div>
               </CardHeader>
               <CardFooter className="pt-0 p-4 flex justify-between items-center text-[9px] font-bold text-muted-foreground bg-indigo-50/20 rounded-b-lg">
                 <span className="flex items-center gap-1">
-                  <Badge variant="outline" className="text-[8px] h-4 font-bold px-1.5 border-indigo-200 text-indigo-700">{ps.category === 'lecture_sheet' ? 'পিডিএফ নোট' : ps.category === 'creative' ? 'সৃজনশীল পিডিএফ' : ps.category === 'mcq' ? 'MCQ পিডিএফ' : 'মডেল টেস্ট'}</Badge>
+                  <Badge variant="outline" className="text-[8px] h-4 font-bold px-1.5 border-indigo-200 text-indigo-700">{ps.category === 'lecture_sheet' ? 'পিডিএফ নোট' : ps.category === 'creative' ? 'সৃজনশীল পিডিএফ' : ps.category === 'mcq' ? 'MCQ পিডিএফ' : ps.category === 'model_test' ? 'মডেল টেস্ট' : 'উত্তরমালা'}</Badge>
                   <Calendar className="w-3 h-3 ml-2 mr-1" /> {ps.uploadedAt?.toDate ? format(ps.uploadedAt.toDate(), 'dd MMM, yy', { locale: bn }) : ''}
                 </span>
                 <a href={ps.pdfUrl} target="_blank" rel="noopener noreferrer"><Button size="sm" variant="outline" className="h-6 text-[9px] font-bold gap-1 border-indigo-500 text-indigo-700 bg-white"><Download className="w-3 h-3" /> ভিউ/ডাউনলোড</Button></a>
@@ -448,7 +452,7 @@ export default function MyLibraryPage() {
                          <Link href={`/create-question?id=${q.id}`}><Button variant="ghost" size="icon" className="h-7 w-7 text-primary"><Edit className="w-3.5 h-3.5" /></Button></Link>
                          <AlertDialog>
                            <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive"><Trash2 className="w-3.5 h-3.5" /></Button></AlertDialogTrigger>
-                           <AlertDialogContent className="font-kalpurush"><AlertDialogHeader><AlertDialogTitle className="font-bold">মুছে ফেলবেন?</AlertDialogTitle></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>বাতিল</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(q.id, 'questions')} className="bg-destructive text-white">মুছে ফেলুন</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+                           <AlertDialogContent className="font-kalpurush"><AlertDialogHeader><AlertDialogTitle className="font-bold">মুছে ফেলবেন?</AlertDialogTitle></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>বাতিল</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(q.id, 'questions')} className="bg-destructive text-white">মুছে ফেলা হয়েছে</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
                          </AlertDialog>
                        </div>
                      )}
@@ -502,4 +506,3 @@ export default function MyLibraryPage() {
 
 function ListChecks({ className }: { className?: string }) { return <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/></svg>; }
 function FilePlus({ className }: { className?: string }) { return <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M9 15h6"/><path d="M12 12v6"/></svg>; }
-
