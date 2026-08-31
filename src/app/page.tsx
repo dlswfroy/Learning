@@ -46,34 +46,59 @@ function chunkArray<T>(array: T[], size: number): T[][] {
   return chunks;
 }
 
-// Helper to format chapter names for the board display consistently
+const BENGALI_ORDINALS = [
+  '১ম', '২য়', '৩য়', '৪র্থ', '৫ম', '৬ষ্ঠ', '৭ম', '৮ম', '৯ম', '১০ম',
+  'একাদশ', 'দ্বাদশ', 'ত্রয়োদশ', 'চতুর্দশ', 'পঞ্চদশ', 'ষোড়শ', 'সপ্তদশ', 'অষ্টাদশ', 'ঊনবিংশ', 'বিংশ'
+];
+
 function formatChapterDisplay(name: string): string {
   if (!name) return '';
-  
-  // Clean up input
   const cleanName = name.trim();
-
-  // Handle Bengali ordinals: ১ম, ২য়, ৩য়, ৪র্থ, ৫র্থ, ৬ষ্ঠ, ৭ম, ৮ম, ৯ম, ১০ম
-  const match = cleanName.match(/^([০-৯]+[মযরর্থষঠ]*)/);
+  
+  const bnToEn: Record<string, string> = { '০':'0', '১':'1', '২':'2', '৩':'3', '৪':'4', '৫':'5', '৬':'6', '৭':'7', '৮':'8', '৯':'9' };
+  const n = cleanName.replace(/[০-৯]/g, m => bnToEn[m]);
+  const match = n.match(/\d+/);
+  
   if (match) {
-    let ordinal = match[1];
-    // Fix specific typos like ৪থ to ৪র্থ if necessary, though regex usually handles it
-    return ordinal;
-  }
-  
-  // For English subjects (Unit 1, Unit 2 etc)
-  if (cleanName.toLowerCase().startsWith('unit')) {
-    const num = cleanName.match(/\d+/);
-    return num ? `U${num[0]}` : cleanName;
+    const num = parseInt(match[0]);
+    if (num >= 1 && num <= 20) return BENGALI_ORDINALS[num - 1];
+    return toBengaliNumber(num);
   }
 
-  if (cleanName.toLowerCase().startsWith('chapter')) {
-    const num = cleanName.match(/\d+/);
-    return num ? `C${num[0]}` : cleanName;
-  }
+  const wordMap: Record<string, string> = {
+    'প্রথম': '১ম', 'দ্বিতীয়': '২য়', 'তৃতীয়': '৩য়', 'চতুর্থ': '৪র্থ', 'পঞ্চম': '৫ম',
+    'ষষ্ঠ': '৬ষ্ঠ', 'সপ্তম': '৭ম', 'অষ্টম': '৮ম', 'নবম': '৯ম', 'দশম': '১০ম',
+    'একাদশ': 'একাদশ', 'দ্বাদশ': 'দ্বাদশ', 'ত্রয়োদশ': 'ত্রয়োদশ', 'চতুর্দশ': 'চতুর্দশ'
+  };
   
-  // Fallback: Return first word or first few chars
+  for (const [word, ordinal] of Object.entries(wordMap)) {
+    if (cleanName.includes(word)) return ordinal;
+  }
+
+  if (cleanName.toLowerCase().startsWith('unit')) {
+    const uNum = n.match(/\d+/);
+    return uNum ? `U${uNum[0]}` : cleanName;
+  }
+
   return cleanName.split(/[\s:]/)[0] || cleanName;
+}
+
+function normalizeForSort(name: string): number {
+  if (!name) return 999;
+  const bnToEn: Record<string, string> = { '০':'0', '১':'1', '২':'2', '৩':'3', '৪':'4', '৫':'5', '৬':'6', '৭':'7', '৮':'8', '৯':'9' };
+  const n = name.replace(/[০-৯]/g, m => bnToEn[m]);
+  const match = n.match(/\d+/);
+  if (match) return parseInt(match[0]);
+  
+  const wordMap: Record<string, number> = {
+    'প্রথম': 1, 'দ্বিতীয়': 2, 'তৃতীয়': 3, 'চতুর্থ': 4, 'পঞ্চম': 5,
+    'ষষ্ঠ': 6, 'সপ্তম': 7, 'অষ্টম': 8, 'নবম': 9, 'দশম': 10,
+    'একাদশ': 11, 'দ্বাদশ': 12, 'ত্রয়োদশ': 13, 'চতুর্দশ': 14, 'পঞ্চদশ': 15
+  };
+  for (const [word, val] of Object.entries(wordMap)) {
+    if (name.includes(word)) return val;
+  }
+  return 999;
 }
 
 export default function Home() {
@@ -162,21 +187,19 @@ export default function Home() {
             const selectedSubject = selectedSubjects[cls.id] || allSubjects[0];
             const classChapters = stats.classData[cls.id]?.[selectedSubject] || {};
             
-            // Get all predefined chapters and merge with any found in DB
             const predefined = getChaptersForSubject(cls.id, selectedSubject);
-            const chapterNames = Array.from(new Set([...predefined, ...Object.keys(classChapters)])).sort((a, b) => a.localeCompare(b, 'bn', { numeric: true }));
+            const chapterNames = Array.from(new Set([...predefined, ...Object.keys(classChapters)]))
+              .sort((a, b) => normalizeForSort(a) - normalizeForSort(b));
             
-            // Show all chapters by chunking into rows of max 20 for readability
             const chapterChunks = chunkArray(chapterNames, 20); 
 
             return (
               <div key={cls.id} className={cn(glassClass, "rounded-xl overflow-hidden bg-white/40 p-1")}>
-                <div className="overflow-x-auto custom-scrollbar">
+                <div className="overflow-x-auto custom-scrollbar pb-2">
                   {chapterChunks.length > 0 ? (
                     chapterChunks.map((chunk, chunkIdx) => (
                       <table key={chunkIdx} className="w-full border-collapse border-2 border-black mb-4 last:mb-0">
                         <tbody className="text-slate-900">
-                          {/* Row 1: Class Name & Subject Dropdown & Chapter Names */}
                           <tr className="border-b-2 border-black">
                             <td rowSpan={6} className="w-10 border-r-2 border-black bg-white font-black text-center align-middle whitespace-nowrap px-2 text-black" style={{ writingMode: 'vertical-lr', transform: 'rotate(180deg)' }}>
                               শ্রেণি: {cls.label}
@@ -204,7 +227,6 @@ export default function Home() {
                             ))}
                           </tr>
 
-                          {/* Row 2: Lecture Sheet */}
                           <tr className="border-b border-black bg-blue-50">
                             <td className="border-r-2 border-black p-1 text-center font-black text-[10px] text-blue-900">লেকচার শিট</td>
                             {chunk.map(ch => (
@@ -214,7 +236,6 @@ export default function Home() {
                             ))}
                           </tr>
 
-                          {/* Row 3: Creative */}
                           <tr className="border-b border-black bg-orange-50">
                             <td className="border-r-2 border-black p-1 text-center font-black text-[10px] text-orange-900">সৃজনশীল</td>
                             {chunk.map(ch => (
@@ -224,7 +245,6 @@ export default function Home() {
                             ))}
                           </tr>
 
-                          {/* Row 4: MCQ */}
                           <tr className="border-b border-black bg-indigo-50">
                             <td className="border-r-2 border-black p-1 text-center font-black text-[10px] text-indigo-900">বহুনির্বাচনী</td>
                             {chunk.map(ch => (
@@ -234,7 +254,6 @@ export default function Home() {
                             ))}
                           </tr>
 
-                          {/* Row 5: Answer Key */}
                           <tr className="border-b border-black bg-green-50">
                             <td className="border-r-2 border-black p-1 text-center font-black text-[10px] text-green-900">উত্তরমালা</td>
                             {chunk.map(ch => (
@@ -244,7 +263,6 @@ export default function Home() {
                             ))}
                           </tr>
 
-                          {/* Row 6: Model Test */}
                           <tr className="bg-rose-50">
                             <td className="border-r-2 border-black p-1 text-center font-black text-[10px] text-rose-900">মডেল টেস্ট</td>
                             {chunk.map(ch => (
@@ -269,7 +287,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Dashboard Cards - 4 columns on mobile, 6 columns on desktop */}
+      {/* Dashboard Cards */}
       <section className="grid grid-cols-4 lg:grid-cols-6 gap-1.5 md:gap-2">
         <Link href="/create-question">
           <Card className={cn(glassClass, "bg-blue-500/10 overflow-hidden group hover:scale-105 transition-all border-l-4 border-l-blue-600 h-full")}>
@@ -385,11 +403,11 @@ export default function Home() {
       </section>
       
       <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar { height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar { height: 8px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #000; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #000; border-radius: 10px; border: 2px solid white; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #333; }
       `}</style>
     </div>
   );
 }
-
