@@ -46,21 +46,34 @@ function chunkArray<T>(array: T[], size: number): T[][] {
   return chunks;
 }
 
-// Helper to format chapter names for the board display
+// Helper to format chapter names for the board display consistently
 function formatChapterDisplay(name: string): string {
   if (!name) return '';
-  // Match Bengali ordinals: ১ম, ২য়, ৩য়, ৪র্থ, ৫র্থ, ৬ষ্ঠ, ৭ম, ৮ম, ৯ম, ১০ম
-  const match = name.match(/^([০-৯]+[মযরর্থষঠ]*)/);
-  if (match) return match[1];
   
-  // For English subjects (Unit 1, Unit 2 etc)
-  if (name.toLowerCase().startsWith('unit')) {
-    const num = name.match(/\d+/);
-    return num ? `U${num[0]}` : name;
+  // Clean up input
+  const cleanName = name.trim();
+
+  // Handle Bengali ordinals: ১ম, ২য়, ৩য়, ৪র্থ, ৫র্থ, ৬ষ্ঠ, ৭ম, ৮ম, ৯ম, ১০ম
+  const match = cleanName.match(/^([০-৯]+[মযরর্থষঠ]*)/);
+  if (match) {
+    let ordinal = match[1];
+    // Fix specific typos like ৪থ to ৪র্থ if necessary, though regex usually handles it
+    return ordinal;
   }
   
-  // Fallback: Return first word or first 5 chars
-  return name.split(/[\s:]/)[0] || name;
+  // For English subjects (Unit 1, Unit 2 etc)
+  if (cleanName.toLowerCase().startsWith('unit')) {
+    const num = cleanName.match(/\d+/);
+    return num ? `U${num[0]}` : cleanName;
+  }
+
+  if (cleanName.toLowerCase().startsWith('chapter')) {
+    const num = cleanName.match(/\d+/);
+    return num ? `C${num[0]}` : cleanName;
+  }
+  
+  // Fallback: Return first word or first few chars
+  return cleanName.split(/[\s:]/)[0] || cleanName;
 }
 
 export default function Home() {
@@ -127,7 +140,7 @@ export default function Home() {
     );
   }
 
-  const glassClass = "backdrop-blur-2xl border-2 border-black shadow-[0_12px_40px_rgba(0,0,0,0.4)]";
+  const glassClass = "backdrop-blur-2xl border-2 border-black shadow-[0_12px_40px_rgba(0,0,0,0.15)]";
 
   return (
     <div className="space-y-12 animate-fade-in font-kalpurush">
@@ -135,12 +148,12 @@ export default function Home() {
       <section className="space-y-8">
         <div className="flex items-center justify-between border-b-2 border-black pb-2">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-red-600 text-white flex items-center justify-center animate-bounce shadow-[0_0_20px_rgba(220,38,38,1)] border border-white/20">
+            <div className="w-8 h-8 rounded-lg bg-red-600 text-white flex items-center justify-center animate-bounce shadow-lg border border-white/20">
               <LayoutGrid className="w-5 h-5" />
             </div>
             <h3 className="text-xl font-black text-foreground uppercase tracking-tight">লাইভ কন্টেন্ট ড্যাশবোর্ড</h3>
           </div>
-          <Badge className="bg-yellow-400 text-black font-black text-[10px] shadow-[0_0_15px_rgba(250,204,21,1)] animate-pulse border border-black">রিয়েল-টাইম আপডেট</Badge>
+          <Badge className="bg-yellow-400 text-black font-black text-[10px] border border-black">রিয়েল-টাইম আপডেট</Badge>
         </div>
         
         <div className="space-y-10">
@@ -153,28 +166,28 @@ export default function Home() {
             const predefined = getChaptersForSubject(cls.id, selectedSubject);
             const chapterNames = Array.from(new Set([...predefined, ...Object.keys(classChapters)])).sort((a, b) => a.localeCompare(b, 'bn', { numeric: true }));
             
-            // Show all chapters by chunking into smaller rows for readability
-            const chapterChunks = chunkArray(chapterNames, 8); 
+            // Show all chapters by chunking into rows of max 20 for readability
+            const chapterChunks = chunkArray(chapterNames, 20); 
 
             return (
-              <div key={cls.id} className={cn(glassClass, "rounded-xl overflow-hidden bg-white/10 p-1")}>
+              <div key={cls.id} className={cn(glassClass, "rounded-xl overflow-hidden bg-white/40 p-1")}>
                 <div className="overflow-x-auto custom-scrollbar">
                   {chapterChunks.length > 0 ? (
                     chapterChunks.map((chunk, chunkIdx) => (
                       <table key={chunkIdx} className="w-full border-collapse border-2 border-black mb-4 last:mb-0">
-                        <tbody>
+                        <tbody className="text-slate-900">
                           {/* Row 1: Class Name & Subject Dropdown & Chapter Names */}
                           <tr className="border-b-2 border-black">
-                            <td rowSpan={6} className="w-12 border-r-2 border-black bg-white font-black text-center align-middle whitespace-nowrap px-2 text-black drop-shadow-sm" style={{ writingMode: 'vertical-lr', transform: 'rotate(180deg)' }}>
+                            <td rowSpan={6} className="w-10 border-r-2 border-black bg-white font-black text-center align-middle whitespace-nowrap px-2 text-black" style={{ writingMode: 'vertical-lr', transform: 'rotate(180deg)' }}>
                               শ্রেণি: {cls.label}
                             </td>
-                            <td className="w-40 border-r-2 border-black bg-cyan-400 p-1 text-center">
+                            <td className="w-36 border-r-2 border-black bg-cyan-100 p-1 text-center">
                               <Select 
                                 value={selectedSubject} 
                                 onValueChange={(val) => setSelectedSubjects(prev => ({...prev, [cls.id]: val}))}
                               >
-                                <SelectTrigger className="h-8 text-[11px] font-black border-black bg-white shadow-inner">
-                                  <SelectValue placeholder="বিষয় নির্বাচন" />
+                                <SelectTrigger className="h-7 text-[10px] font-black border-black bg-white">
+                                  <SelectValue placeholder="বিষয়" />
                                 </SelectTrigger>
                                 <SelectContent className="font-kalpurush">
                                   {allSubjects.map(sub => (
@@ -182,60 +195,60 @@ export default function Home() {
                                   ))}
                                 </SelectContent>
                               </Select>
-                              <div className="text-[8px] font-black mt-0.5 text-cyan-950 uppercase tracking-tighter">বিষয়ের ড্রপ ডাউন</div>
+                              <div className="text-[8px] font-black mt-0.5 text-cyan-900 uppercase">ড্রপ ডাউন</div>
                             </td>
                             {chunk.map(ch => (
-                              <td key={ch} className="min-w-[100px] border-r-2 border-black bg-yellow-300 p-2 text-center font-black text-[11px] align-middle break-words text-black">
+                              <td key={ch} className="min-w-[45px] border-r-2 border-black bg-yellow-100 p-1.5 text-center font-black text-[10px] align-middle text-black">
                                 {formatChapterDisplay(ch)}
                               </td>
                             ))}
                           </tr>
 
                           {/* Row 2: Lecture Sheet */}
-                          <tr className="border-b border-black bg-blue-500 text-white">
-                            <td className="border-r-2 border-black p-1 text-center font-black text-[11px]">লেকচার শিট</td>
+                          <tr className="border-b border-black bg-blue-50">
+                            <td className="border-r-2 border-black p-1 text-center font-black text-[10px] text-blue-900">লেকচার শিট</td>
                             {chunk.map(ch => (
-                              <td key={ch} className="border-r-2 border-black p-1 text-center font-black text-[13px] drop-shadow-md">
+                              <td key={ch} className="border-r-2 border-black p-1 text-center font-black text-[12px]">
                                 {toBengaliNumber(classChapters[ch]?.lectureSheet || 0)}
                               </td>
                             ))}
                           </tr>
 
                           {/* Row 3: Creative */}
-                          <tr className="border-b border-black bg-orange-500 text-white">
-                            <td className="border-r-2 border-black p-1 text-center font-black text-[11px]">সৃজনশীল</td>
+                          <tr className="border-b border-black bg-orange-50">
+                            <td className="border-r-2 border-black p-1 text-center font-black text-[10px] text-orange-900">সৃজনশীল</td>
                             {chunk.map(ch => (
-                              <td key={ch} className="border-r-2 border-black p-1 text-center font-black text-[13px] drop-shadow-md">
+                              <td key={ch} className="border-r-2 border-black p-1 text-center font-black text-[12px]">
                                 {toBengaliNumber(classChapters[ch]?.creative || 0)}
                               </td>
                             ))}
                           </tr>
 
                           {/* Row 4: MCQ */}
-                          <tr className="border-b border-black bg-indigo-600 text-white">
-                            <td className="border-r-2 border-black p-1 text-center font-black text-[11px]">বহুনির্বাচনী</td>
+                          <tr className="border-b border-black bg-indigo-50">
+                            <td className="border-r-2 border-black p-1 text-center font-black text-[10px] text-indigo-900">বহুনির্বাচনী</td>
                             {chunk.map(ch => (
-                              <td key={ch} className="border-r-2 border-black p-1 text-center font-black text-[13px] drop-shadow-md">
+                              <td key={ch} className="border-r-2 border-black p-1 text-center font-black text-[12px]">
                                 {toBengaliNumber(classChapters[ch]?.mcq || 0)}
                               </td>
                             ))}
                           </tr>
 
                           {/* Row 5: Answer Key */}
-                          <tr className="border-b border-black bg-green-500 text-white">
-                            <td className="border-r-2 border-black p-1 text-center font-black text-[11px]">উত্তরমালা</td>
+                          <tr className="border-b border-black bg-green-50">
+                            <td className="border-r-2 border-black p-1 text-center font-black text-[10px] text-green-900">উত্তরমালা</td>
                             {chunk.map(ch => (
-                              <td key={ch} className="border-r-2 border-black p-1 text-center font-black text-[13px] drop-shadow-md">
+                              <td key={ch} className="border-r-2 border-black p-1 text-center font-black text-[12px]">
                                 {toBengaliNumber(classChapters[ch]?.answerKey || 0)}
                               </td>
                             ))}
                           </tr>
 
                           {/* Row 6: Model Test */}
-                          <tr className="bg-rose-600 text-white">
-                            <td className="border-r-2 border-black p-1 text-center font-black text-[11px]">মডেল টেস্ট</td>
+                          <tr className="bg-rose-50">
+                            <td className="border-r-2 border-black p-1 text-center font-black text-[10px] text-rose-900">মডেল টেস্ট</td>
                             {chunk.map(ch => (
-                              <td key={ch} className="border-r-2 border-black p-1 text-center font-black text-[13px] drop-shadow-md">
+                              <td key={ch} className="border-r-2 border-black p-1 text-center font-black text-[12px]">
                                 {toBengaliNumber(classChapters[ch]?.modelTest || 0)}
                               </td>
                             ))}
@@ -244,8 +257,8 @@ export default function Home() {
                       </table>
                     ))
                   ) : (
-                    <div className="p-10 text-center bg-white/20 backdrop-blur-md border-2 border-black rounded-lg">
-                       <p className="text-black font-black text-lg drop-shadow-sm uppercase">এই বিষয়ের কোনো ডাটা পাওয়া যায়নি</p>
+                    <div className="p-10 text-center bg-white/20 border-2 border-black rounded-lg">
+                       <p className="text-black font-black text-lg uppercase">এই বিষয়ের কোনো ডাটা পাওয়া যায়নি</p>
                        <p className="text-[10px] font-bold text-muted-foreground">ড্রপ-ডাউন থেকে অন্য বিষয় সিলেক্ট করে দেখুন</p>
                     </div>
                   )}
@@ -259,85 +272,85 @@ export default function Home() {
       {/* Dashboard Cards - 4 columns on mobile, 6 columns on desktop */}
       <section className="grid grid-cols-4 lg:grid-cols-6 gap-1.5 md:gap-2">
         <Link href="/create-question">
-          <Card className={cn(glassClass, "bg-blue-500/30 overflow-hidden group hover:scale-105 hover:bg-blue-500/40 transition-all border-l-4 border-l-blue-600 h-full")}>
+          <Card className={cn(glassClass, "bg-blue-500/10 overflow-hidden group hover:scale-105 transition-all border-l-4 border-l-blue-600 h-full")}>
             <CardHeader className="p-1">
-              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-blue-600 flex items-center justify-center text-white mb-1 shadow-[0_0_15px_rgba(37,99,235,0.8)] group-hover:rotate-12 transition-transform">
+              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-blue-600 flex items-center justify-center text-white mb-1 shadow-md group-hover:rotate-12 transition-transform">
                 <BrainCircuit className="w-4 h-4 md:w-5 md:h-5" />
               </div>
-              <CardTitle className="text-blue-800 font-black text-[10px] md:text-[12px] leading-tight drop-shadow-sm">প্রশ্ন ব্যাংক</CardTitle>
+              <CardTitle className="text-blue-900 font-black text-[10px] md:text-[12px] leading-tight">প্রশ্ন ব্যাংক</CardTitle>
             </CardHeader>
             <CardContent className="p-1 pt-0">
-              <p className="text-[9px] md:text-[10px] font-black text-blue-900/80 leading-tight line-clamp-2">বোর্ড স্ট্যান্ডার্ড সৃজনশীল ও এমসিকিউ।</p>
+              <p className="text-[9px] md:text-[10px] font-black text-blue-900/60 leading-tight line-clamp-2">বোর্ড স্ট্যান্ডার্ড সৃজনশীল ও এমসিকিউ।</p>
             </CardContent>
           </Card>
         </Link>
 
         <Link href="/create-lecture-sheet">
-          <Card className={cn(glassClass, "bg-orange-500/30 overflow-hidden group hover:scale-105 hover:bg-orange-500/40 transition-all border-l-4 border-l-orange-600 h-full")}>
+          <Card className={cn(glassClass, "bg-orange-500/10 overflow-hidden group hover:scale-105 transition-all border-l-4 border-l-orange-600 h-full")}>
             <CardHeader className="p-1">
-              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-orange-500 flex items-center justify-center text-white mb-1 shadow-[0_0_15px_rgba(249,115,22,0.8)] group-hover:rotate-12 transition-transform">
+              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-orange-500 flex items-center justify-center text-white mb-1 shadow-md group-hover:rotate-12 transition-transform">
                 <BookOpen className="w-4 h-4 md:w-5 md:h-5" />
               </div>
-              <CardTitle className="text-orange-800 font-black text-[10px] md:text-[12px] leading-tight drop-shadow-sm">লেকচার শিট</CardTitle>
+              <CardTitle className="text-orange-900 font-black text-[10px] md:text-[12px] leading-tight">লেকচার শিট</CardTitle>
             </CardHeader>
             <CardContent className="p-1 pt-0">
-              <p className="text-[9px] md:text-[10px] font-black text-orange-900/80 leading-tight line-clamp-2">অধ্যায় ভিত্তিক লেকচার নোট তৈরি করুন।</p>
+              <p className="text-[9px] md:text-[10px] font-black text-orange-900/60 leading-tight line-clamp-2">অধ্যায় ভিত্তিক লেকচার নোট তৈরি করুন।</p>
             </CardContent>
           </Card>
         </Link>
 
         <Link href="/diary">
-          <Card className={cn(glassClass, "bg-indigo-500/30 overflow-hidden group hover:scale-105 hover:bg-indigo-500/40 transition-all border-l-4 border-l-indigo-600 h-full")}>
+          <Card className={cn(glassClass, "bg-indigo-500/10 overflow-hidden group hover:scale-105 transition-all border-l-4 border-l-indigo-600 h-full")}>
             <CardHeader className="p-1">
-              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-indigo-600 flex items-center justify-center text-white mb-1 shadow-[0_0_15px_rgba(79,70,229,0.8)] group-hover:rotate-12 transition-transform">
+              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-indigo-600 flex items-center justify-center text-white mb-1 shadow-md group-hover:rotate-12 transition-transform">
                 <NotebookPen className="w-4 h-4 md:w-5 md:h-5" />
               </div>
-              <CardTitle className="text-indigo-800 font-black text-[10px] md:text-[12px] leading-tight drop-shadow-sm">টিচার্স ডায়েরি</CardTitle>
+              <CardTitle className="text-indigo-900 font-black text-[10px] md:text-[12px] leading-tight">টিচার্স ডায়েরি</CardTitle>
             </CardHeader>
             <CardContent className="p-1 pt-0">
-              <p className="text-[9px] md:text-[10px] font-black text-indigo-900/80 leading-tight line-clamp-2">প্রতিদিনের ক্লাস রেকর্ড লিখে রাখুন।</p>
+              <p className="text-[9px] md:text-[10px] font-black text-indigo-900/60 leading-tight line-clamp-2">প্রতিদিনের ক্লাস রেকর্ড লিখে রাখুন।</p>
             </CardContent>
           </Card>
         </Link>
 
         <Link href="/students">
-          <Card className={cn(glassClass, "bg-green-500/30 overflow-hidden group hover:scale-105 hover:bg-green-500/40 transition-all border-l-4 border-l-green-600 h-full")}>
+          <Card className={cn(glassClass, "bg-green-500/10 overflow-hidden group hover:scale-105 transition-all border-l-4 border-l-green-600 h-full")}>
             <CardHeader className="p-1">
-              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-green-600 flex items-center justify-center text-white mb-1 shadow-[0_0_15px_rgba(22,163,74,0.8)] group-hover:rotate-12 transition-transform">
+              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-green-600 flex items-center justify-center text-white mb-1 shadow-md group-hover:rotate-12 transition-transform">
                 <Users className="w-4 h-4 md:w-5 md:h-5" />
               </div>
-              <CardTitle className="text-green-800 font-black text-[10px] md:text-[12px] leading-tight drop-shadow-sm">শিক্ষার্থী</CardTitle>
+              <CardTitle className="text-green-900 font-black text-[10px] md:text-[12px] leading-tight">শিক্ষার্থী</CardTitle>
             </CardHeader>
             <CardContent className="p-1 pt-0">
-              <p className="text-[9px] md:text-[10px] font-black text-green-900/80 leading-tight line-clamp-2">শিক্ষার্থীদের তথ্য ও হাজিরা পরিচালনা।</p>
+              <p className="text-[9px] md:text-[10px] font-black text-green-900/60 leading-tight line-clamp-2">শিক্ষার্থীদের তথ্য ও হাজিরা পরিচালনা।</p>
             </CardContent>
           </Card>
         </Link>
 
         <Link href="/settings?tab=sheets">
-          <Card className={cn(glassClass, "bg-rose-500/30 overflow-hidden group hover:scale-105 hover:bg-rose-500/40 transition-all border-l-4 border-l-rose-600 h-full")}>
+          <Card className={cn(glassClass, "bg-rose-500/10 overflow-hidden group hover:scale-105 transition-all border-l-4 border-l-rose-600 h-full")}>
             <CardHeader className="p-1">
-              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-rose-600 flex items-center justify-center text-white mb-1 shadow-[0_0_15px_rgba(225,29,72,0.8)] group-hover:rotate-12 transition-transform">
+              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-rose-600 flex items-center justify-center text-white mb-1 shadow-md group-hover:rotate-12 transition-transform">
                 <FileUp className="w-4 h-4 md:w-5 md:h-5" />
               </div>
-              <CardTitle className="text-rose-800 font-black text-[10px] md:text-[12px] leading-tight drop-shadow-sm">কুইক আপলোড</CardTitle>
+              <CardTitle className="text-rose-900 font-black text-[10px] md:text-[12px] leading-tight">কুইক আপলোড</CardTitle>
             </CardHeader>
             <CardContent className="p-1 pt-0">
-              <p className="text-[9px] md:text-[10px] font-black text-rose-900/80 leading-tight line-clamp-2">সরাসরি শিট বা প্রশ্ন আপলোড করুন।</p>
+              <p className="text-[9px] md:text-[10px] font-black text-rose-900/60 leading-tight line-clamp-2">সরাসরি শিট বা প্রশ্ন আপলোড করুন।</p>
             </CardContent>
           </Card>
         </Link>
 
         <Link href="/my-questions">
-          <Card className={cn(glassClass, "bg-cyan-500/30 overflow-hidden group hover:scale-105 hover:bg-cyan-500/40 transition-all border-l-4 border-l-cyan-600 h-full")}>
+          <Card className={cn(glassClass, "bg-cyan-500/10 overflow-hidden group hover:scale-105 transition-all border-l-4 border-l-cyan-600 h-full")}>
             <CardHeader className="p-1">
-              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-cyan-500 flex items-center justify-center text-white mb-1 shadow-[0_0_15px_rgba(6,182,212,0.8)] group-hover:rotate-12 transition-transform">
+              <div className="w-4 h-4 md:w-5 md:h-5 rounded-lg bg-cyan-500 flex items-center justify-center text-white mb-1 shadow-md group-hover:rotate-12 transition-transform">
                 <Library className="w-4 h-4 md:w-5 md:h-5" />
               </div>
-              <CardTitle className="text-cyan-900 font-black text-[10px] md:text-[12px] leading-tight drop-shadow-sm">আমার লাইব্রেরি</CardTitle>
+              <CardTitle className="text-cyan-900 font-black text-[10px] md:text-[12px] leading-tight">আমার লাইব্রেরি</CardTitle>
             </CardHeader>
             <CardContent className="p-1 pt-0">
-              <p className="text-[9px] md:text-[10px] font-black text-cyan-900/80 leading-tight line-clamp-2">আপনার সব সংগ্রহ এখানে পাবেন।</p>
+              <p className="text-[9px] md:text-[10px] font-black text-cyan-900/60 leading-tight line-clamp-2">আপনার সব সংগ্রহ এখানে পাবেন।</p>
             </CardContent>
           </Card>
         </Link>
@@ -346,16 +359,16 @@ export default function Home() {
       <section>
         <div className="flex items-center justify-between mb-6 border-b-2 border-black pb-2">
           <h3 className="text-lg font-black text-foreground flex items-center gap-2">
-            <GraduationCap className="w-4 h-4 md:w-5 md:h-5 text-primary drop-shadow-[0_0_8px_rgba(37,99,235,0.4)]" />
+            <GraduationCap className="w-4 h-4 md:w-5 md:h-5 text-primary" />
             শ্রেণি নির্বাচন করুন
           </h3>
         </div>
         <div className="grid grid-cols-4 lg:grid-cols-6 gap-1.5 md:gap-2">
           {CLASSES.map((cls) => (
             <Link key={cls.id} href={`/class/${cls.id}`}>
-              <Card className={cn(glassClass, "hover:bg-primary/20 hover:scale-105 transition-all group overflow-hidden bg-white/60")}>
+              <Card className={cn(glassClass, "hover:bg-primary/10 hover:scale-105 transition-all group overflow-hidden bg-white/60")}>
                 <CardContent className="p-1 flex flex-col items-center text-center space-y-1">
-                  <div className="w-4 h-4 md:w-5 md:h-5 rounded-full bg-primary flex items-center justify-center text-white group-hover:bg-white group-hover:text-primary transition-all shadow-lg border-2 border-white">
+                  <div className="w-4 h-4 md:w-5 md:h-5 rounded-full bg-primary flex items-center justify-center text-white group-hover:bg-white group-hover:text-primary transition-all shadow-md border-2 border-white">
                     <GraduationCap className="w-4 h-4 md:w-5 md:h-5" />
                   </div>
                   <div>
@@ -379,3 +392,4 @@ export default function Home() {
     </div>
   );
 }
+
