@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useUser } from '@/firebase';
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { GraduationCap, ArrowRight, BrainCircuit, Loader2, BookOpen, Library, Users, NotebookPen } from 'lucide-react';
+import { GraduationCap, ArrowRight, BrainCircuit, Loader2, BookOpen, Library, Users, NotebookPen, FileUp } from 'lucide-react';
 import { CLASSES } from '@/lib/constants';
 
 export default function Home() {
@@ -84,6 +84,20 @@ export default function Home() {
             </CardHeader>
             <CardContent className="p-3 md:p-4 pt-0">
               <p className="text-[9px] md:text-[10px] font-bold text-muted-foreground leading-tight">আপনার শিক্ষার্থীদের তথ্য সংরক্ষণ ও পরিচালনা করুন।</p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/settings?tab=sheets">
+          <Card className="bg-rose-50 border-rose-200 shadow-md overflow-hidden group hover:shadow-lg transition-all border-l-4 border-l-rose-600 h-full">
+            <CardHeader className="pb-1 p-3 md:p-4">
+              <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-rose-600 flex items-center justify-center text-white mb-2 shadow-inner group-hover:scale-110 transition-transform">
+                <FileUp className="w-4 h-4 md:w-5 md:h-5" />
+              </div>
+              <CardTitle className="text-rose-700 font-black text-sm md:text-base">কুইক আপলোড</CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 md:p-4 pt-0">
+              <p className="text-[9px] md:text-[10px] font-bold text-muted-foreground leading-tight">সরাসরি লেকচার শিট বা প্রশ্ন পিডিএফ আপলোড করুন।</p>
             </CardContent>
           </Card>
         </Link>

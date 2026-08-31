@@ -42,7 +42,8 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
             operation: 'list',
           });
           errorEmitter.emit('permission-error', permissionError);
-        } else {
+        } else if (serverError.code !== 'unavailable') {
+          // Suppress "unavailable" connectivity warnings from annoying the developer overlay
           console.error("Firestore useCollection Error:", serverError);
         }
         setError(serverError);

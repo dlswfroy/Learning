@@ -42,7 +42,8 @@ export function useDoc<T = DocumentData>(docRef: DocumentReference<T> | null) {
             operation: 'get',
           });
           errorEmitter.emit('permission-error', permissionError);
-        } else {
+        } else if (serverError.code !== 'unavailable') {
+          // Suppress "unavailable" connectivity warnings from annoying the developer overlay
           console.error("Firestore useDoc Error:", serverError);
         }
         setError(serverError);

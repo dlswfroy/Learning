@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useMemo, useEffect, useRef, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { CLASSES, getSubjectsForClass, getChaptersForSubject } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -71,15 +71,18 @@ function naturalSort(a: any, b: any) {
   return nameA.localeCompare(nameB, 'bn', { numeric: true, sensitivity: 'base' });
 }
 
-export default function SettingsPage() {
+function SettingsContent() {
   const db = useFirestore();
   const storage = useStorage();
   const { user, loading: userLoading } = useUser();
   const router = useRouter();
+  const searchParams = useSearchParams();
   
   const profileInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const sheetInputRef = useRef<HTMLInputElement>(null);
+
+  const [activeTab, setActiveTab] = useState('profile');
 
   // Book management states
   const [classId, setClassId] = useState<string>('');
@@ -125,6 +128,13 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!userLoading && !user) router.push('/auth');
   }, [user, userLoading, router]);
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (userProfile) {
@@ -438,7 +448,7 @@ export default function SettingsPage() {
         <h2 className="text-xl font-bold">সেটিং</h2>
       </header>
 
-      <Tabs defaultValue="profile" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className={`grid w-full mb-6 bg-secondary/50 p-1 ${isAdmin ? 'grid-cols-5' : 'grid-cols-2'}`}>
           <TabsTrigger value="profile" className="gap-2 font-bold text-xs"><User className="w-3.5 h-3.5" /> প্রোফাইল</TabsTrigger>
           <TabsTrigger value="books" className="gap-2 font-bold text-xs"><BookCopy className="w-3.5 h-3.5" /> বই ব্যবস্থাপনা</TabsTrigger>
@@ -806,5 +816,13 @@ export default function SettingsPage() {
         )}
       </Tabs>
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center p-20"><Loader2 className="animate-spin text-primary" /></div>}>
+      <SettingsContent />
+    </Suspense>
   );
 }
