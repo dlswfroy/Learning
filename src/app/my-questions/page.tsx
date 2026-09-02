@@ -29,7 +29,8 @@ import {
   Layers,
   LayoutGrid,
   ExternalLink,
-  Download
+  Download,
+  AlertTriangle
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -122,7 +123,6 @@ function MyLibraryContent() {
 
   useEffect(() => { if (!userLoading && !user) router.push('/auth'); }, [user, userLoading, router]);
 
-  // Handle URL navigation parameters
   useEffect(() => {
     const cid = searchParams.get('classId');
     const sub = searchParams.get('subject');
@@ -142,9 +142,9 @@ function MyLibraryContent() {
   const sheetsQuery = useMemo(() => db && user ? query(collection(db, 'lecture-sheets'), where('userId', '==', user.uid)) : null, [db, user]);
   const pdfSheetsQuery = useMemo(() => db && user ? query(collection(db, 'pdf-sheets')) : null, [db, user]);
 
-  const { data: rawQuestions, loading: questionsLoading } = useCollection(questionsQuery);
-  const { data: rawSheets, loading: sheetsLoading } = useCollection(sheetsQuery);
-  const { data: rawPdfSheets, loading: pdfSheetsLoading } = useCollection(pdfSheetsQuery);
+  const { data: rawQuestions, loading: questionsLoading, error: qError } = useCollection(questionsQuery);
+  const { data: rawSheets, loading: sheetsLoading, error: sError } = useCollection(sheetsQuery);
+  const { data: rawPdfSheets, loading: pdfSheetsLoading, error: pError } = useCollection(pdfSheetsQuery);
 
   const libraryData = useMemo(() => ({ 
     questions: rawQuestions || [], 
@@ -507,6 +507,24 @@ function MyLibraryContent() {
   );
 
   if (userLoading || questionsLoading || sheetsLoading || pdfSheetsLoading) return <div className="flex flex-col items-center justify-center p-20 min-h-[50vh]"><Loader2 className="w-10 h-10 animate-spin text-primary" /><p className="mt-4 text-muted-foreground font-bold">লাইব্রেরি লোড হচ্ছে...</p></div>;
+
+  if (qError || sError || pError) {
+    return (
+      <div className="max-w-xl mx-auto p-10 text-center space-y-6 font-kalpurush">
+        <AlertTriangle className="w-16 h-16 text-destructive mx-auto animate-bounce" />
+        <h2 className="text-2xl font-black text-destructive">লাইব্রেরি লোড হতে সমস্যা হয়েছে</h2>
+        <p className="text-muted-foreground font-bold">ডাটাবেসে ইনডেক্স প্রয়োজন। নিচের লিঙ্কে ক্লিক করে ইনডেক্স তৈরি করুন।</p>
+        <a 
+          href="https://console.firebase.google.com/v1/r/project/birganj-pouro-high-schoo-9d39d/firestore/indexes" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 bg-indigo-600 text-white px-8 py-3 rounded-xl font-black hover:bg-indigo-700 transition-all shadow-lg"
+        >
+          <ExternalLink className="w-5 h-5" /> ফায়ারবেস কনসোল
+        </a>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 animate-fade-in pb-32 font-kalpurush">

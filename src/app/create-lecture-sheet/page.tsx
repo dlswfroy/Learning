@@ -84,7 +84,7 @@ function formatMath(text: string) {
     '\\\\degree': '°', '\\\\cdot': '·', '\\\\infty': '∞', '\\\\approx': '≈',
     '\\\\sum': '∑', '\\\\prod': '∏', '\\\\alpha': 'α', '\\\\beta': 'β',
     '\\\\gamma': 'γ', '\\\\delta': 'δ', '\\\\sigma': 'σ', '\\\\phi': 'φ', '\\\\omega': 'ω',
-    '\\\\eta': 'η', '\\\\rho': 'ρ', '\\\\lambda': 'λ', '\\\\mu': 'μ',
+    '\\\\eta': 'η', '\\\\rho': 'র', '\\\\lambda': 'λ', '\\\\mu': 'μ',
     '\\\\div': '÷', '\\\\rightarrow': '→', '\\\\to': '→', '\\\\arrow': '→',
     '\\\\in': '∈', '\\\\mathbb\\{N\\}': 'ℕ', '\\\\mathbb\\{R\\}': 'ℝ', '\\\\mathbb\\{Z\\}': 'ℤ',
     '\\\\mathbb\\{Q\\}': 'ℚ', '\\\\subset': '⊂', '\\\\subseteq': '⊆', '\\\\cup': '∪',
@@ -161,7 +161,6 @@ function CreateLectureSheetContent() {
     watermarkImageUrl: '', watermarkImageSize: 70, watermarkType: 'text'
   });
 
-  // PDF Upload States
   const [activeCreationMode, setActiveCreationMode] = useState<'text' | 'pdf'>('text');
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfUploading, setPdfUploading] = useState(false);
@@ -191,7 +190,10 @@ function CreateLectureSheetContent() {
   
   useEffect(() => {
     async function loadSheet() {
-      if (!editId || !db || !user) return;
+      if (!editId || !db || !user) {
+        if (!editId) setLoading(false);
+        return;
+      }
       try {
         const docRef = doc(db, 'lecture-sheets', editId);
         const docSnap = await getDoc(docRef);
@@ -213,56 +215,79 @@ function CreateLectureSheetContent() {
           }
           if (docData.manualPages) setManualPages(docData.manualPages);
         }
-      } catch (e) {} finally { setLoading(false); }
+      } catch (e) {
+        toast({ variant: "destructive", title: "ত্রুটি", description: "শীট লোড করা সম্ভব হয়নি।" });
+      } finally { setLoading(false); }
     }
     if (user && db) loadSheet();
-  }, [editId, db, user]);
+  }, [editId, db, user, toast]);
 
   useEffect(() => {
     if (activeEditIdx !== null && pageStyles[activeEditIdx]) {
       setFontSizeDraft(String(pageStyles[activeEditIdx].fontSize));
       setLineHeightDraft(String(pageStyles[activeEditIdx].lineHeight));
-    } else { setFontSizeDraft(String(globalFontSize)); setLineHeightDraft(String(globalLineHeight)); }
+    } else { 
+      setFontSizeDraft(String(globalFontSize)); 
+      setLineHeightDraft(String(globalLineHeight)); 
+    }
   }, [activeEditIdx, globalFontSize, globalLineHeight, pageStyles]);
 
+  // Optimized Pagination Effect
   useEffect(() => {
-    if (!isPrintMode) return;
+    if (!isPrintMode || !data.content || !measurementRef.current) return;
+    
+    // Skip re-pagination if manual edits exist, unless it's the very first run
     if (Object.keys(manualPages).length > 0) {
       const sortedIndices = Object.keys(manualPages).map(Number).sort((a, b) => a - b);
       setPaginatedPages(sortedIndices.map(idx => manualPages[idx]));
       return;
     }
-    if (data.content && measurementRef.current) {
-      const container = measurementRef.current;
-      const contentHtml = formatMath(data.content);
-      const mT = parseFloat(String(printSettings.marginTop)) || 0.5, mL = parseFloat(String(printSettings.marginLeft)) || 0.5, mR = parseFloat(String(printSettings.marginRight)) || 0.5;
-      container.style.width = (8.27 - mL - mR) + 'in';
-      container.style.fontSize = globalFontSize + 'pt';
-      container.style.lineHeight = String(globalLineHeight);
-      const tempLines = contentHtml.split('\n');
-      container.innerHTML = tempLines.map(line => `<div class="measure-line" style="min-height: 1.2em;">${line.trim() || '&nbsp;'}</div>`).join('');
-      const headerSpace = 135, footerSpace = 65, topicSpacePx = 65, totalPageHeightPx = 11.69 * 96;
-      const availableHeightPx = totalPageHeightPx - (mT * 96) - (parseFloat(printSettings.marginBottom) * 96) - headerSpace - footerSpace;
-      const newPages: string[] = [];
-      let currentChunk = "", currentHeight = 0;
-      const lines = container.querySelectorAll('.measure-line');
-      lines.forEach((line) => {
-        const h = (line as HTMLElement).offsetHeight || 18;
-        const effectiveLimit = (newPages.length === 0) ? (availableHeightPx - topicSpacePx) : availableHeightPx;
-        if (currentHeight > 0 && currentHeight + h > effectiveLimit) { if (currentChunk.trim() !== "") newPages.push(currentChunk); currentChunk = line.innerHTML + "<br/>"; currentHeight = h; }
-        else { currentChunk += line.innerHTML + "<br/>"; currentHeight += h; }
-      });
-      if (currentChunk.trim() !== "") newPages.push(currentChunk);
-      const pagesToRender = newPages.length > 0 ? newPages : [""];
-      setPaginatedPages(pagesToRender);
-      const initialStyles: Record<number, any> = {}, initialManual: Record<number, string> = {};
-      pagesToRender.forEach((p, i) => { 
-        initialStyles[i] = pageStyles[i] || { fontSize: globalFontSize, lineHeight: globalLineHeight, bold: false, italic: false, underline: false, color: '#000000', align: 'justify', mT, mB: printSettings.marginBottom, mL, mR }; 
-        initialManual[i] = p; 
-      });
-      setPageStyles(initialStyles); setManualPages(initialManual);
-    }
-  }, [isPrintMode, data.content, printSettings, globalFontSize, globalLineHeight, manualPages, pageStyles]);
+
+    const container = measurementRef.current;
+    const contentHtml = formatMath(data.content);
+    const mT = parseFloat(String(printSettings.marginTop)) || 0.5, mL = parseFloat(String(printSettings.marginLeft)) || 0.5, mR = parseFloat(String(printSettings.marginRight)) || 0.5;
+    
+    container.style.width = (8.27 - mL - mR) + 'in';
+    container.style.fontSize = globalFontSize + 'pt';
+    container.style.lineHeight = String(globalLineHeight);
+    
+    const tempLines = contentHtml.split('\n');
+    container.innerHTML = tempLines.map(line => `<div class="measure-line" style="min-height: 1.2em;">${line.trim() || '&nbsp;'}</div>`).join('');
+    
+    const headerSpace = 135, footerSpace = 65, topicSpacePx = 65, totalPageHeightPx = 11.69 * 96;
+    const availableHeightPx = totalPageHeightPx - (mT * 96) - (parseFloat(printSettings.marginBottom) * 96) - headerSpace - footerSpace;
+    
+    const newPages: string[] = [];
+    let currentChunk = "", currentHeight = 0;
+    const lines = container.querySelectorAll('.measure-line');
+    
+    lines.forEach((line) => {
+      const h = (line as HTMLElement).offsetHeight || 18;
+      const effectiveLimit = (newPages.length === 0) ? (availableHeightPx - topicSpacePx) : availableHeightPx;
+      if (currentHeight > 0 && currentHeight + h > effectiveLimit) { 
+        if (currentChunk.trim() !== "") newPages.push(currentChunk); 
+        currentChunk = line.innerHTML + "<br/>"; 
+        currentHeight = h; 
+      }
+      else { 
+        currentChunk += line.innerHTML + "<br/>"; 
+        currentHeight += h; 
+      }
+    });
+    if (currentChunk.trim() !== "") newPages.push(currentChunk);
+    
+    const pagesToRender = newPages.length > 0 ? newPages : [""];
+    setPaginatedPages(pagesToRender);
+    
+    const initialStyles: Record<number, any> = {}, initialManual: Record<number, string> = {};
+    pagesToRender.forEach((p, i) => { 
+      initialStyles[i] = pageStyles[i] || { fontSize: globalFontSize, lineHeight: globalLineHeight, bold: false, italic: false, underline: false, color: '#000000', align: 'justify', mT, mB: printSettings.marginBottom, mL, mR }; 
+      initialManual[i] = p; 
+    });
+    setPageStyles(initialStyles); 
+    setManualPages(initialManual);
+
+  }, [isPrintMode, data.content, printSettings.marginTop, printSettings.marginBottom, printSettings.marginLeft, printSettings.marginRight, globalFontSize, globalLineHeight]);
 
   const subjects = useMemo(() => data.classId ? getSubjectsForClass(data.classId) : [], [data.classId]);
   const chapters = useMemo(() => (data.classId && data.subject) ? getChaptersForSubject(data.classId, data.subject) : [], [data.classId, data.subject]);
