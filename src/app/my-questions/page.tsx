@@ -30,7 +30,8 @@ import {
   LayoutGrid,
   ExternalLink,
   Download,
-  AlertTriangle
+  AlertTriangle,
+  FileType
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -104,6 +105,7 @@ function getChapterSortValue(name: string): number {
 
 type ViewMode = 'classes' | 'subjects' | 'chapters' | 'content';
 type Category = 'all' | 'sheet' | 'creative' | 'mcq' | 'model' | 'answer';
+type FileTypeFilter = 'all' | 'pdf' | 'word' | 'editor';
 
 function MyLibraryContent() {
   const db = useFirestore();
@@ -116,6 +118,7 @@ function MyLibraryContent() {
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<Category>('all');
+  const [activeFileType, setActiveFileType] = useState<FileTypeFilter>('all');
 
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
@@ -257,8 +260,26 @@ function MyLibraryContent() {
       ps = ps.filter(p => p.category === 'answer_key');
     }
 
+    if (activeFileType === 'pdf') {
+      qs = [];
+      ss = [];
+      ps = ps.filter(p => {
+        const url = (p.pdfUrl || '').toLowerCase();
+        return url.includes('pdf') || url.startsWith('http');
+      });
+    } else if (activeFileType === 'word') {
+      qs = [];
+      ss = [];
+      ps = ps.filter(p => {
+        const url = (p.pdfUrl || '').toLowerCase();
+        return url.includes('word') || url.includes('officedocument') || url.includes('msword');
+      });
+    } else if (activeFileType === 'editor') {
+      ps = [];
+    }
+
     return { questions: qs, sheets: ss, pdfSheets: ps };
-  }, [libraryData, selectedClass, selectedSubject, selectedChapter, activeCategory]);
+  }, [libraryData, selectedClass, selectedSubject, selectedChapter, activeCategory, activeFileType]);
 
   const getChapterStats = (chapterName: string) => {
     const isGeneral = chapterName === 'সাধারণ অধ্যায়';
@@ -301,7 +322,7 @@ function MyLibraryContent() {
 
   const handleBack = () => {
     if (isSelecting) { setIsSelecting(false); setSelectedDocIds([]); return; }
-    if (viewMode === 'content') { setViewMode('chapters'); setSelectedChapter(null); setActiveCategory('all'); return; }
+    if (viewMode === 'content') { setViewMode('chapters'); setSelectedChapter(null); setActiveCategory('all'); setActiveFileType('all'); return; }
     if (viewMode === 'chapters') { setViewMode('subjects'); setSelectedSubject(null); return; }
     if (viewMode === 'subjects') { setViewMode('classes'); setSelectedClass(null); return; }
     router.back();
@@ -408,26 +429,49 @@ function MyLibraryContent() {
             )}
           </div>
           
-          <div className="flex flex-wrap gap-2">
-            {[
-              { id: 'all', label: 'সবগুলো', icon: LayoutGrid },
-              { id: 'sheet', label: 'লেকচার শিট', icon: BookOpen },
-              { id: 'creative', label: 'সৃজনশীল প্রশ্ন', icon: FileText },
-              { id: 'mcq', label: 'বহুনির্বাচনী প্রশ্ন', icon: BrainCircuit },
-              { id: 'model', label: 'মডেল টেস্ট', icon: BrainCircuit },
-              { id: 'answer', label: 'উত্তরমালা', icon: CheckCircle2 }
-            ].map((cat) => (
-              <Button 
-                key={cat.id} 
-                variant={activeCategory === cat.id ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setActiveCategory(cat.id as any)}
-                className={cn("h-9 gap-2 font-bold text-xs rounded-full border-black", activeCategory === cat.id ? "bg-primary text-white" : "text-muted-foreground")}
-              >
-                <cat.icon className="w-3.5 h-3.5" />
-                {cat.label}
-              </Button>
-            ))}
+          <div className="space-y-2">
+            <div className="flex flex-wrap gap-2">
+              {[
+                { id: 'all', label: 'সবগুলো', icon: LayoutGrid },
+                { id: 'sheet', label: 'লেকচার শিট', icon: BookOpen },
+                { id: 'creative', label: 'সৃজনশীল প্রশ্ন', icon: FileText },
+                { id: 'mcq', label: 'বহুনির্বাচনী প্রশ্ন', icon: BrainCircuit },
+                { id: 'model', label: 'মডেল টেস্ট', icon: BrainCircuit },
+                { id: 'answer', label: 'উত্তরমালা', icon: CheckCircle2 }
+              ].map((cat) => (
+                <Button 
+                  key={cat.id} 
+                  variant={activeCategory === cat.id ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setActiveCategory(cat.id as any)}
+                  className={cn("h-9 gap-2 font-bold text-xs rounded-full border-black", activeCategory === cat.id ? "bg-primary text-white" : "text-muted-foreground")}
+                >
+                  <cat.icon className="w-3.5 h-3.5" />
+                  {cat.label}
+                </Button>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap gap-2 mt-2 pt-2 border-t border-black/5">
+              {[
+                { id: 'all', label: 'সব ফরম্যাট', icon: LayoutGrid },
+                { id: 'pdf', label: 'পিডিএফ ফাইল', icon: FileText },
+                { id: 'word', label: 'ওয়ার্ড ফাইল', icon: FileType },
+                { id: 'editor', label: 'কন্টেন্ট এডিটর', icon: Edit }
+              ].map((type) => (
+                <Button 
+                  key={type.id} 
+                  variant={activeFileType === type.id ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setActiveFileType(type.id as any)}
+                  className={cn("h-7 gap-1.5 font-bold text-[10px] rounded-full border border-transparent", 
+                    activeFileType === type.id ? "bg-black text-white" : "text-muted-foreground hover:border-black/10")}
+                >
+                  <type.icon className="w-3 h-3" />
+                  {type.label}
+                </Button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -571,9 +615,9 @@ function MyLibraryContent() {
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-secondary/20 p-3 rounded-xl border-2 border-black">
           <div className="flex items-center gap-2 text-xs font-bold overflow-x-auto whitespace-nowrap pb-1 text-muted-foreground scrollbar-hide">
-            <span className={cn("cursor-pointer hover:text-primary transition-colors px-1", viewMode === 'classes' && "text-primary")} onClick={() => { setViewMode('classes'); setSelectedClass(null); setSelectedSubject(null); setSelectedChapter(null); setIsSelecting(false); setActiveCategory('all'); }}>লাইব্রেরি</span>
-            {selectedClass && (<><ChevronRight className="w-3 h-3 shrink-0" /><span className={cn("cursor-pointer hover:text-primary transition-colors px-1", viewMode === 'subjects' && "text-primary")} onClick={() => { setViewMode('subjects'); setSelectedSubject(null); setSelectedChapter(null); setIsSelecting(false); setActiveCategory('all'); }}>{CLASSES.find(c => c.id === selectedClass)?.label} শ্রেণি</span></>)}
-            {selectedSubject && (<><ChevronRight className="w-3 h-3 shrink-0" /><span className={cn("cursor-pointer hover:text-primary transition-colors px-1", viewMode === 'chapters' && "text-primary")} onClick={() => { setViewMode('chapters'); setSelectedSubject(null); setSelectedChapter(null); setIsSelecting(false); setActiveCategory('all'); }}>{selectedSubject}</span></>)}
+            <span className={cn("cursor-pointer hover:text-primary transition-colors px-1", viewMode === 'classes' && "text-primary")} onClick={() => { setViewMode('classes'); setSelectedClass(null); setSelectedSubject(null); setSelectedChapter(null); setIsSelecting(false); setActiveCategory('all'); setActiveFileType('all'); }}>লাইব্রেরি</span>
+            {selectedClass && (<><ChevronRight className="w-3 h-3 shrink-0" /><span className={cn("cursor-pointer hover:text-primary transition-colors px-1", viewMode === 'subjects' && "text-primary")} onClick={() => { setViewMode('subjects'); setSelectedSubject(null); setSelectedChapter(null); setIsSelecting(false); setActiveCategory('all'); setActiveFileType('all'); }}>{CLASSES.find(c => c.id === selectedClass)?.label} শ্রেণি</span></>)}
+            {selectedSubject && (<><ChevronRight className="w-3 h-3 shrink-0" /><span className={cn("cursor-pointer hover:text-primary transition-colors px-1", viewMode === 'chapters' && "text-primary")} onClick={() => { setViewMode('chapters'); setSelectedSubject(null); setSelectedChapter(null); setIsSelecting(false); setActiveCategory('all'); setActiveFileType('all'); }}>{selectedSubject}</span></>)}
             {selectedChapter && (<><ChevronRight className="w-3 h-3 shrink-0" /><span className={cn("cursor-pointer hover:text-primary transition-colors px-1", viewMode === 'content' && "text-primary")} onClick={() => { setViewMode('content'); }}>{selectedChapter}</span></>)}
           </div>
           <Button variant="outline" size="sm" onClick={handleBack} className="gap-2 font-bold border-black text-primary h-8 self-end sm:self-center bg-white shadow-sm hover:bg-primary hover:text-white transition-all"><ArrowLeft className="w-3.5 h-3.5" /> ফিরে যান</Button>
