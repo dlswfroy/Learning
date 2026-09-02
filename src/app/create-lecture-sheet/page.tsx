@@ -3,22 +3,55 @@
 
 import { useState, useEffect, Suspense, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { CLASSES, getSubjectsForClass } from '@/lib/constants';
+import { CLASSES, getSubjectsForClass, getChaptersForSubject } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, Save, FileText, ArrowLeft, Loader2, BookOpen, ScanText, Eye, Settings2, SlidersHorizontal, Image as ImageIcon, X, Type, Bold, Underline, Italic, Rows3, AlignLeft, AlignCenter, AlignRight, AlignJustify, Edit3, FileDown, Trash2, PlusCircle, CheckCircle2, Camera } from 'lucide-react';
+import { 
+  Printer, 
+  Save, 
+  FileText, 
+  ArrowLeft, 
+  Loader2, 
+  BookOpen, 
+  ScanText, 
+  Eye, 
+  Settings2, 
+  SlidersHorizontal, 
+  Image as ImageIcon, 
+  X, 
+  Type, 
+  Bold, 
+  Underline, 
+  Italic, 
+  Rows3, 
+  AlignLeft, 
+  AlignCenter, 
+  AlignRight, 
+  AlignJustify, 
+  Edit3, 
+  FileDown, 
+  Trash2, 
+  PlusCircle, 
+  CheckCircle2, 
+  Camera,
+  FileUp,
+  FileType
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useUser, useDoc } from '@/firebase';
-import { collection, setDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { useFirestore, useUser, useDoc, useStorage } from '@/firebase';
+import { collection, setDoc, doc, getDoc, serverTimestamp, addDoc } from 'firebase/firestore';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { cn } from '@/lib/utils';
 import Tesseract from 'tesseract.js';
 import { Slider } from '@/components/ui/slider';
 import { Separator } from '@/components/ui/separator';
+import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 function toBengaliNumber(n: number | string | undefined | null): string {
   if (n === undefined || n === null || n === '') return '';
@@ -95,6 +128,7 @@ async function processWatermarkImage(file: File): Promise<string> {
 
 function CreateLectureSheetContent() {
   const db = useFirestore();
+  const storage = useStorage();
   const { user, loading: userLoading } = useUser();
   const { toast } = useToast();
   const searchParams = useSearchParams();
@@ -106,6 +140,7 @@ function CreateLectureSheetContent() {
   const [isScanning, setIsScanning] = useState(false);
   const ocrInputRef = useRef<HTMLInputElement>(null);
   const watermarkInputRef = useRef<HTMLInputElement>(null);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
   const measurementRef = useRef<HTMLDivElement>(null);
   
   const softwareDocRef = useMemo(() => doc(db, 'config', 'software'), [db]);
@@ -125,6 +160,12 @@ function CreateLectureSheetContent() {
     watermarkOpacity: 10, watermarkText: '', watermarkFontSize: 80, watermarkRotation: -45,
     watermarkImageUrl: '', watermarkImageSize: 70, watermarkType: 'text'
   });
+
+  // PDF Upload States
+  const [activeCreationMode, setActiveCreationMode] = useState<'text' | 'pdf'>('text');
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfUploading, setPdfUploading] = useState(false);
+  const [pdfProgress, setPdfProgress] = useState(0);
 
   const [paginatedPages, setPaginatedPages] = useState<string[]>([]);
   const [pageStyles, setPageStyles] = useState<Record<number, any>>({});
@@ -224,6 +265,7 @@ function CreateLectureSheetContent() {
   }, [isPrintMode, data.content, printSettings, globalFontSize, globalLineHeight, manualPages, pageStyles]);
 
   const subjects = useMemo(() => data.classId ? getSubjectsForClass(data.classId) : [], [data.classId]);
+  const chapters = useMemo(() => (data.classId && data.subject) ? getChaptersForSubject(data.classId, data.subject) : [], [data.classId, data.subject]);
 
   const updatePageStyle = useCallback((idx: number, key: string, val: any) => { 
     setPageStyles(prev => {
@@ -317,6 +359,57 @@ function CreateLectureSheetContent() {
     });
   }, [user, db, editId, data, printSettings, pageStyles, manualPages, router, toast, isPrintMode]);
 
+  const handlePdfUpload = async () => {
+    if (!db || !storage || !user || !pdfFile || !data.classId || !data.subject || !data.type) {
+      toast({ variant: "destructive", title: "তথ্য অসম্পূর্ণ", description: "শ্রেণি, বিষয় ও পিডিএফ ফাইল নিশ্চিত করুন।" });
+      return;
+    }
+
+    setPdfUploading(true);
+    setPdfProgress(0);
+
+    try {
+      const timestamp = Date.now();
+      const storagePath = `pdf-sheets/${data.classId}/${data.subject}/${timestamp}_${pdfFile.name}`;
+      const storageRef = ref(storage, storagePath);
+      const uploadTask = uploadBytesResumable(storageRef, pdfFile);
+
+      uploadTask.on('state_changed', 
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setPdfProgress(Math.floor(progress));
+        }, 
+        (error) => {
+          toast({ variant: "destructive", title: "আপলোড ব্যর্থ", description: error.message });
+          setPdfUploading(false);
+        }, 
+        async () => {
+          const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+          const sheetData = {
+            category: data.type === 'lecture_sheet' ? 'lecture_sheet' : (data.type === 'creative' ? 'creative' : (data.type === 'mcq' ? 'mcq' : (data.type === 'model_test' ? 'model_test' : 'answer_key'))),
+            classId: data.classId,
+            subject: data.subject,
+            chapterName: data.topic || 'সাধারণ',
+            fileName: pdfFile.name,
+            pdfUrl: downloadUrl,
+            uploadedAt: serverTimestamp(),
+            userId: user.uid
+          };
+
+          await addDoc(collection(db, 'pdf-sheets'), sheetData);
+          toast({ title: "সফল", description: "পিডিএফ শিটটি আপলোড করা হয়েছে।" });
+          setPdfUploading(false);
+          setPdfFile(null);
+          if (pdfInputRef.current) pdfInputRef.current.value = '';
+          router.push('/my-questions');
+        }
+      );
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "ত্রুটি", description: e.message });
+      setPdfUploading(false);
+    }
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => { 
       if ((e.ctrlKey || e.metaKey)) { 
@@ -408,6 +501,7 @@ function CreateLectureSheetContent() {
             <Button variant="secondary" onClick={() => window.print()} className="gap-2 font-bold"><Printer className="w-4 h-4" /> প্রিন্ট</Button>
           </div>
         </header>
+
         <div className="flex flex-col lg:flex-row gap-8 items-start">
           <aside className="w-full lg:w-80 shrink-0 space-y-6 sticky top-24">
             <Card className="shadow-md border-primary/10">
@@ -417,11 +511,16 @@ function CreateLectureSheetContent() {
               <CardContent className="pt-6 space-y-5">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">শিটের ধরণ</label>
-                  <select className="w-full h-10 px-3 border rounded-md font-bold bg-white" onChange={e => setData(prev => ({...prev, type: e.target.value}))} value={data.type || 'lecture_sheet'}>
-                    <option value="lecture_sheet">লেকচার শিট</option>
-                    <option value="creative">সৃজনশীল প্রশ্ন শিট</option>
-                    <option value="mcq">বহুনির্বাচনী প্রশ্ন শিট</option>
-                  </select>
+                  <Select onValueChange={v => setData(prev => ({...prev, type: v}))} value={data.type}>
+                    <SelectTrigger className="font-bold"><SelectValue placeholder="ধরণ নির্বাচন" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="lecture_sheet">লেকচার শিট</SelectItem>
+                      <SelectItem value="creative">সৃজনশীল প্রশ্ন</SelectItem>
+                      <SelectItem value="mcq">বহুনির্বাচনী প্রশ্ন</SelectItem>
+                      <SelectItem value="model_test">মডেল টেস্ট</SelectItem>
+                      <SelectItem value="answer_key">উত্তরমালা</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">প্রতিষ্ঠানের নাম</label>
@@ -429,45 +528,117 @@ function CreateLectureSheetContent() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">শ্রেণি</label>
-                  <select className="w-full h-10 px-3 border rounded-md font-bold bg-white" onChange={e => setData(prev => ({...prev, classId: e.target.value}))} value={data.classId || ''}>
-                    <option value="">নির্বাচন করুন</option>
-                    {CLASSES.map(c => <option key={c.id} value={c.id}>{c.label} শ্রেণি</option>)}
-                  </select>
+                  <Select onValueChange={v => setData(prev => ({...prev, classId: v}))} value={data.classId}>
+                    <SelectTrigger className="font-bold"><SelectValue placeholder="শ্রেণি" /></SelectTrigger>
+                    <SelectContent>
+                      {CLASSES.map(c => <SelectItem key={c.id} value={c.id}>{c.label} শ্রেণি</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">বিষয়</label>
-                  <select className="w-full h-10 px-3 border rounded-md font-bold bg-white" onChange={e => setData(prev => ({...prev, subject: e.target.value}))} value={data.subject || ''} disabled={!data.classId}>
-                    <option value="">নির্বাচন করুন</option>
-                    {subjects.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
+                  <Select onValueChange={v => setData(prev => ({...prev, subject: v}))} value={data.subject} disabled={!data.classId}>
+                    <SelectTrigger className="font-bold"><SelectValue placeholder="বিষয়" /></SelectTrigger>
+                    <SelectContent>
+                      {subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">টপিক / শিরোনাম</label>
-                  <Input value={data.topic || ''} onChange={e => setData(prev => ({...prev, topic: e.target.value}))} placeholder="যেমন: ৩য় অধ্যায়" />
-                </div>
-                <div className="pt-4 border-t">
-                  <input type="file" ref={ocrInputRef} className="hidden" accept="image/*" onChange={handleOCR} />
-                  <Button onClick={() => ocrInputRef.current?.click()} disabled={isScanning} variant="outline" className="w-full gap-2 border-indigo-600 text-indigo-700 font-bold">
-                    {isScanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanText className="w-4 h-4" />} এআই স্ক্যান
-                  </Button>
+                  {chapters.length > 0 ? (
+                    <Select onValueChange={v => setData(prev => ({...prev, topic: v}))} value={data.topic}>
+                      <SelectTrigger className="font-bold"><SelectValue placeholder="অধ্যায় নির্বাচন করুন" /></SelectTrigger>
+                      <SelectContent>
+                        {chapters.map(ch => <SelectItem key={ch} value={ch}>{ch}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input value={data.topic || ''} onChange={e => setData(prev => ({...prev, topic: e.target.value}))} placeholder="যেমন: ৩য় অধ্যায়" />
+                  )}
                 </div>
               </CardContent>
             </Card>
+
             <div className="space-y-3">
-              <Button onClick={handleSave} disabled={saving} className="w-full gap-2 font-bold h-11"><Save className="w-4 h-4" /> সেভ করুন (Ctrl+S)</Button>
-              <Button onClick={() => { if(!data.content) return; const p = new URLSearchParams(window.location.search); p.set('print', 'true'); if(editId) p.set('id', editId); router.push(`${window.location.pathname}?${p.toString()}`); }} variant="outline" className="w-full gap-2 border-primary text-primary font-bold h-11"><Eye className="w-4 h-4" /> প্রিন্ট প্রিভিউ</Button>
+              <Button onClick={handleSave} disabled={saving || activeCreationMode === 'pdf'} className="w-full gap-2 font-bold h-11"><Save className="w-4 h-4" /> সেভ করুন (Ctrl+S)</Button>
+              <Button onClick={() => { if(!data.content) return; const p = new URLSearchParams(window.location.search); p.set('print', 'true'); if(editId) p.set('id', editId); router.push(`${window.location.pathname}?${p.toString()}`); }} variant="outline" className="w-full gap-2 border-primary text-primary font-bold h-11" disabled={activeCreationMode === 'pdf'}><Eye className="w-4 h-4" /> প্রিন্ট প্রিভিউ</Button>
             </div>
           </aside>
-          <div className="flex-1 w-full">
-            <Card className="shadow-sm border-primary/5">
-              <CardContent className="pt-6">
-                <label className="text-sm font-bold text-primary flex items-center gap-2 mb-4 border-b pb-2"><BookOpen className="w-4 h-4" /> কন্টেন্ট এডিটর</label>
-                <Textarea placeholder="এখানে আপনার লেকচার নোট লিখুন..." value={data.content || ''} onChange={e => setData(prev => ({...prev, content: e.target.value}))} className="min-h-[600px] text-base leading-relaxed font-bold border-none focus-visible:ring-0 shadow-none px-0" />
-              </CardContent>
-            </Card>
+
+          <div className="flex-1 w-full space-y-6">
+            <Tabs value={activeCreationMode} onValueChange={(v: any) => setActiveCreationMode(v)} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-4 bg-secondary/50 p-1 h-12">
+                <TabsTrigger value="text" className="gap-2 font-bold h-10"><Edit3 className="w-4 h-4" /> এডিটর ব্যবহার করুন</TabsTrigger>
+                <TabsTrigger value="pdf" className="gap-2 font-bold h-10"><FileType className="w-4 h-4" /> পিডিএফ ফাইল আপলোড</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="text" className="animate-in fade-in duration-300">
+                <Card className="shadow-sm border-primary/5">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between mb-4 border-b pb-2">
+                      <label className="text-sm font-bold text-primary flex items-center gap-2"><BookOpen className="w-4 h-4" /> কন্টেন্ট এডিটর</label>
+                      <div className="flex gap-2">
+                        <input type="file" ref={ocrInputRef} className="hidden" accept="image/*" onChange={handleOCR} />
+                        <Button onClick={() => ocrInputRef.current?.click()} disabled={isScanning} variant="outline" size="sm" className="h-8 gap-2 border-indigo-600 text-indigo-700 font-bold">
+                          {isScanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanText className="w-4 h-4" />} এআই স্ক্যান
+                        </Button>
+                      </div>
+                    </div>
+                    <Textarea placeholder="এখানে আপনার লেকচার নোট লিখুন..." value={data.content || ''} onChange={e => setData(prev => ({...prev, content: e.target.value}))} className="min-h-[600px] text-base leading-relaxed font-bold border-none focus-visible:ring-0 shadow-none px-0" />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="pdf" className="animate-in fade-in duration-300">
+                <Card className="shadow-md border-indigo-100 border-2">
+                  <CardHeader className="bg-indigo-50/50 border-b">
+                    <CardTitle className="text-lg flex items-center gap-2 font-bold text-indigo-700">
+                      <FileUp className="w-6 h-6" /> সরাসরি পিডিএফ আপলোড
+                    </CardTitle>
+                    <CardDescription className="font-bold">আপনার তৈরিকৃত পিডিএফ ফাইলটি এখানে সিলেক্ট করে সরাসরি আপলোড করুন।</CardDescription>
+                  </CardHeader>
+                  <CardContent className="py-10 flex flex-col items-center justify-center space-y-6">
+                    <div 
+                      onClick={() => pdfInputRef.current?.click()}
+                      className="w-full max-w-md border-2 border-dashed border-indigo-300 rounded-3xl p-10 flex flex-col items-center justify-center gap-4 bg-indigo-50/20 hover:bg-indigo-50/40 transition-all cursor-pointer group"
+                    >
+                      <div className="w-20 h-20 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform">
+                        <FileType className="w-10 h-10" />
+                      </div>
+                      <div className="text-center">
+                        <p className="font-black text-indigo-800 text-lg">{pdfFile ? pdfFile.name : 'পিডিএফ ফাইল নির্বাচন করুন'}</p>
+                        <p className="text-xs text-muted-foreground font-bold mt-1">ফাইল সাইজ ৫ এমবি এর কম হতে হবে</p>
+                      </div>
+                      <input type="file" ref={pdfInputRef} className="hidden" accept="application/pdf" onChange={e => setPdfFile(e.target.files?.[0] || null)} />
+                    </div>
+
+                    {pdfUploading && (
+                      <div className="w-full max-w-md space-y-2">
+                        <div className="flex justify-between text-xs font-black text-indigo-600">
+                          <span>আপলোড হচ্ছে...</span>
+                          <span>{pdfProgress}%</span>
+                        </div>
+                        <Progress value={pdfProgress} className="h-2" />
+                      </div>
+                    )}
+
+                    <Button 
+                      onClick={handlePdfUpload} 
+                      disabled={pdfUploading || !pdfFile || !data.classId || !data.subject} 
+                      className="w-full max-w-md h-12 text-lg font-black bg-indigo-600 hover:bg-indigo-700 shadow-lg gap-2"
+                    >
+                      {pdfUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                      ফাইল আপলোড ও সেভ করুন
+                    </Button>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>
+
       {isPrintMode && (
         <div className="print-view-container flex flex-col h-screen fixed inset-0 top-0 left-0 bg-slate-100 z-[40] font-kalpurush overflow-hidden">
           <header className="no-print h-14 bg-white border-b flex items-center justify-between px-6 shrink-0 shadow-sm z-50">
