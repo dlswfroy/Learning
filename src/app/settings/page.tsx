@@ -63,7 +63,7 @@ async function processImage(file: File): Promise<string> {
   });
 }
 
-const pdfToBase64 = (file: File): Promise<string> => {
+const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -93,7 +93,6 @@ function SettingsContent() {
 
   const [activeTab, setActiveTab] = useState('profile');
 
-  // Book management states
   const [classId, setClassId] = useState<string>('');
   const [subject, setSubject] = useState<string>('');
   const [chapterName, setChapterName] = useState<string>('');
@@ -102,7 +101,6 @@ function SettingsContent() {
   const [bookType, setBookType] = useState<'nctb' | 'guide'>('nctb');
   const [uploading, setUploading] = useState(false);
   
-  // Sheet management states
   const [sheetUploadType, setSheetUploadType] = useState<'file' | 'link'>('file');
   const [sheetCategory, setSheetCategory] = useState<string>('');
   const [sheetClassId, setSheetClassId] = useState<string>('');
@@ -200,10 +198,13 @@ function SettingsContent() {
     if (isAdmin) fetchRequests();
   }, [isAdmin, db]);
 
-  // Handle PDF opening with Blob support
   const handleOpenPdf = async (url: string) => {
     if (!url) return;
-    if (url.startsWith('data:application/pdf')) {
+    const isDataUri = url.startsWith('data:');
+    const isPdf = url.startsWith('data:application/pdf');
+    const isWord = url.startsWith('data:application/msword') || url.startsWith('data:application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+
+    if (isDataUri && (isPdf || isWord)) {
       try {
         const response = await fetch(url);
         const blob = await response.blob();
@@ -352,12 +353,12 @@ function SettingsContent() {
     }
 
     if (sheetUploadType === 'file' && !sheetFile) {
-      toast({ variant: "destructive", title: "ফাইল নেই", description: "পিডিএফ ফাইল নির্বাচন করুন।" });
+      toast({ variant: "destructive", title: "ফাইল নেই", description: "ফাইল নির্বাচন করুন।" });
       return;
     }
 
     if (sheetUploadType === 'link' && !sheetManualUrl) {
-      toast({ variant: "destructive", title: "লিঙ্ক নেই", description: "পিডিএফ লিঙ্ক লিখুন।" });
+      toast({ variant: "destructive", title: "লিঙ্ক নেই", description: "ফাইল লিঙ্ক লিখুন।" });
       return;
     }
 
@@ -369,7 +370,7 @@ function SettingsContent() {
         classId: sheetClassId,
         subject: sheetSubject,
         chapterName: sheetChapter || 'সাধারণ',
-        fileName: 'PDF Link',
+        fileName: 'External Link',
         pdfUrl: sheetManualUrl,
         uploadedAt: serverTimestamp(),
         userId: user?.uid || ''
@@ -377,7 +378,7 @@ function SettingsContent() {
 
       try {
         await addDoc(collection(db, 'pdf-sheets'), sheetData);
-        toast({ title: "সফল", description: "পিডিএফ লিঙ্কটি যুক্ত করা হয়েছে।" });
+        toast({ title: "সফল", description: "লিঙ্কটি যুক্ত করা হয়েছে।" });
         setSheetManualUrl('');
         setSheetChapter('');
       } catch (e) {
@@ -388,10 +389,9 @@ function SettingsContent() {
       return;
     }
 
-    // Base64 logic exactly as requested
     setSheetUploadProgress(10);
     try {
-      const base64String = await pdfToBase64(sheetFile!);
+      const base64String = await fileToBase64(sheetFile!);
       setSheetUploadProgress(70);
 
       const sheetData = {
@@ -400,14 +400,14 @@ function SettingsContent() {
         subject: sheetSubject,
         chapterName: sheetChapter || 'সাধারণ',
         fileName: sheetFile!.name,
-        pdfUrl: base64String, // Saved as Base64 text string
+        pdfUrl: base64String, 
         uploadedAt: serverTimestamp(),
         userId: user?.uid || ''
       };
 
       await addDoc(collection(db, 'pdf-sheets'), sheetData);
       setSheetUploadProgress(100);
-      toast({ title: "সফল", description: "পিডিএফ শিটটি সফলভাবে সংরক্ষিত হয়েছে।" });
+      toast({ title: "সফল", description: "ফাইলটি সফলভাবে সংরক্ষিত হয়েছে।" });
       setSheetUploading(false);
       setSheetFile(null);
       setSheetChapter('');
@@ -432,9 +432,9 @@ function SettingsContent() {
 
   const removeSheet = (sheetId: string) => {
     if (!db || !isAdmin) return;
-    if (!confirm("এই শিটটি মুছে ফেলতে চান?")) return;
+    if (!confirm("এই ফাইলটি মুছে ফেলতে চান?")) return;
     deleteDoc(doc(db, 'pdf-sheets', sheetId))
-      .then(() => toast({ title: "সফল", description: "শিটটি মুছে ফেলা হয়েছে।" }))
+      .then(() => toast({ title: "সফল", description: "ফাইলটি মুছে ফেলা হয়েছে।" }))
       .catch(async () => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
           path: `pdf-sheets/${sheetId}`, operation: 'delete'
@@ -461,7 +461,7 @@ function SettingsContent() {
           <TabsTrigger value="books" className="gap-2 font-bold text-xs"><BookCopy className="w-3.5 h-3.5" /> বই ব্যবস্থাপনা</TabsTrigger>
           {isAdmin && (
             <>
-              <TabsTrigger value="sheets" className="gap-2 font-bold text-xs"><FileUp className="w-3.5 h-3.5" /> সিট আপলোড</TabsTrigger>
+              <TabsTrigger value="sheets" className="gap-2 font-bold text-xs"><FileUp className="w-3.5 h-3.5" /> ফাইল আপলোড</TabsTrigger>
               <TabsTrigger value="requests" className="gap-2 font-bold text-xs"><Users className="w-3.5 h-3.5" /> আবেদন</TabsTrigger>
               <TabsTrigger value="software" className="gap-2 font-bold text-xs"><Globe className="w-3.5 h-3.5" /> ব্র্যান্ডিং</TabsTrigger>
             </>
@@ -566,7 +566,7 @@ function SettingsContent() {
                   <div key={book.id} className="p-3 flex items-center justify-between border rounded-lg hover:border-primary transition-all group bg-white shadow-sm">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-14 rounded border bg-primary/5 flex items-center justify-center overflow-hidden shrink-0 relative">
-                        {book.coverImageUrl ? <img src={book.coverImageUrl} className="w-full h-full object-cover" /> : <FileText className="w-5 h-5 text-primary" />}
+                        {book.coverImageUrl ? <img src={book.coverImageUrl} className="max-full h-full object-cover" /> : <FileText className="w-5 h-5 text-primary" />}
                         {book.isGuide && <div className="absolute top-0 right-0 bg-accent text-[6px] px-1 text-white font-bold uppercase">Guide</div>}
                       </div>
                       <div className="min-w-0">
@@ -574,7 +574,10 @@ function SettingsContent() {
                         <p className="text-[10px] text-muted-foreground font-bold">{CLASSES.find(c => c.id === book.classId)?.label || 'অজানা'} শ্রেণি | {book.isGuide ? 'গাইড' : 'বোর্ড'}</p>
                       </div>
                     </div>
-                    {isAdmin && <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => removeBook(book.id)}><Trash2 className="w-4 h-4" /></Button>}
+                    <div className="flex gap-2">
+                       <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => handleOpenPdf(book.pdfUrl)}><BookOpen className="w-4 h-4" /></Button>
+                       {isAdmin && <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => removeBook(book.id)}><Trash2 className="w-4 h-4" /></Button>}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -590,9 +593,9 @@ function SettingsContent() {
               <Card className="border-2 border-indigo-100">
                 <CardHeader className="bg-indigo-50/50 p-4 border-b">
                   <CardTitle className="text-lg flex items-center gap-2 font-bold text-indigo-700">
-                    <FileType className="w-5 h-5" /> পিডিএফ সিট আপলোড
+                    <FileType className="w-5 h-5" /> ফাইল আপলোড (PDF/Word)
                   </CardTitle>
-                  <CardDescription className="font-bold">লেকচার শিট, সৃজনশীল প্রশ্ন, এমসিকিউ, মডেল টেস্ট বা উত্তরমালা পিডিএফ আপলোড করুন।</CardDescription>
+                  <CardDescription className="font-bold">লেকচার শিট, সৃজনশীল প্রশ্ন, এমসিকিউ বা মডেল টেস্ট ফাইল আপলোড করুন। ওয়ার্ড ফাইল আপলোড করলে ফরমেট ১০০% ঠিক থাকবে।</CardDescription>
                 </CardHeader>
                 <CardContent className="p-4 space-y-6">
                   <div className="space-y-4 border-b pb-4">
@@ -653,12 +656,12 @@ function SettingsContent() {
                   <div className="space-y-2">
                     {sheetUploadType === 'file' ? (
                       <>
-                        <label className="text-sm font-bold">পিডিএফ ফাইল নির্বাচন করুন</label>
+                        <label className="text-sm font-bold">ফাইল নির্বাচন করুন (PDF/Word)</label>
                         <div className="flex items-center gap-4">
                           <Input 
                             type="file" 
                             ref={sheetInputRef}
-                            accept="application/pdf" 
+                            accept=".pdf,.doc,.docx" 
                             onChange={e => setSheetFile(e.target.files?.[0] || null)} 
                             className="flex-1 font-bold"
                             disabled={sheetUploading}
@@ -681,9 +684,9 @@ function SettingsContent() {
                       </>
                     ) : (
                       <>
-                        <label className="text-sm font-bold">পিডিএফ লিঙ্ক (URL) দিন</label>
+                        <label className="text-sm font-bold">ফাইল লিঙ্ক (URL) দিন</label>
                         <Input 
-                          placeholder="https://example.com/sheet.pdf" 
+                          placeholder="https://example.com/file.pdf" 
                           value={sheetManualUrl} 
                           onChange={e => setSheetManualUrl(e.target.value)} 
                           className="font-bold"
@@ -695,13 +698,13 @@ function SettingsContent() {
                 </CardContent>
                 <CardFooter className="flex justify-end border-t bg-muted/20 py-3">
                   <Button onClick={handleUploadSheet} disabled={sheetUploading || (sheetUploadType === 'file' && !sheetFile) || (sheetUploadType === 'link' && !sheetManualUrl)} className="bg-indigo-600 hover:bg-indigo-700 text-white h-10 gap-2 px-10 font-bold shadow-lg">
-                    {sheetUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileUp className="w-4 h-4" />} {sheetUploadType === 'file' ? 'সিট আপলোড করুন' : 'লিঙ্ক সেভ করুন'}
+                    {sheetUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileUp className="w-4 h-4" />} {sheetUploadType === 'file' ? 'ফাইল আপলোড করুন' : 'লিঙ্ক সেভ করুন'}
                   </Button>
                 </CardFooter>
               </Card>
 
               <div className="space-y-4 pt-6">
-                <h3 className="font-bold flex items-center gap-2 text-indigo-700"><CheckCircle className="w-4 h-4" /> আপলোড করা সিটসমূহ</h3>
+                <h3 className="font-bold flex items-center gap-2 text-indigo-700"><CheckCircle className="w-4 h-4" /> আপলোড করা ফাইলসমূহ</h3>
                 {loadingSheets ? (
                   <div className="p-10 text-center"><Loader2 className="w-8 h-8 animate-spin text-indigo-600 mx-auto" /></div>
                 ) : sortedSheets.length > 0 ? (
@@ -741,7 +744,7 @@ function SettingsContent() {
                     ))}
                   </div>
                 ) : (
-                  <div className="p-10 text-center border-dashed border-2 bg-muted/5 rounded-xl"><p className="text-muted-foreground text-sm font-bold">কোনো সিট পাওয়া যায়নি।</p></div>
+                  <div className="p-10 text-center border-dashed border-2 bg-muted/5 rounded-xl"><p className="text-muted-foreground text-sm font-bold">কোনো ফাইল পাওয়া যায়নি।</p></div>
                 )}
               </div>
             </TabsContent>

@@ -125,8 +125,7 @@ async function processWatermarkImage(file: File): Promise<string> {
   });
 }
 
-// PDF to Base64 Logic
-const pdfToBase64 = (file: File): Promise<string> => {
+const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -149,7 +148,7 @@ function CreateLectureSheetContent() {
   const [isScanning, setIsScanning] = useState(false);
   const ocrInputRef = useRef<HTMLInputElement>(null);
   const watermarkInputRef = useRef<HTMLInputElement>(null);
-  const pdfInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const measurementRef = useRef<HTMLDivElement>(null);
   
   const softwareDocRef = useMemo(() => doc(db, 'config', 'software'), [db]);
@@ -171,9 +170,9 @@ function CreateLectureSheetContent() {
   });
 
   const [activeCreationMode, setActiveCreationMode] = useState<'text' | 'pdf'>('text');
-  const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [pdfUploading, setPdfUploading] = useState(false);
-  const [pdfProgress, setPdfProgress] = useState(0);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const [paginatedPages, setPaginatedPages] = useState<string[]>([]);
   const [pageStyles, setPageStyles] = useState<Record<number, any>>({});
@@ -241,7 +240,6 @@ function CreateLectureSheetContent() {
     }
   }, [activeEditIdx, globalFontSize, globalLineHeight, pageStyles]);
 
-  // Optimized Pagination Effect - Fixed dependency array to prevent size mismatch
   const mT = printSettings.marginTop;
   const mB = printSettings.marginBottom;
   const mL = printSettings.marginLeft;
@@ -397,41 +395,40 @@ function CreateLectureSheetContent() {
     });
   }, [user, db, editId, data, printSettings, pageStyles, manualPages, router, toast, isPrintMode]);
 
-  const handlePdfUpload = async () => {
-    if (!db || !user || !pdfFile || !data.classId || !data.subject || !data.type) {
-      toast({ variant: "destructive", title: "তথ্য অসম্পূর্ণ", description: "শ্রেণি, বিষয় ও পিডিএফ ফাইল নিশ্চিত করুন।" });
+  const handleFileUpload = async () => {
+    if (!db || !user || !uploadFile || !data.classId || !data.subject || !data.type) {
+      toast({ variant: "destructive", title: "তথ্য অসম্পূর্ণ", description: "শ্রেণি, বিষয় ও ফাইল নিশ্চিত করুন।" });
       return;
     }
 
-    setPdfUploading(true);
-    setPdfProgress(10); // Start progress
+    setUploading(true);
+    setUploadProgress(10);
 
     try {
-      // Base64 process exactly as requested
-      const base64String = await pdfToBase64(pdfFile);
-      setPdfProgress(60);
+      const base64String = await fileToBase64(uploadFile);
+      setUploadProgress(60);
 
       const sheetData = {
         category: data.type === 'lecture_sheet' ? 'lecture_sheet' : (data.type === 'creative' ? 'creative' : (data.type === 'mcq' ? 'mcq' : (data.type === 'model_test' ? 'model_test' : 'answer_key'))),
         classId: data.classId,
         subject: data.subject,
         chapterName: data.topic || 'সাধারণ',
-        fileName: pdfFile.name,
-        pdfUrl: base64String, // Saved as text string in Firestore
+        fileName: uploadFile.name,
+        pdfUrl: base64String, 
         uploadedAt: serverTimestamp(),
         userId: user.uid
       };
 
       await addDoc(collection(db, 'pdf-sheets'), sheetData);
-      setPdfProgress(100);
-      toast({ title: "সফল", description: "পিডিএফ শিটটি সফলভাবে সংরক্ষিত হয়েছে।" });
-      setPdfUploading(false);
-      setPdfFile(null);
-      if (pdfInputRef.current) pdfInputRef.current.value = '';
+      setUploadProgress(100);
+      toast({ title: "সফল", description: "ফাইলটি সফলভাবে সংরক্ষিত হয়েছে।" });
+      setUploading(false);
+      setUploadFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
       router.push('/my-questions');
     } catch (e: any) {
       toast({ variant: "destructive", title: "ত্রুটি", description: e.message });
-      setPdfUploading(false);
+      setUploading(false);
     }
   };
 
@@ -494,8 +491,8 @@ function CreateLectureSheetContent() {
     window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleSave, handleFormatting, activeEditIdx, pageStyles, globalFontSize, updatePageStyle]);
 
-  const handleOCR = async (Eisen: React.ChangeEvent<HTMLInputElement>) => {
-    const file = Eisen.target.files?.[0]; if (!file) return; setIsScanning(true);
+  const handleOCR = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return; setIsScanning(true);
     try { const result = await Tesseract.recognize(file, 'ben+eng'); if (result?.data?.text) { setData(prev => ({ ...prev, content: prev.content ? prev.content + '\n\n' + result.data.text : result.data.text })); toast({ title: "সফল!", description: "টেক্সট এক্সট্রাক্ট করা হয়েছে।" }); } }
     catch (error) { toast({ variant: "destructive", title: "স্ক্যান ব্যর্থ হয়েছে" }); }
     finally { setIsScanning(false); if (ocrInputRef.current) ocrInputRef.current.value = ''; }
@@ -595,7 +592,7 @@ function CreateLectureSheetContent() {
             <Tabs value={activeCreationMode} onValueChange={(v: any) => setActiveCreationMode(v)} className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-4 bg-secondary/50 p-1 h-12">
                 <TabsTrigger value="text" className="gap-2 font-bold h-10"><Edit3 className="w-4 h-4" /> এডিটর ব্যবহার করুন</TabsTrigger>
-                <TabsTrigger value="pdf" className="gap-2 font-bold h-10"><FileType className="w-4 h-4" /> পিডিএফ ফাইল আপলোড</TabsTrigger>
+                <TabsTrigger value="pdf" className="gap-2 font-bold h-10"><FileType className="w-4 h-4" /> ফাইল আপলোড (PDF/Word)</TabsTrigger>
               </TabsList>
 
               <TabsContent value="text" className="animate-in fade-in duration-300">
@@ -619,41 +616,41 @@ function CreateLectureSheetContent() {
                 <Card className="shadow-md border-indigo-100 border-2">
                   <CardHeader className="bg-indigo-50/50 border-b">
                     <CardTitle className="text-lg flex items-center gap-2 font-bold text-indigo-700">
-                      <FileUp className="w-6 h-6" /> সরাসরি পিডিএফ আপলোড
+                      <FileUp className="w-6 h-6" /> সরাসরি ফাইল আপলোড (PDF/Word)
                     </CardTitle>
-                    <CardDescription className="font-bold">আপনার তৈরিকৃত পিডিএফ ফাইলটি এখানে সিলেক্ট করে সরাসরি আপলোড করুন।</CardDescription>
+                    <CardDescription className="font-bold">আপনার তৈরিকৃত পিডিএফ বা ওয়ার্ড ফাইলটি এখানে সিলেক্ট করে সরাসরি আপলোড করুন।</CardDescription>
                   </CardHeader>
                   <CardContent className="py-10 flex flex-col items-center justify-center space-y-6">
                     <div 
-                      onClick={() => pdfInputRef.current?.click()}
+                      onClick={() => fileInputRef.current?.click()}
                       className="w-full max-w-md border-2 border-dashed border-indigo-300 rounded-3xl p-10 flex flex-col items-center justify-center gap-4 bg-indigo-50/20 hover:bg-indigo-50/40 transition-all cursor-pointer group"
                     >
                       <div className="w-20 h-20 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform">
                         <FileType className="w-10 h-10" />
                       </div>
                       <div className="text-center">
-                        <p className="font-black text-indigo-800 text-lg">{pdfFile ? pdfFile.name : 'পিডিএফ ফাইল নির্বাচন করুন'}</p>
+                        <p className="font-black text-indigo-800 text-lg">{uploadFile ? uploadFile.name : 'ফাইল নির্বাচন করুন'}</p>
                         <p className="text-xs text-muted-foreground font-bold mt-1">ফাইল সাইজ ১ এমবি এর কম হওয়া বাঞ্ছনীয়</p>
                       </div>
-                      <input type="file" ref={pdfInputRef} className="hidden" accept="application/pdf" onChange={e => setPdfFile(e.target.files?.[0] || null)} />
+                      <input type="file" ref={fileInputRef} className="hidden" accept=".pdf,.doc,.docx" onChange={e => setUploadFile(e.target.files?.[0] || null)} />
                     </div>
 
-                    {pdfUploading && (
+                    {uploading && (
                       <div className="w-full max-w-md space-y-2">
                         <div className="flex justify-between text-xs font-black text-indigo-600">
                           <span>প্রসেসিং ও আপলোড হচ্ছে...</span>
-                          <span>{pdfProgress}%</span>
+                          <span>{uploadProgress}%</span>
                         </div>
-                        <Progress value={pdfProgress} className="h-2" />
+                        <Progress value={uploadProgress} className="h-2" />
                       </div>
                     )}
 
                     <Button 
-                      onClick={handlePdfUpload} 
-                      disabled={pdfUploading || !pdfFile || !data.classId || !data.subject} 
+                      onClick={handleFileUpload} 
+                      disabled={uploading || !uploadFile || !data.classId || !data.subject} 
                       className="w-full max-w-md h-12 text-lg font-black bg-indigo-600 hover:bg-indigo-700 shadow-lg gap-2"
                     >
-                      {pdfUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                      {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
                       ফাইল আপলোড ও সেভ করুন
                     </Button>
                   </CardContent>

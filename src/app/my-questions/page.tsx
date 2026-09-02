@@ -152,10 +152,13 @@ function MyLibraryContent() {
     pdfSheets: rawPdfSheets || []
   }), [rawQuestions, rawSheets, rawPdfSheets]);
 
-  // Robust PDF Opening Logic
   const handleOpenPdf = async (url: string) => {
     if (!url) return;
-    if (url.startsWith('data:application/pdf')) {
+    const isDataUri = url.startsWith('data:');
+    const isPdf = url.startsWith('data:application/pdf');
+    const isWord = url.startsWith('data:application/msword') || url.startsWith('data:application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+
+    if (isDataUri && (isPdf || isWord)) {
       try {
         const response = await fetch(url);
         const blob = await response.blob();
@@ -348,7 +351,7 @@ function MyLibraryContent() {
                 <p className="font-bold text-xs flex-1 line-clamp-2">{ch}</p>
               </div>
               <div className="grid grid-cols-2 gap-2 pt-2 border-t border-indigo-100">
-                <div className="flex items-center gap-1.5 text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded"><FileText className="w-3 h-3" /> সিট/পিডিএফ: {toBengaliNumber(stats.sheets)}</div>
+                <div className="flex items-center gap-1.5 text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded"><FileText className="w-3 h-3" /> সিট/ফাইল: {toBengaliNumber(stats.sheets)}</div>
                 <div className="flex items-center gap-1.5 text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded"><BrainCircuit className="w-3 h-3" /> প্রশ্ন: {toBengaliNumber(stats.total)}</div>
                 <div className="flex items-center gap-1.5 text-[10px] font-bold text-primary bg-primary/5 px-2 py-1 rounded">সৃজনশীল: {toBengaliNumber(stats.creative)}</div>
                 <div className="flex items-center gap-1.5 text-[10px] font-bold text-orange-700 bg-orange-100/50 px-2 py-1 rounded">MCQ: {toBengaliNumber(stats.mcq)}</div>
@@ -380,17 +383,17 @@ function MyLibraryContent() {
                   <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center text-white group-hover:scale-110 transition-transform"><BrainCircuit className="w-6 h-6" /></div>
                   <div><h4 className="font-black text-primary">প্রশ্নপত্র</h4><p className="text-[10px] font-bold text-muted-foreground">এই অধ্যায়ের প্রশ্ন তৈরি করুন</p></div>
                 </CardContent>
-              </Card>
-            </DialogTrigger>
-            <DialogContent className="font-kalpurush border-2 border-black">
-              <DialogHeader><DialogTitle className="font-black text-primary text-xl">প্রশ্নের ধরন নির্বাচন করুন</DialogTitle></DialogHeader>
-              <div className="grid grid-cols-1 gap-3 py-4">
-                <Button variant="outline" className="h-14 font-bold gap-3 justify-start px-6 border-black" onClick={() => router.push(`/create-question?classId=${selectedClass}&subject=${encodeURIComponent(selectedSubject || '')}&chapter=${encodeURIComponent(selectedChapter === 'সাধারণ অধ্যায়' ? '' : (selectedChapter || ''))}&type=creative`)}>
-                  <div className="w-8 h-8 rounded bg-primary/10 text-primary flex items-center justify-center"><FileText className="w-4 h-4" /></div>সৃজনশীল প্রশ্নপত্র</Button>
-                <Button variant="outline" className="h-14 font-bold gap-3 justify-start px-6 border-black" onClick={() => router.push(`/create-question?classId=${selectedClass}&subject=${encodeURIComponent(selectedSubject || '')}&chapter=${encodeURIComponent(selectedChapter === 'সাধারণ অধ্যায়' ? '' : (selectedChapter || ''))}&type=mcq`)}>
-                  <div className="w-8 h-8 rounded bg-orange-100 text-orange-600 flex items-center justify-center"><BrainCircuit className="w-4 h-4" /></div>বহুনির্বাচনি (MCQ) প্রশ্নপত্র</Button>
-              </div>
-            </DialogContent>
+              </DialogTrigger>
+              <DialogContent className="font-kalpurush border-2 border-black">
+                <DialogHeader><DialogTitle className="font-black text-primary text-xl">প্রশ্নের ধরন নির্বাচন করুন</DialogTitle></DialogHeader>
+                <div className="grid grid-cols-1 gap-3 py-4">
+                  <Button variant="outline" className="h-14 font-bold gap-3 justify-start px-6 border-black" onClick={() => router.push(`/create-question?classId=${selectedClass}&subject=${encodeURIComponent(selectedSubject || '')}&chapter=${encodeURIComponent(selectedChapter === 'সাধারণ অধ্যায়' ? '' : (selectedChapter || ''))}&type=creative`)}>
+                    <div className="w-8 h-8 rounded bg-primary/10 text-primary flex items-center justify-center"><FileText className="w-4 h-4" /></div>সৃজনশীল প্রশ্নপত্র</Button>
+                  <Button variant="outline" className="h-14 font-bold gap-3 justify-start px-6 border-black" onClick={() => router.push(`/create-question?classId=${selectedClass}&subject=${encodeURIComponent(selectedSubject || '')}&chapter=${encodeURIComponent(selectedChapter === 'সাধারণ অধ্যায়' ? '' : (selectedChapter || ''))}&type=mcq`)}>
+                    <div className="w-8 h-8 rounded bg-orange-100 text-orange-600 flex items-center justify-center"><BrainCircuit className="w-4 h-4" /></div>বহুনির্বাচনি (MCQ) প্রশ্নপত্র</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </Dialog>
         </div>
       </section>
@@ -482,7 +485,7 @@ function MyLibraryContent() {
               </CardHeader>
               <CardFooter className="pt-0 p-4 flex justify-between items-center text-[9px] font-bold text-muted-foreground bg-indigo-50/20 rounded-b-lg">
                 <span className="flex items-center gap-1">
-                  <Badge variant="outline" className="text-[8px] h-4 font-bold px-1.5 border-black text-indigo-700">{ps.category === 'lecture_sheet' ? 'পিডিএফ নোট' : ps.category === 'creative' ? 'সৃজনশীল পিডিএফ' : ps.category === 'mcq' ? 'MCQ পিডিএফ' : ps.category === 'model_test' ? 'মডেল টেস্ট' : 'উত্তরমালা'}</Badge>
+                  <Badge variant="outline" className="text-[8px] h-4 font-bold px-1.5 border-black text-indigo-700">{ps.category === 'lecture_sheet' ? 'নোট' : ps.category === 'creative' ? 'সৃজনশীল' : ps.category === 'mcq' ? 'MCQ' : ps.category === 'model_test' ? 'মডেল টেস্ট' : 'উত্তরমালা'}</Badge>
                   <Calendar className="w-3 h-3 ml-2 mr-1" /> {ps.uploadedAt?.toDate ? format(ps.uploadedAt.toDate(), 'dd MMM, yy', { locale: bn }) : ''}
                 </span>
                 <Button 
@@ -491,7 +494,7 @@ function MyLibraryContent() {
                   className="h-6 text-[9px] font-bold gap-1 border-black text-indigo-700 bg-white"
                   onClick={() => handleOpenPdf(ps.pdfUrl)}
                 >
-                  <Download className="w-3 h-3" /> ডাউনলোড
+                  <Download className="w-3 h-3" /> দেখুন
                 </Button>
               </CardFooter>
             </Card>
