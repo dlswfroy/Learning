@@ -200,6 +200,23 @@ function SettingsContent() {
     if (isAdmin) fetchRequests();
   }, [isAdmin, db]);
 
+  // Handle PDF opening with Blob support
+  const handleOpenPdf = async (url: string) => {
+    if (!url) return;
+    if (url.startsWith('data:application/pdf')) {
+      try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, '_blank');
+      } catch (error) {
+        window.open(url, '_blank');
+      }
+    } else {
+      window.open(url, '_blank');
+    }
+  };
+
   const handleConfirmUser = async (uid: string) => {
     if (!db) return;
     try {
@@ -708,11 +725,14 @@ function SettingsContent() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <a href={sheet.pdfUrl} target="_blank" rel="noopener noreferrer">
-                            <Button variant="outline" size="sm" className="h-8 font-bold gap-1 text-[10px] border-indigo-200">
-                              <LinkIcon className="w-3 h-3" /> ফাইল দেখুন
-                            </Button>
-                          </a>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-8 font-bold gap-1 text-[10px] border-indigo-200"
+                            onClick={() => handleOpenPdf(sheet.pdfUrl)}
+                          >
+                            <LinkIcon className="w-3 h-3" /> ফাইল দেখুন
+                          </Button>
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => removeSheet(sheet.id)}>
                             <Trash2 className="w-4 h-4" />
                           </Button>

@@ -152,6 +152,23 @@ function MyLibraryContent() {
     pdfSheets: rawPdfSheets || []
   }), [rawQuestions, rawSheets, rawPdfSheets]);
 
+  // Robust PDF Opening Logic
+  const handleOpenPdf = async (url: string) => {
+    if (!url) return;
+    if (url.startsWith('data:application/pdf')) {
+      try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, '_blank');
+      } catch (error) {
+        window.open(url, '_blank');
+      }
+    } else {
+      window.open(url, '_blank');
+    }
+  };
+
   const currentSubjects = useMemo(() => {
     if (!selectedClass) return [];
     const predefined = getSubjectsForClass(selectedClass);
@@ -448,7 +465,14 @@ function MyLibraryContent() {
                      <CardTitle className="text-sm font-bold truncate">{ps.chapterName} - {ps.subject}</CardTitle>
                    </div>
                    <div className="flex gap-1">
-                     <a href={ps.pdfUrl} target="_blank" rel="noopener noreferrer"><Button variant="ghost" size="icon" className="h-7 w-7 text-indigo-600"><ExternalLink className="w-3.5 h-3.5" /></Button></a>
+                     <Button 
+                       variant="ghost" 
+                       size="icon" 
+                       className="h-7 w-7 text-indigo-600"
+                       onClick={() => handleOpenPdf(ps.pdfUrl)}
+                     >
+                       <ExternalLink className="w-3.5 h-3.5" />
+                     </Button>
                      <AlertDialog>
                        <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive"><Trash2 className="w-3.5 h-3.5" /></Button></AlertDialogTrigger>
                        <AlertDialogContent className="font-kalpurush border-2 border-black"><AlertDialogHeader><AlertDialogTitle className="font-bold">মুছে ফেলবেন?</AlertDialogTitle></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel className="border-black">বাতিল</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(ps.id, 'pdf-sheets')} className="bg-destructive text-white">মুছে ফেলা হয়েছে</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
@@ -461,7 +485,14 @@ function MyLibraryContent() {
                   <Badge variant="outline" className="text-[8px] h-4 font-bold px-1.5 border-black text-indigo-700">{ps.category === 'lecture_sheet' ? 'পিডিএফ নোট' : ps.category === 'creative' ? 'সৃজনশীল পিডিএফ' : ps.category === 'mcq' ? 'MCQ পিডিএফ' : ps.category === 'model_test' ? 'মডেল টেস্ট' : 'উত্তরমালা'}</Badge>
                   <Calendar className="w-3 h-3 ml-2 mr-1" /> {ps.uploadedAt?.toDate ? format(ps.uploadedAt.toDate(), 'dd MMM, yy', { locale: bn }) : ''}
                 </span>
-                <a href={ps.pdfUrl} target="_blank" rel="noopener noreferrer"><Button size="sm" variant="outline" className="h-6 text-[9px] font-bold gap-1 border-black text-indigo-700 bg-white"><Download className="w-3 h-3" /> ডাউনলোড</Button></a>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="h-6 text-[9px] font-bold gap-1 border-black text-indigo-700 bg-white"
+                  onClick={() => handleOpenPdf(ps.pdfUrl)}
+                >
+                  <Download className="w-3 h-3" /> ডাউনলোড
+                </Button>
               </CardFooter>
             </Card>
           ))}

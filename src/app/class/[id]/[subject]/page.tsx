@@ -95,6 +95,23 @@ export default function SubjectPage() {
     notFound();
   }
 
+  // Handle PDF opening with Blob support for Base64
+  const handleOpenPdf = async (url: string) => {
+    if (!url) return;
+    if (url.startsWith('data:application/pdf')) {
+      try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, '_blank');
+      } catch (error) {
+        window.open(url, '_blank');
+      }
+    } else {
+      window.open(url, '_blank');
+    }
+  };
+
   const bookQuery = useMemo(() => {
     if (!db || !id || !subject) return null;
     return query(
@@ -151,11 +168,12 @@ export default function SubjectPage() {
                 </div>
               )}
               <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-6">
-                <a href={book.pdfUrl} target="_blank" rel="noopener noreferrer" className="w-full">
-                  <Button className="w-full gap-2 font-bold bg-white text-primary hover:bg-white/90">
-                    <BookOpen className="w-4 h-4" /> পড়ুন
-                  </Button>
-                </a>
+                <Button 
+                  className="w-full gap-2 font-bold bg-white text-primary hover:bg-white/90"
+                  onClick={() => handleOpenPdf(book.pdfUrl)}
+                >
+                  <BookOpen className="w-4 h-4" /> পড়ুন
+                </Button>
               </div>
             </div>
             <CardHeader className="p-4">
@@ -195,11 +213,13 @@ export default function SubjectPage() {
                 </p>
               </div>
             </div>
-            <a href={book.pdfUrl} target="_blank" rel="noopener noreferrer" className="ml-4 shrink-0">
-              <Button size="sm" className="gap-2 font-bold bg-primary text-white hover:bg-primary/90">
-                <BookOpen className="w-4 h-4" /> পড়ুন
-              </Button>
-            </a>
+            <Button 
+              size="sm" 
+              className="gap-2 font-bold bg-primary text-white hover:bg-primary/90 ml-4 shrink-0"
+              onClick={() => handleOpenPdf(book.pdfUrl)}
+            >
+              <BookOpen className="w-4 h-4" /> পড়ুন
+            </Button>
           </div>
         ))}
       </div>
