@@ -43,7 +43,6 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useDoc, useStorage } from '@/firebase';
 import { collection, setDoc, doc, getDoc, serverTimestamp, addDoc } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { cn } from '@/lib/utils';
@@ -125,6 +124,16 @@ async function processWatermarkImage(file: File): Promise<string> {
     reader.readAsDataURL(file);
   });
 }
+
+// PDF to Base64 Logic
+const pdfToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = error => reject(error);
+  });
+};
 
 function CreateLectureSheetContent() {
   const db = useFirestore();
@@ -232,11 +241,15 @@ function CreateLectureSheetContent() {
     }
   }, [activeEditIdx, globalFontSize, globalLineHeight, pageStyles]);
 
-  // Optimized Pagination Effect
+  // Optimized Pagination Effect - Fixed dependency array to prevent size mismatch
+  const mT = printSettings.marginTop;
+  const mB = printSettings.marginBottom;
+  const mL = printSettings.marginLeft;
+  const mR = printSettings.marginRight;
+
   useEffect(() => {
     if (!isPrintMode || !data.content || !measurementRef.current) return;
     
-    // Skip re-pagination if manual edits exist, unless it's the very first run
     if (Object.keys(manualPages).length > 0) {
       const sortedIndices = Object.keys(manualPages).map(Number).sort((a, b) => a - b);
       setPaginatedPages(sortedIndices.map(idx => manualPages[idx]));
@@ -245,9 +258,9 @@ function CreateLectureSheetContent() {
 
     const container = measurementRef.current;
     const contentHtml = formatMath(data.content);
-    const mT = parseFloat(String(printSettings.marginTop)) || 0.5, mL = parseFloat(String(printSettings.marginLeft)) || 0.5, mR = parseFloat(String(printSettings.marginRight)) || 0.5;
+    const marginT = parseFloat(String(mT)) || 0.5, marginL = parseFloat(String(mL)) || 0.5, marginR = parseFloat(String(mR)) || 0.5;
     
-    container.style.width = (8.27 - mL - mR) + 'in';
+    container.style.width = (8.27 - marginL - marginR) + 'in';
     container.style.fontSize = globalFontSize + 'pt';
     container.style.lineHeight = String(globalLineHeight);
     
@@ -255,7 +268,7 @@ function CreateLectureSheetContent() {
     container.innerHTML = tempLines.map(line => `<div class="measure-line" style="min-height: 1.2em;">${line.trim() || '&nbsp;'}</div>`).join('');
     
     const headerSpace = 135, footerSpace = 65, topicSpacePx = 65, totalPageHeightPx = 11.69 * 96;
-    const availableHeightPx = totalPageHeightPx - (mT * 96) - (parseFloat(printSettings.marginBottom) * 96) - headerSpace - footerSpace;
+    const availableHeightPx = totalPageHeightPx - (marginT * 96) - (parseFloat(String(mB)) * 96) - headerSpace - footerSpace;
     
     const newPages: string[] = [];
     let currentChunk = "", currentHeight = 0;
@@ -281,13 +294,13 @@ function CreateLectureSheetContent() {
     
     const initialStyles: Record<number, any> = {}, initialManual: Record<number, string> = {};
     pagesToRender.forEach((p, i) => { 
-      initialStyles[i] = pageStyles[i] || { fontSize: globalFontSize, lineHeight: globalLineHeight, bold: false, italic: false, underline: false, color: '#000000', align: 'justify', mT, mB: printSettings.marginBottom, mL, mR }; 
+      initialStyles[i] = pageStyles[i] || { fontSize: globalFontSize, lineHeight: globalLineHeight, bold: false, italic: false, underline: false, color: '#000000', align: 'justify', mT: marginT, mB: mB, mL: marginL, mR: marginR }; 
       initialManual[i] = p; 
     });
     setPageStyles(initialStyles); 
     setManualPages(initialManual);
 
-  }, [isPrintMode, data.content, printSettings.marginTop, printSettings.marginBottom, printSettings.marginLeft, printSettings.marginRight, globalFontSize, globalLineHeight]);
+  }, [isPrintMode, data.content, mT, mB, mL, mR, globalFontSize, globalLineHeight]);
 
   const subjects = useMemo(() => data.classId ? getSubjectsForClass(data.classId) : [], [data.classId]);
   const chapters = useMemo(() => (data.classId && data.subject) ? getChaptersForSubject(data.classId, data.subject) : [], [data.classId, data.subject]);
@@ -385,50 +398,37 @@ function CreateLectureSheetContent() {
   }, [user, db, editId, data, printSettings, pageStyles, manualPages, router, toast, isPrintMode]);
 
   const handlePdfUpload = async () => {
-    if (!db || !storage || !user || !pdfFile || !data.classId || !data.subject || !data.type) {
+    if (!db || !user || !pdfFile || !data.classId || !data.subject || !data.type) {
       toast({ variant: "destructive", title: "তথ্য অসম্পূর্ণ", description: "শ্রেণি, বিষয় ও পিডিএফ ফাইল নিশ্চিত করুন।" });
       return;
     }
 
     setPdfUploading(true);
-    setPdfProgress(0);
+    setPdfProgress(10); // Start progress
 
     try {
-      const timestamp = Date.now();
-      const storagePath = `pdf-sheets/${data.classId}/${data.subject}/${timestamp}_${pdfFile.name}`;
-      const storageRef = ref(storage, storagePath);
-      const uploadTask = uploadBytesResumable(storageRef, pdfFile);
+      // Base64 process exactly as requested
+      const base64String = await pdfToBase64(pdfFile);
+      setPdfProgress(60);
 
-      uploadTask.on('state_changed', 
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          setPdfProgress(Math.floor(progress));
-        }, 
-        (error) => {
-          toast({ variant: "destructive", title: "আপলোড ব্যর্থ", description: error.message });
-          setPdfUploading(false);
-        }, 
-        async () => {
-          const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
-          const sheetData = {
-            category: data.type === 'lecture_sheet' ? 'lecture_sheet' : (data.type === 'creative' ? 'creative' : (data.type === 'mcq' ? 'mcq' : (data.type === 'model_test' ? 'model_test' : 'answer_key'))),
-            classId: data.classId,
-            subject: data.subject,
-            chapterName: data.topic || 'সাধারণ',
-            fileName: pdfFile.name,
-            pdfUrl: downloadUrl,
-            uploadedAt: serverTimestamp(),
-            userId: user.uid
-          };
+      const sheetData = {
+        category: data.type === 'lecture_sheet' ? 'lecture_sheet' : (data.type === 'creative' ? 'creative' : (data.type === 'mcq' ? 'mcq' : (data.type === 'model_test' ? 'model_test' : 'answer_key'))),
+        classId: data.classId,
+        subject: data.subject,
+        chapterName: data.topic || 'সাধারণ',
+        fileName: pdfFile.name,
+        pdfUrl: base64String, // Saved as text string in Firestore
+        uploadedAt: serverTimestamp(),
+        userId: user.uid
+      };
 
-          await addDoc(collection(db, 'pdf-sheets'), sheetData);
-          toast({ title: "সফল", description: "পিডিএফ শিটটি আপলোড করা হয়েছে।" });
-          setPdfUploading(false);
-          setPdfFile(null);
-          if (pdfInputRef.current) pdfInputRef.current.value = '';
-          router.push('/my-questions');
-        }
-      );
+      await addDoc(collection(db, 'pdf-sheets'), sheetData);
+      setPdfProgress(100);
+      toast({ title: "সফল", description: "পিডিএফ শিটটি সফলভাবে সংরক্ষিত হয়েছে।" });
+      setPdfUploading(false);
+      setPdfFile(null);
+      if (pdfInputRef.current) pdfInputRef.current.value = '';
+      router.push('/my-questions');
     } catch (e: any) {
       toast({ variant: "destructive", title: "ত্রুটি", description: e.message });
       setPdfUploading(false);
@@ -633,7 +633,7 @@ function CreateLectureSheetContent() {
                       </div>
                       <div className="text-center">
                         <p className="font-black text-indigo-800 text-lg">{pdfFile ? pdfFile.name : 'পিডিএফ ফাইল নির্বাচন করুন'}</p>
-                        <p className="text-xs text-muted-foreground font-bold mt-1">ফাইল সাইজ ৫ এমবি এর কম হতে হবে</p>
+                        <p className="text-xs text-muted-foreground font-bold mt-1">ফাইল সাইজ ১ এমবি এর কম হওয়া বাঞ্ছনীয়</p>
                       </div>
                       <input type="file" ref={pdfInputRef} className="hidden" accept="application/pdf" onChange={e => setPdfFile(e.target.files?.[0] || null)} />
                     </div>
@@ -641,7 +641,7 @@ function CreateLectureSheetContent() {
                     {pdfUploading && (
                       <div className="w-full max-w-md space-y-2">
                         <div className="flex justify-between text-xs font-black text-indigo-600">
-                          <span>আপলোড হচ্ছে...</span>
+                          <span>প্রসেসিং ও আপলোড হচ্ছে...</span>
                           <span>{pdfProgress}%</span>
                         </div>
                         <Progress value={pdfProgress} className="h-2" />
@@ -724,7 +724,7 @@ function CreateLectureSheetContent() {
                    ) : (
                      <div className="space-y-2">
                        <label className="text-[10px] font-bold">লোগো আপলোড</label>
-                       <input type="file" ref={watermarkInputRef} className="hidden" accept="image/*" onChange={handleWatermarkUpload} />
+                       <input type="file" min-h-0 ref={watermarkInputRef} className="hidden" accept="image/*" onChange={handleWatermarkUpload} />
                        <Button variant="outline" size="sm" className="w-full h-8 gap-2 border-primary text-primary font-bold text-[10px]" onClick={() => watermarkInputRef.current?.click()}>
                          <Camera className="w-3 h-3" /> ছবি নির্বাচন করুন
                        </Button>
@@ -752,9 +752,9 @@ function CreateLectureSheetContent() {
             <main className="print-main-area flex-1 overflow-y-auto bg-slate-200 pt-16 pb-24 flex flex-col items-center gap-10 relative">
                {paginatedPages.map((pageHtml, idx) => {
                  const style = pageStyles[idx] || { fontSize: globalFontSize, lineHeight: globalLineHeight, bold: false, italic: false, underline: false, color: '#000000', align: 'justify', mT: 0.5, mB: 0.5, mL: 0.5, mR: 0.5 };
-                 const mT = parseFloat(String(style.mT)) || 0.5, mB = parseFloat(String(style.mB)) || 0.5, mL = parseFloat(String(style.mL)) || 0.5, mR = parseFloat(String(style.mR)) || 0.5;
+                 const marginT = parseFloat(String(style.mT)) || 0.5, marginB = parseFloat(String(style.mB)) || 0.5, marginL = parseFloat(String(style.mL)) || 0.5, marginR = parseFloat(String(style.mR)) || 0.5;
                  return (
-                 <div key={idx} className={cn(`paper paper-idx-${idx} shadow-2xl bg-white relative overflow-hidden shrink-0 group transition-all`, activeEditIdx === idx && "ring-4 ring-blue-500 shadow-blue-200")} style={{ width: '8.27in', height: '11.69in', padding: `${mT}in ${mR}in ${mB}in ${mL}in`, lineHeight: '1.2', boxSizing: 'border-box' }}>
+                 <div key={idx} className={cn(`paper paper-idx-${idx} shadow-2xl bg-white relative overflow-hidden shrink-0 group transition-all`, activeEditIdx === idx && "ring-4 ring-blue-500 shadow-blue-200")} style={{ width: '8.27in', height: '11.69in', padding: `${marginT}in ${marginR}in ${marginB}in ${marginL}in`, lineHeight: '1.2', boxSizing: 'border-box' }}>
                     <div className="no-print absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-50 flex gap-2"><Button size="sm" variant={activeEditIdx === idx ? 'default' : 'secondary'} className="gap-2 font-bold shadow-lg" onClick={() => setActiveEditIdx(idx)}><Edit3 className="w-3.5 h-3.5" /> এডিট করুন</Button><Button size="sm" variant="destructive" className="gap-2 font-bold shadow-lg" onClick={() => { if(!confirm("মুছে ফেলবেন?")) return; const newP = paginatedPages.filter((_, i) => i !== idx); setPaginatedPages(newP); }}><Trash2 className="w-3.5 h-3.5" /> মুছে ফেলুন</Button></div>
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden" style={{ opacity: (printSettings.watermarkOpacity || 0) / 100, transform: `rotate(${printSettings.watermarkRotation || 0}deg)`, whiteSpace: 'nowrap' }}>
                       {printSettings.watermarkType === 'image' && printSettings.watermarkImageUrl ? (<img src={printSettings.watermarkImageUrl} alt="Watermark" style={{ width: `${printSettings.watermarkImageSize || 70}%`, height: 'auto', objectFit: 'contain' }} />) : (<span className="font-black text-black" style={{ fontSize: `${(printSettings.watermarkImageSize || 80) * 1.2}pt` }}>{printSettings.watermarkText || data.institution || softwareConfig?.appName || 'টপ গ্রেড'}</span>)}

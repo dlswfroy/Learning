@@ -63,6 +63,15 @@ async function processImage(file: File): Promise<string> {
   });
 }
 
+const pdfToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = error => reject(error);
+  });
+};
+
 function naturalSort(a: any, b: any) {
   if (a.classId !== b.classId) return parseInt(a.classId) - parseInt(b.classId);
   if (a.subject !== b.subject) return a.subject.localeCompare(b.subject, 'bn');
@@ -362,49 +371,30 @@ function SettingsContent() {
       return;
     }
 
-    // Direct File Upload Logic
-    if (!storage || !sheetFile) {
-      setSheetUploading(false);
-      return;
-    }
-
-    setSheetUploadProgress(0);
+    // Base64 logic exactly as requested
+    setSheetUploadProgress(10);
     try {
-      const timestamp = Date.now();
-      const storagePath = `pdf-sheets/${sheetClassId}/${sheetSubject}/${timestamp}_${sheetFile.name}`;
-      const storageRef = ref(storage, storagePath);
-      const uploadTask = uploadBytesResumable(storageRef, sheetFile);
+      const base64String = await pdfToBase64(sheetFile!);
+      setSheetUploadProgress(70);
 
-      uploadTask.on('state_changed', 
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          setSheetUploadProgress(Math.floor(progress));
-        }, 
-        (error) => {
-          toast({ variant: "destructive", title: "আপলোড ব্যর্থ", description: error.message });
-          setSheetUploading(false);
-        }, 
-        async () => {
-          const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
-          const sheetData = {
-            category: sheetCategory,
-            classId: sheetClassId,
-            subject: sheetSubject,
-            chapterName: sheetChapter || 'সাধারণ',
-            fileName: sheetFile.name,
-            pdfUrl: downloadUrl,
-            uploadedAt: serverTimestamp(),
-            userId: user?.uid || ''
-          };
+      const sheetData = {
+        category: sheetCategory,
+        classId: sheetClassId,
+        subject: sheetSubject,
+        chapterName: sheetChapter || 'সাধারণ',
+        fileName: sheetFile!.name,
+        pdfUrl: base64String, // Saved as Base64 text string
+        uploadedAt: serverTimestamp(),
+        userId: user?.uid || ''
+      };
 
-          await addDoc(collection(db, 'pdf-sheets'), sheetData);
-          toast({ title: "সফল", description: "পিডিএফ শিটটি আপলোড করা হয়েছে।" });
-          setSheetUploading(false);
-          setSheetFile(null);
-          setSheetChapter('');
-          if (sheetInputRef.current) sheetInputRef.current.value = '';
-        }
-      );
+      await addDoc(collection(db, 'pdf-sheets'), sheetData);
+      setSheetUploadProgress(100);
+      toast({ title: "সফল", description: "পিডিএফ শিটটি সফলভাবে সংরক্ষিত হয়েছে।" });
+      setSheetUploading(false);
+      setSheetFile(null);
+      setSheetChapter('');
+      if (sheetInputRef.current) sheetInputRef.current.value = '';
     } catch (e: any) {
       toast({ variant: "destructive", title: "ত্রুটি", description: e.message });
       setSheetUploading(false);
@@ -665,7 +655,7 @@ function SettingsContent() {
                         {sheetUploading && (
                           <div className="space-y-2 mt-2">
                             <div className="flex justify-between text-[10px] font-bold">
-                              <span>আপলোড হচ্ছে...</span>
+                              <span>প্রসেসিং ও আপলোড হচ্ছে...</span>
                               <span>{sheetUploadProgress}%</span>
                             </div>
                             <Progress value={sheetUploadProgress} className="h-2" />
