@@ -9,7 +9,24 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings as SettingsIcon, CheckCircle, Trash2, Loader2, Link as LinkIcon, BookCopy, User, Globe, Save, Camera, FileText, Users, ShieldCheck, FileUp, FileType } from 'lucide-react';
+import { 
+  Settings as SettingsIcon, 
+  CheckCircle, 
+  Trash2, 
+  Loader2, 
+  Link as LinkIcon, 
+  BookCopy, 
+  User, 
+  Globe, 
+  Save, 
+  Camera, 
+  FileText, 
+  Users, 
+  ShieldCheck, 
+  FileUp, 
+  FileType,
+  BookOpen
+} from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { toast } from '@/hooks/use-toast';

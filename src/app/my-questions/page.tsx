@@ -390,7 +390,7 @@ function MyLibraryContent() {
         <h3 className="text-sm font-black text-primary flex items-center gap-2 border-b-2 border-black pb-2 uppercase tracking-wider"><PlusCircle className="w-4 h-4" /> নতুন তৈরি করুন ({selectedChapter})</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Link href={`/create-lecture-sheet?classId=${selectedClass}&subject=${encodeURIComponent(selectedSubject || '')}&topic=${encodeURIComponent(selectedChapter === 'সাধারণ অধ্যায়' ? '' : (selectedChapter || ''))}`}>
-            <Card className="hover:border-orange-500 hover:shadow-lg transition-all group border-l-4 border-l-orange-500 border-t-2 border-r-2 border-b-2 border-black cursor-pointer bg-orange-50/30">
+            <Card className="hover:border-orange-500 hover:shadow-lg transition-all group border-l-4 border-l-orange-500 border-t-2 border-r-2 border-black cursor-pointer bg-orange-50/30">
               <CardContent className="p-6 flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-orange-500 flex items-center justify-center text-white group-hover:scale-110 transition-transform"><FilePlus className="w-6 h-6" /></div>
                 <div><h4 className="font-black text-orange-700">লেকচার শিট</h4><p className="text-[10px] font-bold text-muted-foreground">এই অধ্যায়ের নোট তৈরি করুন</p></div>
@@ -399,7 +399,7 @@ function MyLibraryContent() {
           </Link>
           <Dialog>
             <DialogTrigger asChild>
-              <Card className="hover:border-primary hover:shadow-lg transition-all group border-l-4 border-l-primary border-t-2 border-r-2 border-b-2 border-black cursor-pointer bg-blue-50/30">
+              <Card className="hover:border-primary hover:shadow-lg transition-all group border-l-4 border-l-primary border-t-2 border-r-2 border-black cursor-pointer bg-blue-50/30">
                 <CardContent className="p-6 flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center text-white group-hover:scale-110 transition-transform"><BrainCircuit className="w-6 h-6" /></div>
                   <div><h4 className="font-black text-primary">প্রশ্নপত্র</h4><p className="text-[10px] font-bold text-muted-foreground">এই অধ্যায়ের প্রশ্ন তৈরি করুন</p></div>
@@ -587,19 +587,26 @@ function MyLibraryContent() {
   if (userLoading || questionsLoading || sheetsLoading || pdfSheetsLoading) return <div className="flex flex-col items-center justify-center p-20 min-h-[50vh]"><Loader2 className="w-10 h-10 animate-spin text-primary" /><p className="mt-4 text-muted-foreground font-bold">লাইব্রেরি লোড হচ্ছে...</p></div>;
 
   if (qError || sError || pError) {
+    const isBuilding = qError?.message.includes('building') || sError?.message.includes('building') || pError?.message.includes('building');
     return (
       <div className="max-w-xl mx-auto p-10 text-center space-y-6 font-kalpurush">
-        <AlertTriangle className="w-16 h-16 text-destructive mx-auto animate-bounce" />
-        <h2 className="text-2xl font-black text-destructive">লাইব্রেরি লোড হতে সমস্যা হয়েছে</h2>
-        <p className="text-muted-foreground font-bold">ডাটাবেসে ইনডেক্স প্রয়োজন। নিচের লিঙ্কে ক্লিক করে ইনডেক্স তৈরি করুন।</p>
-        <a 
-          href="https://console.firebase.google.com/v1/r/project/birganj-pouro-high-schoo-9d39d/firestore/indexes" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 bg-indigo-600 text-white px-8 py-3 rounded-xl font-black hover:bg-indigo-700 transition-all shadow-lg"
-        >
-          <ExternalLink className="w-5 h-5" /> ফায়ারবেস কনসোল
-        </a>
+        <AlertTriangle className={cn("w-16 h-16 text-destructive mx-auto", isBuilding ? "animate-pulse" : "animate-bounce")} />
+        <h2 className="text-2xl font-black text-destructive">{isBuilding ? "ইনডেক্স তৈরির কাজ চলছে..." : "লাইব্রেরি লোড হতে সমস্যা হয়েছে"}</h2>
+        <p className="text-muted-foreground font-bold">
+          {isBuilding 
+            ? "ফায়ারবেস বর্তমানে প্রয়োজনীয় ইনডেক্সগুলো তৈরি করছে। এটি সম্পন্ন হতে ২-৫ মিনিট সময় লাগতে পারে। অনুগ্রহ করে কিছুক্ষণ পর পেজটি রিফ্রেশ করুন।" 
+            : "ডাটাবেসে ইনডেক্স প্রয়োজন। নিচের লিঙ্কে ক্লিক করে ইনডেক্স তৈরি করুন।"}
+        </p>
+        {!isBuilding && (
+          <a 
+            href="https://console.firebase.google.com/v1/r/project/birganj-pouro-high-schoo-9d39d/firestore/indexes" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 bg-indigo-600 text-white px-8 py-3 rounded-xl font-black hover:bg-indigo-700 transition-all shadow-lg"
+          >
+            <ExternalLink className="w-5 h-5" /> ফায়ারবেস কনসোল
+          </a>
+        )}
       </div>
     );
   }
@@ -617,7 +624,7 @@ function MyLibraryContent() {
           <div className="flex items-center gap-2 text-xs font-bold overflow-x-auto whitespace-nowrap pb-1 text-muted-foreground scrollbar-hide">
             <span className={cn("cursor-pointer hover:text-primary transition-colors px-1", viewMode === 'classes' && "text-primary")} onClick={() => { setViewMode('classes'); setSelectedClass(null); setSelectedSubject(null); setSelectedChapter(null); setIsSelecting(false); setActiveCategory('all'); setActiveFileType('all'); }}>লাইব্রেরি</span>
             {selectedClass && (<><ChevronRight className="w-3 h-3 shrink-0" /><span className={cn("cursor-pointer hover:text-primary transition-colors px-1", viewMode === 'subjects' && "text-primary")} onClick={() => { setViewMode('subjects'); setSelectedSubject(null); setSelectedChapter(null); setIsSelecting(false); setActiveCategory('all'); setActiveFileType('all'); }}>{CLASSES.find(c => c.id === selectedClass)?.label} শ্রেণি</span></>)}
-            {selectedSubject && (<><ChevronRight className="w-3 h-3 shrink-0" /><span className={cn("cursor-pointer hover:text-primary transition-colors px-1", viewMode === 'chapters' && "text-primary")} onClick={() => { setViewMode('chapters'); setSelectedSubject(null); setSelectedChapter(null); setIsSelecting(false); setActiveCategory('all'); setActiveFileType('all'); }}>{selectedSubject}</span></>)}
+            {selectedSubject && (<><ChevronRight className="w-3 h-3 shrink-0" /><span className={cn("cursor-pointer hover:text-primary transition-colors px-1", viewMode === 'subjects' && "text-primary")} onClick={() => { setViewMode('chapters'); setSelectedSubject(null); setSelectedChapter(null); setIsSelecting(false); setActiveCategory('all'); setActiveFileType('all'); }}>{selectedSubject}</span></>)}
             {selectedChapter && (<><ChevronRight className="w-3 h-3 shrink-0" /><span className={cn("cursor-pointer hover:text-primary transition-colors px-1", viewMode === 'content' && "text-primary")} onClick={() => { setViewMode('content'); }}>{selectedChapter}</span></>)}
           </div>
           <Button variant="outline" size="sm" onClick={handleBack} className="gap-2 font-bold border-black text-primary h-8 self-end sm:self-center bg-white shadow-sm hover:bg-primary hover:text-white transition-all"><ArrowLeft className="w-3.5 h-3.5" /> ফিরে যান</Button>

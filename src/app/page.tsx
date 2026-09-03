@@ -111,6 +111,7 @@ export default function Home() {
   const db = useFirestore();
 
   const [selectedSubjects, setSelectedSubjects] = useState<Record<string, string>>({});
+  const [selectedDashboardClass, setSelectedDashboardClass] = useState<string>('6');
 
   const qQuery = useMemo(() => db ? collection(db, 'questions') : null, [db]);
   const pQuery = useMemo(() => db ? collection(db, 'pdf-sheets') : null, [db]);
@@ -260,7 +261,7 @@ export default function Home() {
         <div className="flex items-center justify-between mb-6 border-b-2 border-black pb-2">
           <h3 className="text-lg font-black text-foreground flex items-center gap-2">
             <GraduationCap className="w-4 h-4 md:w-5 md:h-5 text-primary" />
-            শ্রেণি নির্বাচন করুন
+            বোর্ড বই দেখুন (শ্রেণি নির্বাচন করুন)
           </h3>
         </div>
         <div className="grid grid-cols-4 lg:grid-cols-6 gap-1.5 md:gap-2">
@@ -292,11 +293,23 @@ export default function Home() {
             </div>
             <h3 className="text-xl font-black text-foreground uppercase tracking-tight">লাইভ কন্টেন্ট ড্যাশবোর্ড</h3>
           </div>
-          <Badge className="bg-yellow-400 text-black font-black text-[10px] border border-black">রিয়েল-টাইম আপডেট</Badge>
+          <div className="flex items-center gap-3">
+            <Select value={selectedDashboardClass} onValueChange={setSelectedDashboardClass}>
+              <SelectTrigger className="w-[140px] h-8 text-xs font-black border-black bg-white">
+                <SelectValue placeholder="শ্রেণি" />
+              </SelectTrigger>
+              <SelectContent className="font-kalpurush border-2 border-black">
+                {CLASSES.map(c => (
+                  <SelectItem key={c.id} value={c.id} className="font-bold text-xs">{c.label} শ্রেণি</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Badge className="bg-yellow-400 text-black font-black text-[10px] border border-black hidden md:block">রিয়েল-টাইম আপডেট</Badge>
+          </div>
         </div>
         
         <div className="space-y-10">
-          {CLASSES.map((cls) => {
+          {CLASSES.filter(c => c.id === selectedDashboardClass).map((cls) => {
             const allSubjects = getSubjectsForClass(cls.id);
             const selectedSubject = selectedSubjects[cls.id] || allSubjects[0];
             const classChaptersStats = stats.classData[cls.id]?.[selectedSubject] || {};
